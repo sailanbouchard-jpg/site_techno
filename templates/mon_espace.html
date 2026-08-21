@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mon espace — Technologie</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        :root { /*REP_PALETTE_VARS*/ }
+
+        .espace-header {
+            display:         flex;
+            align-items:     center;
+            justify-content: space-between;
+            margin-bottom:   28px;
+        }
+        .espace-header h1 {
+            font-size: 1.5em;
+            color:     #111;
+            margin:    0;
+        }
+        .btn-new-note {
+            padding:       8px 18px;
+            background:    #3b82f6;
+            color:         white;
+            border:        none;
+            border-radius: 6px;
+            cursor:        pointer;
+            font-size:     14px;
+            font-weight:   600;
+        }
+        .btn-new-note:hover { background: #2563eb; }
+
+        /* ── Bloc-notes ── */
+        .notes-grid {
+            display:               grid;
+            grid-template-columns: 1fr 1fr;
+            gap:                   16px;
+            align-items:           start;
+            margin-bottom:         32px;
+        }
+
+        .note-card {
+            border:        1px solid var(--rep-border, #d5b65a);
+            border-left:   5px solid var(--rep-border, #d5b65a);
+            border-radius: var(--block-radius);
+            background:    var(--rep-bg, #fefcf7);
+            padding:       16px;
+            color:         var(--rep-color, #1a1200);
+            font-family:   var(--rep-font, inherit);
+            font-size:     var(--rep-size, inherit);
+        }
+
+        .note-titre-input {
+            width:         100%;
+            font-size:     1.05em;
+            font-weight:   700;
+            border:        none;
+            border-bottom: 2px solid transparent;
+            background:    transparent;
+            padding:       3px 0;
+            margin-bottom: 10px;
+            outline:       none;
+            color:         inherit;
+            font-family:   inherit;
+        }
+        .note-titre-input:focus { border-bottom-color: var(--rep-border, #d5b65a); }
+
+        .note-contenu-textarea {
+            width:         100%;
+            min-height:    120px;
+            resize:        vertical;
+            border:        1px solid var(--rep-border, #d5b65a);
+            border-radius: 5px;
+            padding:       10px;
+            font-size:     inherit;
+            font-family:   inherit;
+            line-height:   1.6;
+            outline:       none;
+            background:    white;
+            color:         var(--rep-color, #1a1200);
+            box-sizing:    border-box;
+        }
+        .note-contenu-textarea:focus { border-color: #3b82f6; }
+
+        .note-actions {
+            display:     flex;
+            align-items: center;
+            gap:         8px;
+            margin-top:  10px;
+            flex-wrap:   wrap;
+        }
+        .note-date {
+            font-size:   11px;
+            color:       #aaa;
+            margin-left: auto;
+        }
+
+        .btn-save {
+            padding:       5px 14px;
+            background:    #10b981;
+            color:         white;
+            border:        none;
+            border-radius: 5px;
+            cursor:        pointer;
+            font-size:     13px;
+        }
+        .btn-save:hover    { background: #059669; }
+        .btn-save:disabled { background: #a7f3d0; cursor: default; }
+
+        .btn-delete {
+            padding:       5px 14px;
+            background:    #fee2e2;
+            color:         #991b1b;
+            border:        none;
+            border-radius: 5px;
+            cursor:        pointer;
+            font-size:     13px;
+        }
+        .btn-delete:hover { background: #fecaca; }
+
+        .note-status { font-size: 12px; color: #059669; }
+
+        .empty-state {
+            text-align:  center;
+            color:       #aaa;
+            padding:     60px 0;
+            font-size:   15px;
+            line-height: 1.8;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position:        fixed;
+            inset:           0;
+            background:      rgba(0, 0, 0, 0.45);
+            z-index:         1000;
+            display:         flex;
+            align-items:     center;
+            justify-content: center;
+        }
+        .modal-box {
+            background:    white;
+            border-radius: 10px;
+            padding:       28px 30px;
+            max-width:     420px;
+            width:         90%;
+            box-shadow:    0 20px 60px rgba(0, 0, 0, 0.18);
+        }
+        .modal-box h2 {
+            font-size:     1.05em;
+            color:         #111;
+            margin:        0 0 10px;
+        }
+        .modal-box p {
+            font-size:   14px;
+            color:       #555;
+            margin:      0 0 22px;
+            line-height: 1.5;
+        }
+        .modal-box p strong { color: #111; }
+        .modal-btns {
+            display:         flex;
+            gap:             10px;
+            justify-content: flex-end;
+        }
+        .btn-modal-cancel {
+            padding:       7px 16px;
+            background:    #f3f4f6;
+            color:         #374151;
+            border:        none;
+            border-radius: 6px;
+            cursor:        pointer;
+            font-size:     14px;
+        }
+        .btn-modal-cancel:hover { background: #e5e7eb; }
+        .btn-modal-confirm {
+            padding:       7px 16px;
+            background:    #ef4444;
+            color:         white;
+            border:        none;
+            border-radius: 6px;
+            cursor:        pointer;
+            font-size:     14px;
+            font-weight:   600;
+        }
+        .btn-modal-confirm:hover { background: #dc2626; }
+
+        #espace-not-connected {
+            text-align:  center;
+            color:       #991b1b;
+            padding:     60px 0;
+            line-height: 1.8;
+        }
+        #espace-not-connected a {
+            color:       #1d4ed8;
+            font-size:   14px;
+        }
+
+        /* ── Dépôt de fichiers ── */
+        .section-titre {
+            font-size:     1.1em;
+            font-weight:   700;
+            color:         #1e3a8a;
+            margin:        0 0 14px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e0e7ff;
+        }
+        .drop-cards {
+            display:        flex;
+            flex-direction: column;
+            gap:            14px;
+            margin-bottom:  32px;
+        }
+        .drop-card {
+            border:        1px solid #c7d2fe;
+            border-radius: var(--block-radius);
+            background:    #f8faff;
+            overflow:      hidden;
+        }
+        .drop-card-header {
+            display:         flex;
+            align-items:     center;
+            justify-content: space-between;
+            padding:         10px 16px;
+            background:      #e0e7ff;
+        }
+        .drop-card-title { font-weight: 700; font-size: .95em; color: #1e3a8a; }
+        .drop-badge-open   { background:#dcfce7; color:#065f46; font-size:.75em; padding:2px 8px; border-radius:10px; font-weight:600; }
+        .drop-badge-closed { background:#f3f4f6; color:#6b7280; font-size:.75em; padding:2px 8px; border-radius:10px; }
+
+        .drop-zone {
+            margin:        12px 16px;
+            border:        2px dashed #a5b4fc;
+            border-radius: 8px;
+            padding:       20px;
+            text-align:    center;
+            cursor:        pointer;
+            transition:    background .15s, border-color .15s;
+            background:    white;
+        }
+        .drop-zone.dz-hover { background:#eff6ff; border-color:#3b82f6; }
+        .drop-zone-text     { font-size:.88em; color:#64748b; margin-bottom:10px; }
+        .btn-dz-choose {
+            display:       inline-block;
+            padding:       6px 16px;
+            background:    #3b82f6;
+            color:         white;
+            border-radius: 5px;
+            font-size:     .85em;
+            cursor:        pointer;
+            user-select:   none;
+        }
+        .btn-dz-choose:hover { background: #2563eb; }
+        .dz-uploading { font-size:.85em; color:#6b7280; margin-top:8px; }
+        .dz-error     { font-size:.82em; color:#991b1b; margin-top:6px; }
+
+        .drop-files-list {
+            list-style: none;
+            padding:    0 16px 12px;
+            margin:     0;
+        }
+        .drop-file-item {
+            display:         flex;
+            align-items:     center;
+            gap:             8px;
+            padding:         5px 0;
+            border-bottom:   1px solid #f0f0f0;
+            font-size:       .85em;
+            color:           #374151;
+        }
+        .drop-file-item:last-child { border-bottom: none; }
+        .drop-file-name  { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .drop-file-size  { color: #9ca3af; white-space: nowrap; }
+        .drop-file-date  { color: #9ca3af; white-space: nowrap; }
+        .btn-drop-del    { background: none; border: none; color: #f87171; cursor: pointer; font-size: 1em; padding: 0 2px; line-height: 1; }
+        .btn-drop-del:hover { color: #dc2626; }
+        .drop-empty    { font-size:.82em; color:#aaa; padding: 0 16px 12px; font-style: italic; }
+        .drop-no-links { font-size:.9em; color:#94a3b8; font-style:italic; padding:18px 0 24px; }
+    </style>
+</head>
+<body>
+
+{{navbar}}
+
+<main>
+    <div id="espace-loading" style="text-align:center;color:#aaa;padding:60px 0">Chargement…</div>
+
+    <div id="espace-not-connected" style="display:none">
+        <p>Vous devez être connecté pour accéder à votre espace.</p>
+        <a href="/index.html">Retour à l'accueil</a>
+    </div>
+
+    <div id="espace-content" style="display:none">
+        <div class="espace-header">
+            <h1>Mon espace</h1>
+            <button class="btn-new-note" id="btn-new-note">+ Nouveau bloc-note</button>
+        </div>
+
+        <!-- Bloc-notes -->
+        <div class="notes-grid" id="notes-grid"></div>
+
+        <!-- Dépôt de fichiers -->
+        <div id="drops-section">
+            <h2 class="section-titre">Dépôt de fichiers</h2>
+            <div class="drop-cards" id="drop-cards-container">
+                <p class="drop-no-links">Chargement…</p>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Modal de suppression (3 étapes) -->
+<div class="modal-overlay" id="delete-modal" style="display:none">
+    <div class="modal-box">
+        <h2 id="modal-title"></h2>
+        <p  id="modal-body"></p>
+        <div class="modal-btns">
+            <button class="btn-modal-cancel"  id="modal-cancel">Annuler</button>
+            <button class="btn-modal-confirm" id="modal-confirm"></button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var notes        = [];
+    var deleteTarget = null; // { id, titre, step }
+
+    function escHtml(s) {
+        return String(s)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+
+    function formatDate(iso) {
+        if (!iso) return "";
+        var d = new Date(iso);
+        return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" })
+             + " à " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    }
+
+    // ── Rendu des cartes ─────────────────────────────────────────────────────
+
+    function renderNotes() {
+        var grid = document.getElementById("notes-grid");
+
+        if (notes.length === 0) {
+            grid.innerHTML =
+                '<div class="empty-state" style="grid-column:span 2">' +
+                    'Aucun bloc-note pour l\'instant.<br>' +
+                    'Créez-en un avec le bouton ci-dessus !' +
+                '</div>';
+            return;
+        }
+
+        grid.innerHTML = notes.map(function (n) {
+            return (
+                '<div class="note-card" id="note-card-' + n.id + '">' +
+                    '<input class="note-titre-input" value="' + escHtml(n.titre) + '" placeholder="Titre…">' +
+                    '<textarea class="note-contenu-textarea" placeholder="Écrivez vos notes ici…">' + escHtml(n.contenu) + '</textarea>' +
+                    '<div class="note-actions">' +
+                        '<button class="btn-save">Sauvegarder</button>' +
+                        '<button class="btn-delete">Supprimer</button>' +
+                        '<span class="note-status"></span>' +
+                        '<span class="note-date">Modifié le ' + formatDate(n.modifie_le) + '</span>' +
+                    '</div>' +
+                '</div>'
+            );
+        }).join("");
+
+        notes.forEach(function (n) {
+            var card = document.getElementById("note-card-" + n.id);
+            card.querySelector(".btn-save").addEventListener("click", function () { saveNote(n.id, card); });
+            card.querySelector(".btn-delete").addEventListener("click", function () { startDelete(n.id, n.titre); });
+        });
+    }
+
+    // ── Appels API ───────────────────────────────────────────────────────────
+
+    function loadNotes() {
+        fetch("/api/bloc-notes")
+            .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+            .then(function (data) { notes = data; renderNotes(); })
+            .catch(function () {});
+    }
+
+    function saveNote(id, card) {
+        var titre   = card.querySelector(".note-titre-input").value.trim() || "Sans titre";
+        var contenu = card.querySelector(".note-contenu-textarea").value;
+        var btn     = card.querySelector(".btn-save");
+        var status  = card.querySelector(".note-status");
+
+        btn.disabled         = true;
+        status.textContent   = "Sauvegarde…";
+        status.style.color   = "#999";
+
+        fetch("/api/bloc-notes/" + id, {
+            method:  "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({ titre: titre, contenu: contenu }),
+        })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+        .then(function (data) {
+            var note = notes.find(function (n) { return n.id === id; });
+            if (note) { note.titre = titre; note.contenu = contenu; note.modifie_le = data.modifie_le; }
+            card.querySelector(".note-date").textContent = "Modifié le " + formatDate(data.modifie_le);
+            status.textContent = "Sauvegardé !";
+            status.style.color = "#059669";
+            setTimeout(function () { status.textContent = ""; }, 2500);
+        })
+        .catch(function () {
+            status.textContent = "Erreur lors de la sauvegarde";
+            status.style.color = "#991b1b";
+        })
+        .finally(function () { btn.disabled = false; });
+    }
+
+    function createNote() {
+        fetch("/api/bloc-notes", {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({ titre: "Nouveau bloc-note", contenu: "" }),
+        })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+        .then(function (note) {
+            notes.push(note);
+            renderNotes();
+            var inputs = document.querySelectorAll(".note-titre-input");
+            var last = inputs[inputs.length - 1];
+            if (last) {
+                last.focus();
+                last.select();
+                last.closest(".note-card").scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }
+        })
+        .catch(function () { alert("Impossible de créer le bloc-note."); });
+    }
+
+    function deleteNote(id) {
+        fetch("/api/bloc-notes/" + id, { method: "DELETE" })
+            .then(function (r) {
+                if (r.ok) {
+                    notes = notes.filter(function (n) { return n.id !== id; });
+                    renderNotes();
+                }
+            })
+            .catch(function () {});
+    }
+
+    // ── Modal suppression (3 étapes) ─────────────────────────────────────────
+
+    var modal        = document.getElementById("delete-modal");
+    var modalTitle   = document.getElementById("modal-title");
+    var modalBody    = document.getElementById("modal-body");
+    var modalConfirm = document.getElementById("modal-confirm");
+    var modalCancel  = document.getElementById("modal-cancel");
+
+    function startDelete(id, titre) {
+        deleteTarget          = { id: id, titre: titre, step: 1 };
+        modalTitle.textContent = "Supprimer une note";
+        modalBody.innerHTML    = "Confirmer la suppression de la note <strong>« " + escHtml(titre) + " »</strong> ?";
+        modalConfirm.textContent = "Confirmer";
+        modal.style.display    = "flex";
+    }
+
+    modalConfirm.addEventListener("click", function () {
+        if (!deleteTarget) return;
+        if (deleteTarget.step === 1) {
+            deleteTarget.step        = 2;
+            modalTitle.textContent   = "Dernière confirmation";
+            modalBody.innerHTML      = "Vous êtes sûr(e) de vouloir supprimer la note <strong>« " + escHtml(deleteTarget.titre) + " »</strong> ? Cette action est irréversible.";
+            modalConfirm.textContent = "Oui, supprimer";
+        } else {
+            modal.style.display = "none";
+            deleteNote(deleteTarget.id);
+            deleteTarget = null;
+        }
+    });
+
+    function closeModal() {
+        modal.style.display = "none";
+        deleteTarget        = null;
+    }
+
+    modalCancel.addEventListener("click", closeModal);
+    modal.addEventListener("click", function (e) { if (e.target === modal) closeModal(); });
+
+    // ── Dépôts de fichiers ───────────────────────────────────────────────────
+
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + " o";
+        if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + " Ko";
+        return (bytes / 1024 / 1024).toFixed(1) + " Mo";
+    }
+
+    function makeFileItem(f, linkId, card) {
+        var li = document.createElement("li");
+        li.className = "drop-file-item";
+        li.id = "drop-file-" + f.id;
+        li.innerHTML =
+            '<span class="drop-file-name" title="' + escHtml(f.nom_original) + '">' + escHtml(f.nom_original) + '</span>' +
+            '<span class="drop-file-size">' + formatSize(f.taille) + '</span>' +
+            '<button class="btn-drop-del" title="Supprimer ce fichier">×</button>';
+        li.querySelector(".btn-drop-del").addEventListener("click", function () {
+            deleteDropFile(f.id, card);
+        });
+        return li;
+    }
+
+    function ensureFilesList(card) {
+        var list = card.querySelector(".drop-files-list");
+        if (list) return list;
+        var empty = card.querySelector(".drop-empty");
+        if (empty) empty.remove();
+        list = document.createElement("ul");
+        list.className = "drop-files-list";
+        card.appendChild(list);
+        return list;
+    }
+
+    function checkEmptyList(card) {
+        var list = card.querySelector(".drop-files-list");
+        if (list && list.children.length === 0) {
+            list.remove();
+            var p = document.createElement("p");
+            p.className = "drop-empty";
+            p.textContent = "Aucun fichier déposé.";
+            card.appendChild(p);
+        }
+    }
+
+    function uploadFile(linkId, file, card) {
+        var uploading = card.querySelector(".dz-uploading");
+        var errDiv    = card.querySelector(".dz-error");
+        errDiv.style.display    = "none";
+        uploading.style.display = "block";
+
+        var fd = new FormData();
+        fd.append("fichier", file);
+
+        fetch("/api/drops/" + linkId + "/upload", { method: "POST", body: fd })
+            .then(function (r) {
+                if (!r.ok) return r.json().then(function (d) { throw new Error(d.erreur || "Erreur d'envoi"); });
+                return r.json();
+            })
+            .then(function (f) {
+                uploading.style.display = "none";
+                var list = ensureFilesList(card);
+                list.insertBefore(makeFileItem(f, linkId, card), list.firstChild);
+            })
+            .catch(function (err) {
+                uploading.style.display = "none";
+                errDiv.textContent      = err.message;
+                errDiv.style.display    = "block";
+            });
+    }
+
+    function deleteDropFile(fichierId, card) {
+        fetch("/api/drops/fichiers/" + fichierId, { method: "DELETE" })
+            .then(function (r) {
+                if (!r.ok) throw new Error();
+                var li = document.getElementById("drop-file-" + fichierId);
+                if (li) li.remove();
+                checkEmptyList(card);
+            })
+            .catch(function () {});
+    }
+
+    function bindDropCard(card, linkId, files) {
+        var zone      = card.querySelector(".drop-zone");
+        var input     = card.querySelector('input[type="file"]');
+        var uploading = card.querySelector(".dz-uploading");
+        var errDiv    = card.querySelector(".dz-error");
+
+        zone.addEventListener("dragover", function (e) { e.preventDefault(); zone.classList.add("dz-hover"); });
+        zone.addEventListener("dragleave", function () { zone.classList.remove("dz-hover"); });
+        zone.addEventListener("drop", function (e) {
+            e.preventDefault();
+            zone.classList.remove("dz-hover");
+            if (e.dataTransfer.files.length > 0) uploadFile(linkId, e.dataTransfer.files[0], card);
+        });
+        input.addEventListener("change", function () {
+            if (input.files.length > 0) uploadFile(linkId, input.files[0], card);
+            input.value = "";
+        });
+
+        files.forEach(function (f) {
+            card.querySelector(".drop-files-list").appendChild(makeFileItem(f, linkId, card));
+        });
+    }
+
+    function renderDropCards(links) {
+        var container = document.getElementById("drop-cards-container");
+
+        if (!links || links.length === 0) {
+            container.innerHTML = '<p class="drop-no-links">Aucun lien de dépôt ouvert par le professeur pour l\'instant.</p>';
+            return;
+        }
+        container.innerHTML = "";
+
+        links.forEach(function (link) {
+            var card = document.createElement("div");
+            card.className = "drop-card";
+            card.id = "drop-card-" + link.id;
+
+            var hasFiles = link.mes_fichiers && link.mes_fichiers.length > 0;
+            card.innerHTML =
+                '<div class="drop-card-header">' +
+                    '<span class="drop-card-title">' + escHtml(link.titre) + '</span>' +
+                    '<span class="drop-badge-open">Ouvert</span>' +
+                '</div>' +
+                '<div class="drop-zone" data-lid="' + link.id + '">' +
+                    '<div class="drop-zone-text">Glissez un fichier ici, ou</div>' +
+                    '<label class="btn-dz-choose">Choisir un fichier' +
+                        '<input type="file" style="display:none">' +
+                    '</label>' +
+                    '<div class="dz-uploading" style="display:none">Envoi en cours…</div>' +
+                    '<div class="dz-error" style="display:none"></div>' +
+                '</div>' +
+                (hasFiles
+                    ? '<ul class="drop-files-list"></ul>'
+                    : '<p class="drop-empty">Aucun fichier déposé.</p>');
+
+            container.appendChild(card);
+            bindDropCard(card, link.id, link.mes_fichiers || []);
+        });
+    }
+
+    function loadDrops() {
+        fetch("/api/drops")
+            .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+            .then(function (data) { renderDropCards(data); })
+            .catch(function () {});
+    }
+
+    // ── Init ─────────────────────────────────────────────────────────────────
+
+    document.getElementById("btn-new-note").addEventListener("click", createNote);
+
+    fetch("/api/me")
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            document.getElementById("espace-loading").style.display = "none";
+            if (!data.connecte) {
+                document.getElementById("espace-not-connected").style.display = "block";
+                return;
+            }
+            document.getElementById("espace-content").style.display = "block";
+            loadNotes();
+            loadDrops();
+        })
+        .catch(function () {
+            document.getElementById("espace-loading").style.display = "none";
+            document.getElementById("espace-not-connected").style.display = "block";
+        });
+})();
+</script>
+
+</body>
+</html>

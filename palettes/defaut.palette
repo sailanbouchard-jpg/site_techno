@@ -1,0 +1,142 @@
+# palettes/defaut.palette
+# ─────────────────────────────────────────────────────────────────
+# Palette "defaut" — thème clair académique standard
+#
+# Seules les valeurs différentes des defaults (palette_defaults.py)
+# sont nécessaires ici. Les valeurs manquantes utilisent les defaults.
+# ─────────────────────────────────────────────────────────────────
+
+[corps]
+police     = Arial, sans-serif
+taille     = 14px
+couleur    = #222222
+interligne = 1.7
+
+[h1]
+taille  = 1.9em    couleur = #1a1a2e    poids = bold
+
+[h2]
+taille  = 1.4em    couleur = #16213e    poids = bold
+
+[h3]
+taille  = 1.15em   couleur = #333333    poids = bold
+
+[pg]
+fond    = #ffffff    bordure = #000000
+
+[def]
+fond    = #e8f4fd    bordure = #2980b9    texte = #1a5276
+
+[alr]
+fond    = #fff8e8    bordure = #e67e00    texte = #7d4e00
+
+[bleu]
+fond = #e8f4fd    bordure = #2980b9
+
+[vert]
+fond = #e6f4ea    bordure = #27ae60
+
+[orange]
+fond = #fff3e0    bordure = #e67e00
+
+[rouge]
+fond = #fce8e6    bordure = #c0392b
+
+[jaune]
+fond = #fefde7    bordure = #f39c12
+
+[violet]
+fond = #f3e8fd    bordure = #8e44ad
+
+[gris]
+fond = #f1f3f4    bordure = #7f8c8d
+
+[ques]
+couleur = #1a3a7e    police = Georgia, serif    taille = 0.95em
+
+[rep]
+fond = #f7ecd5    fond_cadre = #fefcf7    bordure = #d5b65a    texte = #1a1200    bouton_fond = #dbc689    bouton_texte = #ffffff
+police_rep = Comic Sans MS, cursive    taille_rep = 1em    facteur_compact = 0.7
+taille_bouton = .88em    taille_bouton_compact = .6em
+charger_fond = #4f46e5    charger_texte = #ffffff    annuler_fond = #b91c1c    annuler_texte = #ffffff    charge_statut = #6d28d9
+
+[obj]
+fond = #fefce8    bordure = #ca8a04    texte = #713f12    label = Objectif
+
+[resume]
+fond = #f0f7ff    bordure = #3b82f6    texte = #1e3a8a    titre = Synthèse
+
+[qcm]
+fond = #f8fafc    bordure = #64748b    texte = #1e293b    bouton_fond = #3b82f6    bouton_texte = #ffffff
+ok_fond = #dcfce7    ok_bordure = #16a34a    err_fond = #fee2e2    err_bordure = #dc2626
+
+[assoc]
+fond = #f8fafc    bordure = #64748b    texte = #1e293b    item_fond = #e2e8f0    item_bordure = #94a3b8
+ok_fond = #dcfce7    bouton_fond = #3b82f6    bouton_texte = #ffffff
+
+[trier]
+fond = #f8fafc    bordure = #64748b    texte = #1e293b    item_fond = #e2e8f0    item_bordure = #94a3b8
+ok_fond = #dcfce7    ok_bordure = #16a34a    bouton_fond = #3b82f6    bouton_texte = #ffffff
+
+[repg]
+fond = #f7ecd5    fond_cadre = #fefcf7    bordure = #d5b65a    texte = #1a1200
+champ_fond = #ffffff    champ_bordure = #d5b65a    bouton_fond = #dbc689    bouton_texte = #ffffff
+
+[lien]
+fond = #f0f7ff    bordure = #3b82f6    texte = #1e3a8a
+
+[pdf]
+bouton_fond = #f8fafc    bouton_bordure = #64748b    bouton_texte = #1e293b    bouton_fond_survol = #e2e8f0
+
+[tbl]
+fond = #ffffff    bordure = #cccccc    entete_fond = #e8f0f8    entete_texte = #1a3a5e
+
+[diag]
+largeur_case_xs  = 114px    largeur_case_s   = 144px    largeur_case_m = 174px
+largeur_case_l   = 214px    largeur_case_xl  = 264px    hauteur_case   = 40px
+rayon_case       = 4px
+ecart_colonnes   = 56px
+ecart_cases_xs   = 5px       ecart_cases_s    = 14px     ecart_cases_m  = 18px
+ecart_cases_l    = 24px      ecart_cases_xl   = 30px
+ecart_cousins_xs = 8px       ecart_cousins_s  = 15px      ecart_cousins_m = 20px
+ecart_cousins_l  = 25px       ecart_cousins_xl = 30px
+case_marge       = 1.6px 0px
+fleche_couleur   = #888888  fleche_epaisseur = 2px
+titre_couleur    = #333333  titre_taille     = .9em
+case_taille      = .85em    case_interligne  = 1.25
+
+[dracine]
+fond = #f1f3f4    bordure = #7f8c8d    texte = #222222
+largeur_xs = 78px    largeur_s = 108px    largeur_m = 138px
+largeur_l  = 178px   largeur_xl = 218px
+marge = 1px 2.8px
+
+[verif]
+bouton_fond = #3b82f6    bouton_texte = #ffffff
+corrige_btn_fond = #f59e0b    corrige_btn_texte = #ffffff
+effacer_btn_fond = #b91c1c    effacer_btn_texte = #ffffff
+valide_couleur = #16a34a    croix_couleur = #dc2626    symbole_taille = 1.3em
+ok_couleur = #065f46    err_couleur = #991b1b    corrige_fond = #ffffff
+
+[obj3d]
+# Visualisateur 3D (bloc =3D>). Valeurs numeriques passees au WebGL via data-*.
+# Pas de commentaire en fin de ligne : le # sert aux couleurs hexa.
+fond            = #eef2f5
+couleur_defaut  = #b7bdc4
+lumiere         = 0.9
+ambiance        = 0.45
+hauteur         = 420px
+bordure         = #d0d7de     rayon = 8px    accent = #2980b9
+controle_fond   = #ffffff     controle_bordure = #cbd5e1
+controle_texte  = #1e293b     controle_fond_survol = #e2e8f0
+
+[pages]
+largeur_sidebar     = 15%
+largeur_sidebar_min = 58px
+largeur_sidebar_max = 300px
+ecart_miniatures    = 6px
+padding_sidebar     = 4px
+padding_page        = 18px 24px
+hauteur_a4          = 1123px
+marge_pages         = 32px
+rayon_miniature     = 3px

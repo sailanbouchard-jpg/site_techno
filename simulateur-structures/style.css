@@ -1,0 +1,915 @@
+/*
+  style.css
+  ─────────
+  Rôle : structure et mise en page du simulateur. Le canvas occupe TOUT
+  l'écran ; l'interface flotte dessus en panneaux compacts (« HUD ») :
+  barre du haut (lecture, vue), barre du bas (matériaux + outils), tiroir
+  bibliothèque à gauche, inspecteur/vent à droite, bandeaux contextuels.
+
+  AUCUNE couleur ni dimension n'est écrite en dur ici : tout vient des
+  variables définies dans style-config.css (à charger avant ce fichier).
+*/
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+  background: var(--color-background);
+  overflow: hidden;
+}
+
+/* ── Scène : canvas plein écran, HUD par-dessus ── */
+
+.app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#simulation-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: var(--canvas-fallback-bg);
+}
+
+/* ── Conteneurs HUD : ne bloquent pas les clics entre les cartes ── */
+
+.hud {
+  position: absolute;
+  left: var(--hud-margin);
+  right: var(--hud-margin);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--hud-gap);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hud-top {
+  top: var(--hud-margin);
+}
+
+.hud-bottom {
+  bottom: var(--hud-margin);
+  align-items: flex-end;
+}
+
+.hud-card {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-small);
+  padding: 6px 10px;
+  background: var(--hud-bg);
+  border: 1px solid var(--hud-border);
+  border-radius: var(--hud-radius);
+  box-shadow: var(--hud-shadow);
+  backdrop-filter: blur(var(--hud-blur));
+  -webkit-backdrop-filter: blur(var(--hud-blur));
+}
+
+/* Poussent la carte suivante à droite. */
+.sim-card {
+  margin-inline: auto;
+}
+
+/* ── Séparateur vertical léger ── */
+
+.hud-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 3px 2px;
+  background: var(--sep-color);
+  flex-shrink: 0;
+}
+
+/* ── Boutons du HUD (icône + libellé en ligne) ── */
+
+.hud-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--ctrl-radius);
+  background: var(--ctrl-bg);
+  color: var(--color-text);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.06s ease;
+}
+
+.hud-btn svg {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  flex-shrink: 0;
+}
+
+.hud-btn:hover:not(:disabled) {
+  background: var(--ctrl-bg-hover);
+}
+
+.hud-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.hud-btn.active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--ctrl-active-text);
+}
+
+.hud-btn-glyph {
+  font-weight: 700;
+  font-size: 14px;
+  min-width: var(--icon-size);
+  text-align: center;
+}
+
+/* Bouton Tester : l'action principale, en vert franc. */
+.play-btn {
+  background: var(--color-play);
+  border-color: var(--color-play);
+  color: #0c1a10;
+  font-weight: 600;
+}
+
+.play-btn:hover:not(:disabled) {
+  background: var(--color-play-hover);
+}
+
+/* ── Identité (haut gauche) ── */
+
+.brand-logo {
+  width: 26px;
+  height: 26px;
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  margin-right: 2px;
+}
+
+.brand-text strong {
+  font-size: var(--font-size-title);
+  letter-spacing: 0.04em;
+}
+
+.brand-text span {
+  font-size: var(--font-size-tiny);
+  color: var(--color-text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ── Affichages (temps, valeurs) ── */
+
+.hud-readout {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-size: var(--font-size-small);
+}
+
+/* ── Curseurs compacts (ralenti, zoom) ── */
+
+.hud-slider {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-muted);
+}
+
+.hud-slider svg {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  flex-shrink: 0;
+}
+
+.hud-slider-name {
+  font-size: var(--font-size-small);
+}
+
+.hud-slider .hud-readout {
+  min-width: 32px;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 90px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ctrl-bg-hover);
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--color-text);
+  border: none;
+  transition: background 0.12s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: var(--color-accent);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--color-text);
+  border: none;
+}
+
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ctrl-bg-hover);
+}
+
+/* ── Sélecteur de largeur de grille (− 50 m +) ── */
+
+.hud-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.hud-stepper button {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--ctrl-border);
+  border-radius: 6px;
+  background: var(--ctrl-bg);
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.hud-stepper button:hover:not(:disabled) {
+  background: var(--ctrl-bg-hover);
+}
+
+.stepper-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 44px;
+  line-height: 1.1;
+  font-size: var(--font-size-tiny);
+  color: var(--color-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stepper-label b {
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* ── Palette de matériaux (bas gauche) ── */
+
+.palette-card {
+  padding: 6px 8px;
+}
+
+.palette {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+
+/* Une famille = ses déclinaisons côte à côte + le nom dessous. Le séparateur
+   léger entre familles est porté par la bordure gauche des groupes suivants. */
+.mat-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 0 5px;
+}
+
+.mat-group + .mat-group {
+  border-left: 1px solid var(--sep-color);
+}
+
+.mat-row {
+  display: flex;
+  gap: 3px;
+}
+
+.mat-group-label {
+  font-size: var(--font-size-tiny);
+  color: var(--color-text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1;
+  padding-bottom: 1px;
+}
+
+/* Une déclinaison = un bouton montrant la BARRE du matériau (fine ou épaisse). */
+.mat-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: var(--mat-chip-width);
+  padding: 5px 4px 3px;
+  border: 1px solid transparent;
+  border-radius: var(--ctrl-radius);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-tiny);
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.mat-chip:hover:not(:disabled) {
+  background: var(--ctrl-bg-hover);
+}
+
+.mat-chip.active {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+  color: var(--color-text);
+  box-shadow: 0 0 0 2px var(--color-accent-ring);
+}
+
+.mat-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* La barre témoin : couleur réelle du matériau, hauteur = épaisseur relative. */
+.mat-bar {
+  width: var(--mat-bar-width);
+  border-radius: 2px;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.35), 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.mat-variant {
+  white-space: nowrap;
+}
+
+/* ── Outils d'édition (bas, à côté de la palette) ── */
+
+.tools-card {
+  padding: 5px 8px;
+  gap: 2px;
+}
+
+.tool-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 56px;
+  padding: 6px 8px 5px;
+  border: 1px solid transparent;
+  border-radius: var(--ctrl-radius);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-tiny);
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.tool-btn svg {
+  width: var(--tool-icon-size);
+  height: var(--tool-icon-size);
+}
+
+.tool-btn:hover:not(:disabled) {
+  background: var(--ctrl-bg-hover);
+  color: var(--color-text);
+}
+
+.tool-btn.active {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+/* ── Poids total / vent (bas droite) ── */
+
+.status-card {
+  margin-left: auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 8px 12px;
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+#wind-display {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+#wind-display:empty {
+  display: none;
+}
+
+/* ── Bandeaux contextuels (Sol, Poids, Câble) ── */
+
+.context-strip {
+  position: absolute;
+  bottom: var(--bottom-offset);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11;
+  max-width: min(92vw, 780px);
+  padding: 7px 12px;
+  font-size: var(--font-size-small);
+}
+
+.context-strip[hidden] {
+  display: none;
+}
+
+.context-hint {
+  color: var(--color-text-muted);
+}
+
+.context-strip label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.strip-btn {
+  padding: 5px 9px;
+  border: 1px solid var(--ctrl-border);
+  border-radius: var(--ctrl-radius);
+  background: var(--ctrl-bg);
+  color: var(--color-text);
+  font-size: var(--font-size-small);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.strip-btn:hover:not(:disabled) {
+  background: var(--ctrl-bg-hover);
+}
+
+/* ── Champs de saisie sur panneaux sombres ── */
+
+input[type="number"],
+select {
+  padding: 4px 6px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--input-text);
+  font: inherit;
+  font-size: var(--font-size-small);
+}
+
+input[type="number"] {
+  width: 4.8em;
+}
+
+input[type="number"]:focus,
+select:focus {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 0;
+}
+
+input:disabled,
+select:disabled,
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  color: var(--color-disabled-text);
+}
+
+/* ── Tiroir bibliothèque (gauche) ── */
+
+.library-drawer {
+  position: absolute;
+  top: var(--top-offset);
+  left: var(--hud-margin);
+  bottom: var(--bottom-offset);
+  z-index: 12;
+  width: var(--library-width);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 10px 12px;
+  overflow-y: auto;
+}
+
+.library-drawer[hidden] {
+  display: none;
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-small);
+}
+
+.drawer-header h3 {
+  margin: 0;
+  font-size: var(--font-size-title);
+  letter-spacing: 0.03em;
+}
+
+.drawer-close {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.drawer-close:hover {
+  background: var(--ctrl-bg-hover);
+  color: var(--color-text);
+}
+
+/* Contenu du tiroir : démos + sauvegardes (rendu par testCasePanel.js). */
+
+.test-case-panel h3 {
+  margin: var(--spacing-small) 0;
+  font-size: var(--font-size-small);
+  color: var(--color-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.test-case-button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin-bottom: 4px;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: var(--ctrl-radius);
+  background: var(--ctrl-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-small);
+  cursor: pointer;
+}
+
+.test-case-button:hover {
+  background: var(--ctrl-bg-hover);
+  border-color: var(--ctrl-border);
+}
+
+.test-case-separator {
+  border-top: 1px solid var(--sep-color);
+  margin: var(--spacing-medium) 0;
+}
+
+.test-case-save-button {
+  display: block;
+  width: 100%;
+  margin-bottom: var(--spacing-medium);
+  padding: 7px 9px;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--ctrl-radius);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.test-case-save-button:hover {
+  background: var(--color-accent);
+  color: var(--ctrl-active-text);
+}
+
+.test-case-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.test-case-row .test-case-button {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.test-case-delete-button {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-danger);
+  font-size: 12px;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+
+.test-case-delete-button:hover {
+  background: var(--menu-danger-hover);
+}
+
+.saved-structure-hint {
+  font-size: var(--font-size-small);
+  color: var(--color-text-faint);
+}
+
+/* ── Colonne de droite : inspecteur + panneau du vent ── */
+
+.hud-right {
+  position: absolute;
+  top: var(--top-offset);
+  right: var(--hud-margin);
+  bottom: var(--bottom-offset);
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--hud-gap);
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.hud-right > .hud-card {
+  pointer-events: auto;
+}
+
+.inspector {
+  width: var(--inspector-width);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 10px 12px;
+  overflow-y: auto;
+  max-height: 100%;
+  flex-shrink: 1;
+}
+
+.inspector[hidden] {
+  display: none;
+}
+
+.inspector h3 {
+  margin: 0 0 var(--spacing-small);
+  font-size: var(--font-size-title);
+}
+
+.inspector h4 {
+  font-size: var(--font-size-base);
+  margin: var(--spacing-small) 0;
+}
+
+.inspector-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-small);
+  margin-bottom: var(--spacing-small);
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
+.inspector-field input {
+  width: var(--field-input-width);
+}
+
+.inspector-readonly-value {
+  color: var(--color-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.inspector-swatch-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.inspector-button {
+  margin-top: var(--spacing-small);
+  width: 100%;
+  padding: 7px;
+  border: 1px solid var(--ctrl-border);
+  border-radius: var(--ctrl-radius);
+  background: var(--ctrl-bg);
+  color: var(--color-danger);
+  font: inherit;
+  font-size: var(--font-size-small);
+  cursor: pointer;
+}
+
+.inspector-button:hover {
+  background: var(--menu-danger-hover);
+}
+
+/* Liste à cocher des forces appliquées (dans l'inspecteur de nœud). */
+
+.force-assignment-list {
+  margin-top: var(--spacing-medium);
+  border-top: 1px solid var(--sep-color);
+  padding-top: var(--spacing-small);
+}
+
+.force-assignment-empty {
+  font-size: var(--font-size-small);
+  color: var(--color-text-faint);
+}
+
+.force-assignment-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-small);
+  margin-bottom: var(--spacing-small);
+}
+
+.force-assignment-label {
+  flex: 1;
+}
+
+.force-color-swatch {
+  display: inline-block;
+  width: var(--force-color-swatch-size);
+  height: var(--force-color-swatch-size);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Panneau du vent (droite, sous l'inspecteur) ── */
+
+.wind-panel {
+  width: var(--inspector-width);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 10px 12px;
+  flex-shrink: 0;
+}
+
+.wind-panel[hidden] {
+  display: none;
+}
+
+.wind-panel h3 {
+  margin: 0 0 var(--spacing-small);
+  font-size: var(--font-size-title);
+}
+
+.wind-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-small);
+  margin-bottom: var(--spacing-small);
+}
+
+.wind-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
+.wind-fields input {
+  width: 100%;
+}
+
+.wind-preview-caption {
+  display: block;
+  margin: var(--spacing-small) 0 2px;
+  font-size: var(--font-size-tiny);
+  color: var(--color-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+#wind-curve-canvas {
+  width: 100%;
+  height: var(--wind-preview-height);
+  border: 1px solid var(--ctrl-border);
+  border-radius: 6px;
+  display: block;
+  background: var(--input-bg);
+}
+
+/* ── Barres de défilement discrètes (panneaux sombres) ── */
+
+.library-drawer::-webkit-scrollbar,
+.inspector::-webkit-scrollbar {
+  width: 8px;
+}
+
+.library-drawer::-webkit-scrollbar-thumb,
+.inspector::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+}
+
+.library-drawer::-webkit-scrollbar-track,
+.inspector::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ── Menu du clic droit (conservé si réactivé) ── */
+
+.context-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 180px;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--menu-bg);
+  border: 1px solid var(--hud-border);
+  border-radius: var(--menu-radius);
+  box-shadow: var(--menu-shadow);
+}
+
+.context-menu[hidden] {
+  display: none;
+}
+
+.context-menu-item {
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.context-menu-item:hover {
+  background: var(--menu-hover);
+}
+
+.context-menu-item.danger {
+  color: var(--color-danger);
+}
+
+.context-menu-item.danger:hover {
+  background: var(--menu-danger-hover);
+}
+
+/* ── Petits écrans : les cartes du bas passent à la ligne ── */
+
+@media (max-width: 1100px) {
+  .hud {
+    flex-wrap: wrap;
+  }
+
+  .sim-card,
+  .status-card {
+    margin-inline: 0;
+  }
+}

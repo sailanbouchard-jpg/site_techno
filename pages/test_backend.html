@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Backend</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+    h1 { font-size: 1.4rem; margin-bottom: 24px; }
+    h2 { font-size: 1rem; margin-bottom: 12px; color: #444; }
+    section { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+    label { display: block; font-size: .85rem; margin-bottom: 4px; color: #555; }
+    input, textarea { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 5px; font-size: .9rem; margin-bottom: 10px; }
+    button { padding: 8px 18px; border: none; border-radius: 5px; cursor: pointer; font-size: .9rem; }
+    .btn-primary { background: #3b82f6; color: #fff; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-danger  { background: #ef4444; color: #fff; }
+    .btn-danger:hover  { background: #dc2626; }
+    #status { font-size: .85rem; padding: 8px 12px; border-radius: 5px; margin-top: 8px; display: none; }
+    #status.ok  { background: #d1fae5; color: #065f46; display: block; }
+    #status.err { background: #fee2e2; color: #991b1b; display: block; }
+    #reponses-list { margin-top: 10px; font-size: .88rem; }
+    .reponse-item { background: #f5f5f5; border-radius: 5px; padding: 8px 10px; margin-bottom: 6px; }
+    .reponse-meta { font-size: .75rem; color: #777; margin-top: 4px; }
+    #who { font-weight: 600; color: #3b82f6; }
+  </style>
+</head>
+<body>
+
+<h1>Test Backend — Sessions &amp; Réponses partagées</h1>
+
+<!-- ── Connexion ── -->
+<section>
+  <h2>Connexion</h2>
+  <div id="who">Non connecté</div>
+  <div style="margin-top:12px">
+    <label>Identifiant</label>
+    <input id="login-id" type="text" placeholder="alice ou bob" value="alice">
+    <label>Mot de passe</label>
+    <input id="login-pwd" type="password" placeholder="alice123 ou bob123" value="alice123">
+    <div style="display:flex;gap:8px">
+      <button class="btn-primary" onclick="login()">Se connecter</button>
+      <button class="btn-danger"  onclick="logout()">Se déconnecter</button>
+    </div>
+  </div>
+  <div id="status"></div>
+</section>
+
+<!-- ── Poster une réponse ── -->
+<section>
+  <h2>Poster une réponse (activite_01 / q1)</h2>
+  <label>Contenu</label>
+  <textarea id="contenu" rows="3" placeholder="Écris ta réponse ici…"></textarea>
+  <button class="btn-primary" onclick="posterReponse()">Envoyer</button>
+  <div id="post-status" style="font-size:.85rem;margin-top:8px;"></div>
+</section>
+
+<!-- ── Réponses du groupe ── -->
+<section>
+  <h2>Réponses du groupe (activite_01)</h2>
+  <button class="btn-primary" onclick="chargerReponses()">Actualiser</button>
+  <div id="groupe-info" style="font-size:.8rem;color:#777;margin-top:8px;"></div>
+  <div id="reponses-list"></div>
+</section>
+
+<script>
+  function setStatus(el, msg, ok) {
+    el.textContent = msg;
+    el.className = ok ? "ok" : "err";
+  }
+
+  async function login() {
+    const identifiant  = document.getElementById("login-id").value.trim();
+    const mot_de_passe = document.getElementById("login-pwd").value;
+    const statusEl     = document.getElementById("status");
+    try {
+      const r = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifiant, mot_de_passe }),
+      });
+      const data = await r.json();
+      if (r.ok) {
+        document.getElementById("who").textContent = "Connecté : " + data.identifiant;
+        setStatus(statusEl, "Connexion réussie !", true);
+        chargerReponses();
+      } else {
+        setStatus(statusEl, data.erreur || "Erreur", false);
+      }
+    } catch (e) {
+      setStatus(statusEl, "Erreur réseau : " + e.message, false);
+    }
+  }
+
+  async function logout() {
+    await fetch("/api/logout", { method: "POST" });
+    document.getElementById("who").textContent = "Non connecté";
+    setStatus(document.getElementById("status"), "Déconnecté.", true);
+    document.getElementById("reponses-list").innerHTML = "";
+    document.getElementById("groupe-info").textContent = "";
+  }
+
+  async function chargerReponses() {
+    const listEl = document.getElementById("reponses-list");
+    const infoEl = document.getElementById("groupe-info");
+    try {
+      const r = await fetch("/api/reponses?activite=activite_01");
+      const data = await r.json();
+      if (!r.ok) {
+        listEl.innerHTML = `<em style="color:#991b1b">${data.erreur}</em>`;
+        infoEl.textContent = "";
+        return;
+      }
+      infoEl.textContent = "Groupe n°" + data.numero_groupe;
+      if (data.reponses.length === 0) {
+        listEl.innerHTML = "<em>Aucune réponse pour l'instant.</em>";
+        return;
+      }
+      listEl.innerHTML = data.reponses.map(rep => `
+        <div class="reponse-item">
+          <strong>${rep.question_id}</strong> : ${rep.contenu}
+          <div class="reponse-meta">Modifié le ${rep.modifie_le.replace("T", " ").slice(0, 19)} UTC</div>
+        </div>
+      `).join("");
+    } catch (e) {
+      listEl.innerHTML = `<em style="color:#991b1b">Erreur réseau : ${e.message}</em>`;
+    }
+  }
+
+  async function posterReponse() {
+    const contenu  = document.getElementById("contenu").value.trim();
+    const statusEl = document.getElementById("post-status");
+    try {
+      const r = await fetch("/api/reponses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activite_slug: "activite_01", question_id: "q1", contenu }),
+      });
+      const data = await r.json();
+      statusEl.textContent = r.ok ? "✓ " + data.message : "✗ " + (data.erreur || "Erreur");
+      statusEl.style.color = r.ok ? "#065f46" : "#991b1b";
+      if (r.ok) chargerReponses();
+    } catch (e) {
+      statusEl.textContent = "Erreur réseau : " + e.message;
+      statusEl.style.color = "#991b1b";
+    }
+  }
+</script>
+</body>
+</html>

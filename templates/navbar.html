@@ -1,0 +1,663 @@
+<!--
+    navbar.html — filled by page_builder.build_navbar_html()
+    {{menu}}        → generated dropdown HTML
+    {{search_data}} → JSON array [{title, url}, ...]
+-->
+<nav class="navbar">
+    <div class="logo"><a href="/index.html">Technologie</a></div>
+    <div class="menu">{{menu}}</div>
+    <div class="search">
+        <input type="text" id="search-input" placeholder="Rechercher…" autocomplete="off">
+        <div id="search-results"></div>
+    </div>
+    <div class="auth-widget" id="auth-widget"></div>
+</nav>
+
+<script>
+(function () {
+    const allPages = {{search_data}};
+    const input    = document.getElementById("search-input");
+    const results  = document.getElementById("search-results");
+
+    input.addEventListener("input", function () {
+        const query = input.value.trim().toLowerCase();
+        results.innerHTML = "";
+        if (query.length < 2) return;
+
+        allPages
+            .filter(p => p.title.toLowerCase().includes(query))
+            .forEach(p => {
+                const a       = document.createElement("a");
+                a.href        = p.url;
+                a.textContent = p.title;
+                results.appendChild(a);
+            });
+    });
+
+    document.addEventListener("click", e => {
+        if (!e.target.closest(".search")) results.innerHTML = "";
+    });
+})();
+</script>
+
+<script>
+(function () {
+    const widget = document.getElementById("auth-widget");
+
+    document.addEventListener("click", e => {
+        const dd = document.getElementById("auth-dropdown");
+        if (dd && !e.target.closest(".auth-widget")) dd.classList.remove("open");
+    });
+
+    function renderLogin(errMsg) {
+        widget.innerHTML =
+            '<form class="auth-login-form" id="auth-form">' +
+                '<input type="text"     id="auth-id"  placeholder="Identifiant" autocomplete="username">' +
+                '<input type="password" id="auth-pwd" placeholder="Mot de passe" autocomplete="current-password">' +
+                '<button type="submit">Connexion</button>' +
+            '</form>' +
+            (errMsg ? '<span class="auth-error">' + errMsg + '</span>' : '');
+
+        document.getElementById("auth-form").addEventListener("submit", async function (e) {
+            e.preventDefault();
+            const identifiant  = document.getElementById("auth-id").value.trim();
+            const mot_de_passe = document.getElementById("auth-pwd").value;
+            try {
+                const r = await fetch("/api/login", {
+                    method:  "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body:    JSON.stringify({ identifiant, mot_de_passe }),
+                });
+                if (r.ok) { loadSession(); }
+                else       { renderLogin("Identifiant ou mot de passe incorrect"); }
+            } catch (err) {
+                renderLogin("Erreur réseau");
+            }
+        });
+    }
+
+    function renderUser(data) {
+        var groupesHtml = data.groupes.length === 0
+            ? '<div class="auth-debug-row"><span class="auth-debug-key" style="color:#888">Aucun groupe assigné</span></div>'
+            : data.groupes.map(function (g) {
+                return '<div class="auth-debug-row">' +
+                    '<span class="auth-debug-key">' + g.activite_slug + '</span>' +
+                    '<span class="auth-debug-val">groupe ' + g.numero_groupe + '</span>' +
+                '</div>';
+              }).join("");
+
+        var niveauHtml = data.niveau
+            ? '<div class="auth-debug-row">' +
+                  '<span class="auth-debug-key">niveau</span>' +
+                  '<span class="auth-debug-val">' + data.niveau + '</span>' +
+              '</div>'
+            : '';
+
+        var classeHtml = data.classe
+            ? '<div class="auth-debug-row">' +
+                  '<span class="auth-debug-key">classe</span>' +
+                  '<span class="auth-debug-val" style="font-weight:600;color:#6d28d9">' + data.classe + '</span>' +
+              '</div>'
+            : '';
+
+        widget.innerHTML =
+            '<div class="auth-badge" id="auth-badge">' + data.identifiant + '</div>' +
+            '<div class="auth-dropdown" id="auth-dropdown">' +
+                '<a class="auth-mon-espace-link" href="/mon-espace">Mon espace</a>' +
+                '<h3 style="margin-top:12px">Mon compte</h3>' +
+                '<div class="auth-debug-row">' +
+                    '<span class="auth-debug-key">identifiant</span>' +
+                    '<span class="auth-debug-val">' + data.identifiant + '</span>' +
+                '</div>' +
+                niveauHtml +
+                classeHtml +
+                '<h3 style="margin-top:10px">Mes groupes</h3>' +
+                groupesHtml +
+                '<button class="auth-logout-btn" id="auth-logout">Se déconnecter</button>' +
+                '<div class="auth-notes-section">' +
+                    '<h3 style="margin-top:0">Bloc-notes</h3>' +
+                    '<button class="auth-new-note-btn" id="auth-new-note">＋ Nouveau bloc-note</button>' +
+                    '<div id="auth-notes-list"></div>' +
+                '</div>' +
+            '</div>';
+
+        document.getElementById("auth-badge").addEventListener("click", function (e) {
+            e.stopPropagation();
+            document.getElementById("auth-dropdown").classList.toggle("open");
+        });
+
+        document.getElementById("auth-logout").addEventListener("click", async function () {
+            await fetch("/api/logout", { method: "POST" });
+            window.BlocNotes && window.BlocNotes.destroy();
+            renderLogin();
+        });
+
+        document.getElementById("auth-new-note").addEventListener("click", function () {
+            window.BlocNotes && window.BlocNotes.createNote();
+            document.getElementById("auth-dropdown").classList.remove("open");
+        });
+
+        window.BlocNotes && window.BlocNotes.init();
+    }
+
+    async function loadSession() {
+        try {
+            const r    = await fetch("/api/me");
+            const data = await r.json();
+            if (r.ok && data.connecte) { renderUser(data); }
+            else                       { renderLogin(); }
+        } catch (err) {
+            renderLogin();
+        }
+    }
+
+    loadSession();
+})();
+</script>
+
+<script>
+(function () {
+    'use strict';
+
+    var panels     = {};   // bnId → { el, visible, cree_le }
+    var saveTimers = {};   // bnId → timeout handle
+
+    // ── Persistance position/état dans localStorage ───────
+
+    function saveUI(id, patch) {
+        var key  = 'bn_ui_' + id;
+        var prev = {};
+        try { prev = JSON.parse(localStorage.getItem(key)) || {}; } catch (e) {}
+        localStorage.setItem(key, JSON.stringify(Object.assign(prev, patch)));
+    }
+
+    function loadUI(id) {
+        try { return JSON.parse(localStorage.getItem('bn_ui_' + id)) || {}; }
+        catch (e) { return {}; }
+    }
+
+    // ── Sérialisation contenu (texte + dessin) ────────────
+
+    function parseContent(raw) {
+        try {
+            var obj = JSON.parse(raw);
+            if (obj && typeof obj === 'object' && 'text' in obj) return obj;
+        } catch (e) {}
+        return { text: raw || '', canvas: '' };
+    }
+
+    function buildContent(panel) {
+        var textarea  = panel.querySelector('.bn-textarea');
+        var canvas    = panel.querySelector('.bn-canvas');
+        var text      = textarea ? textarea.value : '';
+        var canvasUrl = (canvas && canvas.dataset.hasDrawing) ? canvas.toDataURL() : '';
+        return JSON.stringify({ text: text, canvas: canvasUrl });
+    }
+
+    // ── Auto-sauvegarde (debounce 2 s) ───────────────────
+
+    function triggerSave(id) {
+        clearTimeout(saveTimers[id]);
+        var info = panels[id];
+        if (!info) return;
+        var status = info.el.querySelector('.bn-status');
+        if (status) status.textContent = '…';
+        saveTimers[id] = setTimeout(function () {
+            fetch('/api/notes-volantes/' + id, {
+                method:  'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ contenu: buildContent(info.el) }),
+            }).then(function (r) {
+                if (!status) return;
+                status.textContent = r.ok ? 'Sauvegardé' : 'Erreur';
+                setTimeout(function () { if (status) status.textContent = ''; }, 2000);
+            }).catch(function () {
+                if (status) status.textContent = 'Erreur réseau';
+            });
+        }, 2000);
+    }
+
+    // ── Canvas – dessin, gomme, formes, flèches ──────────
+
+    function initCanvas(canvas, colorIn, sizeIn, toolSelect) {
+        var ctx        = canvas.getContext('2d');
+        var drawing    = false;
+        var history    = [];
+        var shapeState = null;   // { start:{x,y}, snapshot:ImageData }
+
+        function getPos(e) {
+            var r = canvas.getBoundingClientRect();
+            return {
+                x: (e.clientX - r.left) * (canvas.width  / r.width),
+                y: (e.clientY - r.top)  * (canvas.height / r.height),
+            };
+        }
+
+        function tool() { return toolSelect.value; }
+
+        function styleCtx(t) {
+            ctx.globalCompositeOperation = (t === 'eraser') ? 'destination-out' : 'source-over';
+            ctx.strokeStyle = (t === 'eraser') ? 'rgba(0,0,0,1)' : colorIn.value;
+            ctx.fillStyle   = colorIn.value;
+            ctx.lineWidth   = parseInt(sizeIn.value, 10) * (t === 'eraser' ? 4 : 1);
+            ctx.lineCap     = 'round';
+            ctx.lineJoin    = 'round';
+        }
+
+        function saveHistory() {
+            history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+            if (history.length > 20) history.shift();
+        }
+
+        function drawArrow(s, e) {
+            var angle   = Math.atan2(e.y - s.y, e.x - s.x);
+            var headLen = Math.max(12, parseInt(sizeIn.value, 10) * 5);
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = colorIn.value;
+            ctx.fillStyle   = colorIn.value;
+            ctx.lineWidth   = parseInt(sizeIn.value, 10);
+            ctx.lineCap     = 'round';
+            ctx.beginPath();
+            ctx.moveTo(s.x, s.y);
+            ctx.lineTo(e.x - Math.cos(angle) * headLen * 0.5, e.y - Math.sin(angle) * headLen * 0.5);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(e.x, e.y);
+            ctx.lineTo(e.x - headLen * Math.cos(angle - Math.PI / 6), e.y - headLen * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(e.x - headLen * Math.cos(angle + Math.PI / 6), e.y - headLen * Math.sin(angle + Math.PI / 6));
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawShape(t, s, e) {
+            if (t === 'arrow') { drawArrow(s, e); return; }
+            styleCtx(t);
+            ctx.beginPath();
+            if (t === 'line') {
+                ctx.moveTo(s.x, s.y);
+                ctx.lineTo(e.x, e.y);
+                ctx.stroke();
+            } else if (t === 'rect') {
+                ctx.rect(s.x, s.y, e.x - s.x, e.y - s.y);
+                ctx.stroke();
+            } else if (t === 'circle') {
+                var rx = Math.abs(e.x - s.x) / 2;
+                var ry = Math.abs(e.y - s.y) / 2;
+                ctx.ellipse(s.x + (e.x - s.x) / 2, s.y + (e.y - s.y) / 2, Math.max(rx, 1), Math.max(ry, 1), 0, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        function cancelShape() {
+            if (!shapeState) return;
+            ctx.putImageData(shapeState.snapshot, 0, 0);
+            canvas.classList.remove('bn-placing');
+            shapeState = null;
+        }
+
+        // ── Crayon / Gomme : mousedown → drag → mouseup ───
+
+        canvas.addEventListener('mousedown', function (e) {
+            var t = tool();
+            if (t !== 'pencil' && t !== 'eraser') return;
+            drawing = true;
+            saveHistory();
+            styleCtx(t);
+            var p = getPos(e);
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            canvas.dataset.hasDrawing = '1';
+        });
+
+        canvas.addEventListener('mousemove', function (e) {
+            var p = getPos(e);
+            if (shapeState) {
+                ctx.putImageData(shapeState.snapshot, 0, 0);
+                drawShape(tool(), shapeState.start, p);
+            }
+            if (!drawing) return;
+            ctx.lineTo(p.x, p.y);
+            ctx.stroke();
+        });
+
+        function endDraw() {
+            if (drawing) ctx.globalCompositeOperation = 'source-over';
+            drawing = false;
+        }
+        canvas.addEventListener('mouseup',    endDraw);
+        canvas.addEventListener('mouseleave', endDraw);
+
+        // ── Formes / flèches : 1er clic → aperçu → 2e clic ─
+
+        canvas.addEventListener('click', function (e) {
+            var t = tool();
+            if (!['line', 'arrow', 'rect', 'circle'].includes(t)) return;
+            var p = getPos(e);
+            if (!shapeState) {
+                shapeState = { start: p, snapshot: ctx.getImageData(0, 0, canvas.width, canvas.height) };
+                canvas.classList.add('bn-placing');
+            } else {
+                ctx.putImageData(shapeState.snapshot, 0, 0);
+                saveHistory();
+                drawShape(t, shapeState.start, p);
+                canvas.dataset.hasDrawing = '1';
+                canvas.classList.remove('bn-placing');
+                shapeState = null;
+            }
+        });
+
+        // Changer d'outil ou Échap annule la forme en cours
+        toolSelect.addEventListener('change', cancelShape);
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') cancelShape();
+        });
+
+        return {
+            undo: function () {
+                if (shapeState) { cancelShape(); return; }
+                if (history.length) ctx.putImageData(history.pop(), 0, 0);
+            },
+            clearAll: function () {
+                saveHistory();
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                delete canvas.dataset.hasDrawing;
+            },
+        };
+    }
+
+    function restoreCanvas(canvas, dataUrl) {
+        if (!dataUrl) return;
+        var img = new Image();
+        img.onload = function () {
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            canvas.dataset.hasDrawing = '1';
+        };
+        img.src = dataUrl;
+    }
+
+    // ── Drag ─────────────────────────────────────────────
+
+    function makeDraggable(panel, header) {
+        var active = false, ox = 0, oy = 0;
+
+        header.addEventListener('mousedown', function (e) {
+            if (e.target.tagName === 'BUTTON') return;
+            active = true;
+            var r = panel.getBoundingClientRect();
+            ox = e.clientX - r.left;
+            oy = e.clientY - r.top;
+            panel.style.userSelect = 'none';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', function (e) {
+            if (!active) return;
+            var x = Math.max(0, Math.min(e.clientX - ox, window.innerWidth  - panel.offsetWidth));
+            var y = Math.max(0, Math.min(e.clientY - oy, window.innerHeight - panel.offsetHeight));
+            panel.style.left = x + 'px';
+            panel.style.top  = y + 'px';
+        });
+
+        document.addEventListener('mouseup', function () {
+            if (!active) return;
+            active = false;
+            panel.style.userSelect = '';
+            var r  = panel.getBoundingClientRect();
+            saveUI(panel.dataset.bnId, { x: r.left, y: r.top });
+        });
+    }
+
+    // ── Liste dans le dropdown auth ───────────────────────
+
+    function formatDate(isoStr) {
+        try {
+            return new Date(isoStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+        } catch (e) { return 'Note ' + isoStr; }
+    }
+
+    function refreshDropdownList() {
+        var list = document.getElementById('auth-notes-list');
+        if (!list) return;
+        var ids = Object.keys(panels);
+        if (ids.length === 0) {
+            list.innerHTML = '<div style="font-size:11px;color:#aaa;padding:4px 0">Aucun bloc-note</div>';
+            return;
+        }
+        list.innerHTML = ids.map(function (id) {
+            var info    = panels[id];
+            var visible = info && info.visible;
+            var label   = info && info.cree_le ? formatDate(info.cree_le) : 'Note ' + id;
+            return '<div class="auth-note-item">' +
+                '<span class="auth-note-date">' + label + '</span>' +
+                '<button class="auth-note-show-btn' + (visible ? ' visible' : '') + '" data-bn-id="' + id + '">' +
+                    (visible ? 'Masquer' : 'Afficher') +
+                '</button>' +
+            '</div>';
+        }).join('');
+
+        list.querySelectorAll('.auth-note-show-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var id    = btn.dataset.bnId;
+                var info  = panels[id];
+                if (!info) return;
+                var hiding       = info.visible;
+                info.el.style.display = hiding ? 'none' : '';
+                info.visible          = !hiding;
+                btn.classList.toggle('visible', !hiding);
+                btn.textContent = hiding ? 'Afficher' : 'Masquer';
+                saveUI(id, { hidden: hiding });
+            });
+        });
+    }
+
+    // ── Création du panneau DOM ───────────────────────────
+
+    function createPanel(note) {
+        var id      = note.id;
+        var content = parseContent(note.contenu);
+        var ui      = loadUI(id);
+
+        var count     = Object.keys(panels).length;
+        var x         = ui.x !== undefined ? ui.x : 20 + count * 22;
+        var y         = ui.y !== undefined ? ui.y : 80 + count * 22;
+        var w         = ui.w || 300;
+        var h         = ui.h || 260;
+        var mode      = ui.mode || 'text';
+        var collapsed = !!ui.collapsed;
+
+        var panel = document.createElement('div');
+        panel.className    = 'bn-panel' + (collapsed ? ' bn-collapsed' : '');
+        panel.dataset.bnId = id;
+        panel.style.cssText = 'left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + h + 'px;';
+
+        panel.innerHTML =
+            '<div class="bn-header">' +
+                '<span class="bn-title">Bloc-note</span>' +
+                '<div class="bn-header-btns">' +
+                    '<button class="bn-btn bn-btn-toggle" title="' + (collapsed ? 'Agrandir' : 'Réduire') + '">' + (collapsed ? '+' : '−') + '</button>' +
+                    '<button class="bn-btn bn-btn-delete" title="Supprimer">✕</button>' +
+                '</div>' +
+            '</div>' +
+            '<div class="bn-body">' +
+                '<div class="bn-tabs">' +
+                    '<button class="bn-tab' + (mode === 'text' ? ' active' : '') + '" data-mode="text">Texte</button>' +
+                    '<button class="bn-tab' + (mode === 'draw' ? ' active' : '') + '" data-mode="draw">Dessin</button>' +
+                '</div>' +
+                '<textarea class="bn-textarea" placeholder="Vos notes ici…"' + (mode !== 'text' ? ' style="display:none"' : '') + '></textarea>' +
+                '<canvas class="bn-canvas"' + (mode !== 'draw' ? ' style="display:none"' : '') + '></canvas>' +
+                '<div class="bn-draw-toolbar"' + (mode !== 'draw' ? ' style="display:none"' : '') + '>' +
+                    '<select class="bn-tool" title="Outil">' +
+                        '<option value="pencil">✏ Crayon</option>' +
+                        '<option value="eraser">◻ Gomme</option>' +
+                        '<option value="line">⎯ Ligne</option>' +
+                        '<option value="arrow">➜ Flèche</option>' +
+                        '<option value="rect">▭ Rectangle</option>' +
+                        '<option value="circle">◯ Cercle</option>' +
+                    '</select>' +
+                    '<input type="color" class="bn-color" value="#222222" title="Couleur">' +
+                    '<input type="range" class="bn-size" min="1" max="20" value="3" title="Épaisseur">' +
+                    '<button class="bn-btn bn-btn-undo" title="Annuler (↩)">↩</button>' +
+                    '<button class="bn-btn bn-btn-clear" title="Tout effacer">🗑</button>' +
+                '</div>' +
+                '<div class="bn-status"></div>' +
+            '</div>';
+
+        document.body.appendChild(panel);
+
+        // Remplissage du textarea après injection (évite l'échappement HTML)
+        var textarea = panel.querySelector('.bn-textarea');
+        textarea.value = content.text || '';
+
+        var header    = panel.querySelector('.bn-header');
+        var btnToggle = panel.querySelector('.bn-btn-toggle');
+        var btnDelete = panel.querySelector('.bn-btn-delete');
+        var tabs      = panel.querySelectorAll('.bn-tab');
+        var canvas    = panel.querySelector('.bn-canvas');
+        var toolbar   = panel.querySelector('.bn-draw-toolbar');
+        var colorIn    = panel.querySelector('.bn-color');
+        var sizeIn     = panel.querySelector('.bn-size');
+        var toolSelect = panel.querySelector('.bn-tool');
+        var btnUndo    = panel.querySelector('.bn-btn-undo');
+        var btnClear   = panel.querySelector('.bn-btn-clear');
+        var canvasMethods = null;   // { undo(), clearAll() } – initialisé quand le canvas est actif
+
+        makeDraggable(panel, header);
+
+        // Sauvegarde taille après redimensionnement natif (CSS resize)
+        if (window.ResizeObserver) {
+            var resizeTimer;
+            new ResizeObserver(function () {
+                if (panel.classList.contains('bn-collapsed')) return;
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function () {
+                    saveUI(id, { w: panel.offsetWidth, h: panel.offsetHeight });
+                }, 300);
+            }).observe(panel);
+        }
+
+        // Réduire / agrandir
+        btnToggle.addEventListener('click', function () {
+            var nowCollapsed = panel.classList.toggle('bn-collapsed');
+            btnToggle.textContent = nowCollapsed ? '+' : '−';
+            btnToggle.title       = nowCollapsed ? 'Agrandir' : 'Réduire';
+            saveUI(id, { collapsed: nowCollapsed });
+        });
+
+        // Supprimer
+        btnDelete.addEventListener('click', function () {
+            if (!confirm('Supprimer ce bloc-note ?')) return;
+            fetch('/api/notes-volantes/' + id, { method: 'DELETE' }).then(function () {
+                panel.remove();
+                delete panels[id];
+                clearTimeout(saveTimers[id]);
+                localStorage.removeItem('bn_ui_' + id);
+                refreshDropdownList();
+            });
+        });
+
+        // Basculement onglet Texte ↔ Dessin
+        tabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                var newMode = tab.dataset.mode;
+                if (newMode === mode) return;
+                mode = newMode;
+                tabs.forEach(function (t) { t.classList.toggle('active', t.dataset.mode === newMode); });
+
+                if (newMode === 'text') {
+                    textarea.style.display = '';
+                    canvas.style.display   = 'none';
+                    toolbar.style.display  = 'none';
+                } else {
+                    textarea.style.display = 'none';
+                    canvas.style.display   = '';
+                    toolbar.style.display  = '';
+                    if (!canvas.dataset.bnInit) {
+                        canvas.width          = canvas.offsetWidth  || 280;
+                        canvas.height         = canvas.offsetHeight || 180;
+                        canvas.dataset.bnInit = '1';
+                        canvasMethods = initCanvas(canvas, colorIn, sizeIn, toolSelect);
+                        if (content.canvas) restoreCanvas(canvas, content.canvas);
+                    }
+                }
+                saveUI(id, { mode: newMode });
+            });
+        });
+
+        // Initialisation canvas si on démarre en mode dessin
+        if (mode === 'draw') {
+            requestAnimationFrame(function () {
+                canvas.width          = canvas.offsetWidth  || 280;
+                canvas.height         = canvas.offsetHeight || 180;
+                canvas.dataset.bnInit = '1';
+                canvasMethods = initCanvas(canvas, colorIn, sizeIn, toolSelect);
+                if (content.canvas) restoreCanvas(canvas, content.canvas);
+            });
+        }
+
+        // Auto-save texte
+        textarea.addEventListener('input', function () { triggerSave(id); });
+
+        // Sauvegarde après fin de trait ou forme validée
+        canvas.addEventListener('mouseup', function () { triggerSave(id); });
+        canvas.addEventListener('click',   function () { triggerSave(id); });
+
+        // Annuler la dernière action
+        btnUndo.addEventListener('click', function () {
+            if (canvasMethods) canvasMethods.undo();
+        });
+
+        // Tout effacer
+        btnClear.addEventListener('click', function () {
+            if (canvasMethods) canvasMethods.clearAll();
+            triggerSave(id);
+        });
+
+        panels[id] = { el: panel, visible: true, cree_le: note.cree_le };
+        return panel;
+    }
+
+    // ── Interface publique (appelée depuis le script auth) ─
+
+    window.BlocNotes = {
+        init: function () {
+            fetch('/api/notes-volantes')
+                .then(function (r) { return r.ok ? r.json() : []; })
+                .then(function (notes) {
+                    notes.forEach(function (note) {
+                        if (panels[note.id]) return;
+                        var p  = createPanel(note);
+                        var ui = loadUI(note.id);
+                        if (ui.hidden) { p.style.display = 'none'; panels[note.id].visible = false; }
+                    });
+                    refreshDropdownList();
+                })
+                .catch(function () {});
+        },
+
+        destroy: function () {
+            Object.keys(panels).forEach(function (id) {
+                if (panels[id] && panels[id].el) panels[id].el.remove();
+                clearTimeout(saveTimers[id]);
+            });
+            panels     = {};
+            saveTimers = {};
+            var list = document.getElementById('auth-notes-list');
+            if (list) list.innerHTML = '';
+        },
+
+        createNote: function () {
+            fetch('/api/notes-volantes', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ contenu: '' }),
+            })
+                .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+                .then(function (note) {
+                    createPanel(note);
+                    refreshDropdownList();
+                })
+                .catch(function () { alert('Impossible de créer le bloc-note.'); });
+        },
+    };
+})();
+</script>

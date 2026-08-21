@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulateur CMD — démo du moteur</title>
+  <link rel="stylesheet" href="./ui/terminal.css">
+  <link rel="stylesheet" href="./ui/theme.css">
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--term-fond);
+      color: var(--term-gris);
+      font-family: var(--term-police);
+      padding: 24px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 18px;
+      letter-spacing: 0.12em;
+      color: var(--term-cyan);
+      text-shadow: 0 0 12px rgba(65, 231, 255, 0.35);
+    }
+    p { text-align: center; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>### DÉMO — MOTEUR DU SIMULATEUR ###</h1>
+  <p>Machine d'exemple. Appuie sur [Entrée] pour l'allumer, puis tape « help ».</p>
+  <div id="terminal"></div>
+
+  <script type="module">
+    import { Machine, Terminal } from "./engine.js";
+
+    const machine = Machine.create(
+      {
+        hostname: "demo-01",
+        user: "visiteur",
+        theme: "hacker",
+        motd: [
+          "[[titre]]########################################[[/]]",
+          "[[titre]]##   D E M O  ·  TECHNO-OS  v3        ##[[/]]",
+          "[[titre]]########################################[[/]]",
+          "",
+          "[[gris]]Machine de démonstration — fais ce que tu veux, rien n'est sauvegardé.[[/]]",
+          "[[gris]]Tape[[/]] [[jaune]]help[[/]] [[gris]]pour la liste des commandes.[[/]]",
+        ].join("\n"),
+      },
+      {
+        "/home/visiteur/bienvenue.txt":
+          "Ceci est un fichier d'exemple.\nEssaie : ls, cat, tree, mkdir, edit…\n",
+        "/home/visiteur/Documents/": null,
+        "/home/visiteur/Documents/.secret": "Chut. Les fichiers cachés existent (ls -a).\n",
+      }
+    );
+
+    Terminal.mount(document.getElementById("terminal"), machine, {});
+  </script>
+</body>
+</html>

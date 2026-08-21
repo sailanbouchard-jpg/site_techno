@@ -1,0 +1,187 @@
+/*
+  terminal.css — STRUCTURE ET LAYOUT UNIQUEMENT.
+
+  Aucune couleur, aucune dimension « de goût » ici : tout le visuel
+  (couleurs, police, taille d'écran, espacements, effets) vit dans
+  theme.css, l'équivalent des fichiers .palette du site.
+  Pour changer l'apparence → modifie theme.css, jamais ce fichier.
+*/
+
+/* ── Cadre général ── */
+
+.sim-terminal {
+  display: flex;
+  justify-content: center;
+}
+
+.term-cadre {
+  width: var(--term-largeur);
+  max-width: 100%;
+  border-radius: var(--term-rayon);
+  border: 1px solid var(--term-bordure);
+  box-shadow: var(--term-ombre);
+  background: var(--term-fond-cadre);
+  font-family: var(--term-police);
+  font-size: var(--term-taille);
+  overflow: hidden;
+}
+
+/* ── Barre de fenêtre (façon « fenêtre système ») ── */
+
+.term-barre {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--term-barre-hauteur);
+  padding: var(--term-barre-espacement);
+  background: var(--term-barre-fond);
+  border-bottom: 1px solid var(--term-bordure);
+}
+
+.term-barre-points {
+  display: inline-flex;
+  gap: 7px;
+}
+
+.term-barre-points i {
+  width: var(--term-point-taille);
+  height: var(--term-point-taille);
+  border-radius: 50%;
+}
+
+.term-barre-points i:nth-child(1) { background: var(--term-point-1); }
+.term-barre-points i:nth-child(2) { background: var(--term-point-2); }
+.term-barre-points i:nth-child(3) { background: var(--term-point-3); }
+
+.term-barre-titre {
+  color: var(--term-barre-texte);
+  font-size: var(--term-barre-taille-texte);
+  letter-spacing: var(--term-barre-espacement-lettres);
+}
+
+/* ── Écran ── */
+
+.term-ecran {
+  position: relative;
+  height: var(--term-hauteur);
+  background: var(--term-fond);
+  color: var(--term-texte);
+  line-height: var(--term-interligne);
+  text-shadow: var(--term-lueur);
+  overflow: hidden;
+}
+
+/* Zone défilante (la sortie + la ligne de saisie) */
+.term-defile {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  padding: var(--term-espacement);
+  scrollbar-width: thin;
+  scrollbar-color: var(--term-ascenseur) transparent;
+}
+
+/* Effet scanlines type écran cathodique (réglable dans theme.css) */
+.term-ecran::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 2px,
+    var(--term-scanline) 2px 3px
+  );
+  opacity: var(--term-scanline-opacite);
+  z-index: 2;
+}
+
+/* ── Sortie ── */
+
+.term-sortie div {
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 1em;
+}
+
+.term-err {
+  color: var(--term-rouge);
+}
+
+/* ── Ligne de saisie ── */
+
+.term-saisie {
+  display: flex;
+  align-items: baseline;
+}
+
+.term-saisie.term-cache-saisie {
+  display: none;
+}
+
+.term-invite {
+  white-space: pre;
+  flex-shrink: 0;
+}
+
+.term-entree {
+  flex: 1;
+  min-width: 40px;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-shadow: inherit;
+  caret-color: var(--term-caret);
+}
+
+/* ── Éditeur plein écran ── */
+
+.term-editeur {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  background: var(--term-fond);
+}
+
+.term-editeur-entete {
+  padding: var(--term-editeur-espacement);
+  background: var(--term-editeur-bande-fond);
+  color: var(--term-editeur-bande-texte);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.term-editeur-zone {
+  flex: 1;
+  resize: none;
+  border: none;
+  outline: none;
+  padding: var(--term-espacement);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  caret-color: var(--term-caret);
+}
+
+.term-editeur-pied {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: var(--term-editeur-espacement);
+  background: var(--term-editeur-bande-fond);
+  color: var(--term-editeur-bande-texte);
+  font-size: var(--term-editeur-taille-pied);
+}
+
+.term-editeur-statut.est-ok     { color: var(--term-vert); }
+.term-editeur-statut.est-alerte { color: var(--term-jaune); }
+.term-editeur-statut.est-erreur { color: var(--term-rouge); }

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Technologie — Collège</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    {{navbar}}
+    <main>
+        <section class="home-hero">
+            <h1 class="heading heading-1">À quoi ça sert, tout ça ?</h1>
+            <p class="home-lead">
+                « Je vais jamais coder », « je serai pas ingénieur », « ça m'avancera à rien »...
+                On se dit souvent ça en cours de technologie. C'est une vraie question.
+                Voici une vraie réponse.
+            </p>
+        </section>
+
+        <section class="home-block home-cta">
+            <h2 class="heading heading-2">Tester un simulateur</h2>
+            <p class="text">
+                Un simulateur de structures 2D est disponible : place des nœuds, relie-les par des
+                poutres, ancre-les au sol, puis observe comment la structure se déforme sous la
+                gravité et des efforts appliqués.
+            </p>
+            <a class="home-cta-btn" href="/simulateur-structures/">Lancer le simulateur de structures</a>
+        </section>
+
+        <section class="home-block">
+            <h2 class="heading heading-2">Apprendre à choisir, pas à réciter</h2>
+            <p class="text">
+                Un jour, une ampoule de ta maison va griller. Pour la remplacer, il faut aller au
+                magasin — et là, des dizaines de modèles : culot à vis ou à baïonnette, LED ou
+                halogène, blanc chaud ou blanc froid, 5 watts ou 60 watts... Si tu ne comprends rien
+                à tout ça, tu achètes au hasard, tu te trompes, tu retournes au magasin. Si tu
+                comprends un minimum comment marche une ampoule, tu choisis la bonne en trente
+                secondes.
+            </p>
+            <p class="text">
+                C'est exactement pour ça qu'on apprend la technologie : pas pour devenir ingénieur,
+                mais pour ne plus jamais être démuni devant un objet technique — une ampoule, un
+                chargeur de téléphone, un vélo électrique, une imprimante qui ne marche plus.
+            </p>
+        </section>
+
+        <section class="home-block">
+            <h2 class="heading heading-2">Comprendre les débats, pas les subir</h2>
+            <p class="text">
+                Tu as sûrement déjà entendu une grande discussion d'adultes : « les voitures
+                électriques, c'est l'avenir » contre « les voitures électriques, c'est pire pour la
+                planète ». Qui a raison ? En réalité, personne n'a totalement raison ni totalement
+                tort : une voiture électrique ne rejette rien par le pot d'échappement, mais sa
+                batterie demande d'extraire des métaux quelque part dans le monde, et la recharger
+                prend souvent plus de temps que faire le plein.
+            </p>
+            <p class="text">
+                Si tu comprends comment marche un moteur, une batterie, une chaîne d'énergie, tu n'as
+                plus besoin de croire quelqu'un sur parole. Tu peux comparer toi-même. Et ça, c'est un
+                vrai pouvoir : ne pas se faire avoir par celui qui crie le plus fort.
+            </p>
+        </section>
+
+        <section class="home-block">
+            <h2 class="heading heading-2">Rien n'est parfait — tout se compare</h2>
+            <p class="text">
+                Il n'existe pas d'objet miracle. Une lessive qui « lave plus blanc que blanc », un
+                téléphone « indestructible », un appareil qui « ne consomme presque rien »... à
+                chaque fois, il y a un compromis caché : un prix, une limite, un défaut qu'on ne te
+                montre pas dans la pub. Comprendre la technologie, c'est apprendre à repérer ce
+                compromis — et à ne pas tomber dans le panneau.
+            </p>
+        </section>
+
+        <section class="home-block">
+            <h2 class="heading heading-2">Et si tu ne deviens jamais ingénieure ou ingénieur ?</h2>
+            <p class="text">
+                Tu n'apprends pas l'histoire pour devenir historien, ni le sport pour devenir
+                champion olympique, ni le français pour devenir écrivain. Tu apprends tout ça pour
+                devenir un adulte qui comprend le monde dans lequel il vit, et qui sait se débrouiller
+                seul dedans.
+            </p>
+            <p class="text">
+                La technologie, c'est pareil. Tu n'as pas besoin de savoir coder un site internet pour
+                vivre ta vie. Mais tu as besoin de savoir réfléchir, comparer, te poser les bonnes
+                questions devant un objet, une pub ou un débat — parce que ce monde est déjà rempli de
+                technologie, et qu'il en aura encore plus demain, quel que soit le métier que tu
+                choisiras.
+            </p>
+        </section>
+
+        
+
+        <!-- Démo du visualisateur 3D. Rendu WebGL par static/libs/stl_viewer.js.
+             Couleurs/tailles reproduisent la palette [obj3d] (page hors pipeline
+             Markdown, donc valeurs en clair). -->
+        <section class="home-block">
+            <h2 class="heading heading-2">Voir un objet en trois dimensions</h2>
+            <p class="text">
+                Voici un stylo Bic modélisé en 3D, comme on en fabrique avec un logiciel de conception
+                (Tinkercad, par exemple) avant de l'imprimer. Attrape-le avec la souris pour le faire
+                tourner, utilise la molette pour zoomer, et règle la puissance de la lumière.
+            </p>
+            <div class="media media-obj3d" style="max-width: 715px; width: 100%; margin-left: auto; margin-right: auto;">
+                <div class="block-obj3d"
+                     style="--obj3d-fond: #eef2f5; --obj3d-bordure: #d0d7de; --obj3d-rayon: 8px; --obj3d-hauteur: 420px; --obj3d-ctrl-fond: #ffffff; --obj3d-ctrl-bordure: #cbd5e1; --obj3d-ctrl-texte: #1e293b; --obj3d-ctrl-survol: #e2e8f0; --obj3d-accent: #2980b9;"
+                     data-stl="/medias/stl/stylo_bic.stl" data-fond="#eef2f5"
+                     data-couleur-defaut="#b7bdc4" data-lumiere="0.9" data-ambiance="0.45">
+                    <canvas class="obj3d-canvas"></canvas>
+                    <div class="obj3d-message">Chargement du modèle 3D…</div>
+                    <div class="obj3d-controls">
+                        <button type="button" class="obj3d-btn obj3d-zoom" data-dir="in" aria-label="Zoomer" title="Zoomer">+</button>
+                        <button type="button" class="obj3d-btn obj3d-zoom" data-dir="out" aria-label="Dézoomer" title="Dézoomer">−</button>
+                        <button type="button" class="obj3d-btn obj3d-reset" title="Recentrer la vue">Recentrer</button>
+                        <label class="obj3d-light-label" title="Puissance de l'éclairage">Lumière<input type="range" class="obj3d-light" min="0" max="2" step="0.05"></label>
+                    </div>
+                </div>
+                <p class="media-legend">Un stylo Bic en 3D — fais-le tourner, zoome, éclaire-le.</p>
+                <script src="/static/libs/stl_viewer.js" defer></script>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

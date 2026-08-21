@@ -1,0 +1,55 @@
+▶  Build du site…
+▶  Build started
+
+   ✓ site/ cleaned
+   ✓ static/ copied
+   ↓ Icônes de liens externes :
+     ⊙ centre  (cache)
+   ✓ medias/ copied
+   ✓ Media map: 79 fichiers indexés
+   ✓ Palettes loaded: ['defaut', 'sombre']
+   ✓ Templates loaded
+   ✓ Catalog: 28 activités, 20 séquences, 5 classes
+
+   Rendering pages:
+     ✓ 3eme/s01 Utilisation raisonnée de l'IAG/activite_01_etude_eolienne.html
+     ✓ 3eme/s02 Projet handspinner/activité1 Simuler les pertes thermiques annuelles.html
+     ✓ 3eme/s03 Etude éolienne/activité1 Simuler les pertes thermiques annuelles.html
+     ✓ 4eme/s01 Utilisation raisonnée de l'IAG/activité1 Simuler les pertes thermiques annuelles.html
+     ✓ 4eme/s02 Station météo connectée/activité1 Simuler les pertes thermiques annuelles.html
+     ✓ 4eme/s03 Le Canadair/activité1 Simuler les pertes thermiques annuelles.html
+     ✓ 4eme/s04 Les réseaux informatiques/activité1 Simuler les pertes thermiques annuelles.html
+     ✓ 4eme/s05 Les énergies renouvelables/activité1 Simuler les pertes thermiques annuelles.html
+     ✓ 4eme/s06 Gestion du chauffage domestique/activité1 Simuler les pertes thermiques annuelles.html
+     ✓ 4eme/s07 Cycle de vie, le téléphone portable/activité1 Simuler les pertes thermiques annuelles.html
+     ✓ 5eme/s01 Utiliser le réseau informatique du collège/activité1 Simuler les pertes thermiques annuelles.html
+     ✓ 5eme/s02 Les familles d objets/activité1 Simuler les pertes thermiques annuelles.html
+     ✓ 5eme/s03 Les interaction des objets/activité1 Simuler les pertes thermiques annuelles.html
+     ✓ 5eme/s04 Projet lampe de poche/activité1 Simuler les pertes thermiques annuelles.html
+     ✓ 5eme/s05 Courses de Mbots/activité1 Simuler les pertes thermiques annuelles.html
+     ✓ 5eme/s06 Imaginer un conteneur aménagé/activité1 Simuler les pertes thermiques annuelles.html
+     ✓ 5eme/s07 Ponts, simuler et valider le comportement des structures/activité1 Simuler les pertes thermiques annuelles.html
+     ✓ Documents/Fiches de cours/fiches_de_cours.html
+     ✓ entrainement/Besoin_et_cahier_des_charges/Portail_automatique.html
+     ✓ entrainement/Besoin_et_cahier_des_charges/Tramway.html
+     ✓ entrainement/Chaines_fonctionnelles/Avion_radiocommandé.html
+     ✓ entrainement/Chaines_fonctionnelles/Avion_solaire.html
+     ✓ entrainement/Chaines_fonctionnelles/Filtration_piscine.html
+     ✓ entrainement/Chaines_fonctionnelles/Hydrolienne.html
+     ✓ entrainement/Chaines_fonctionnelles/Machine_a_pain.html
+     ✓ entrainement/Chaines_fonctionnelles/Rover_martien.html
+     ✓ entrainement/Chaines_fonctionnelles/schema.html
+     ✓ entrainement/Chaines_fonctionnelles/Trottinette_electrique.html
+
+   ✓ index.html
+   ✓ pages/ copied (2 files)
+
+✔  Build complete — 28 pages written to site/
+
+✓  Base de données prête (data.db)
+✓  Mot de passe admin : admin
+✓  Comptes élèves : lancer seed_test.py pour créer dede01–dede20
+▶  Serveur démarré sur http://127.0.0.1:5000
+
+ * Serving Flask app 'server'
+ * Debug mode: on

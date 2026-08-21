@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Outil d'authoring — Schémas interactifs</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: system-ui, sans-serif;
+            font-size: 15px;
+            background: #f5f5f5;
+            color: #222;
+        }
+
+        header {
+            background: #1e3a5f;
+            color: #fff;
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        header h1 { margin: 0; font-size: 1.1em; font-weight: 600; }
+        header a   { color: #93c5fd; font-size: .85em; margin-left: auto; }
+
+        #auth-gate {
+            max-width: 380px;
+            margin: 80px auto;
+            background: #fff;
+            border-radius: 10px;
+            padding: 32px;
+            box-shadow: 0 2px 12px rgba(0,0,0,.1);
+            text-align: center;
+        }
+        #auth-gate h2  { margin: 0 0 20px; font-size: 1.05em; }
+        #auth-gate input {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1em;
+            margin-bottom: 12px;
+        }
+        #auth-gate button {
+            width: 100%;
+            padding: 9px;
+            background: #1e3a5f;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        #auth-error { color: #dc2626; font-size: .85em; margin-top: 8px; }
+
+        #app { display: none; }
+
+        .toolbar {
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .toolbar label { font-size: .88em; color: #555; }
+        .toolbar select, .toolbar input[type=text], .toolbar input[type=number] {
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: .9em;
+        }
+        .toolbar select { min-width: 220px; }
+        .toolbar input[type=text] { width: 200px; }
+        .toolbar button {
+            padding: 6px 14px;
+            background: #1e3a5f;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: .88em;
+        }
+        .toolbar button:hover { background: #2d5487; }
+        .toolbar-sep { border-left: 1px solid #ddd; height: 24px; }
+        #size-select { width: 80px; }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 0;
+            height: calc(100vh - 105px);
+        }
+
+        /* ── Image panel ── */
+        .image-panel {
+            padding: 20px;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .image-hint {
+            color: #999;
+            font-size: .9em;
+            margin-top: 60px;
+            text-align: center;
+        }
+
+        .schema-wrap {
+            position: relative;
+            display: inline-block;
+            cursor: none;
+            user-select: none;
+        }
+        .schema-wrap img {
+            display: block;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,.15);
+            max-width: 100%;
+        }
+
+        /* Repères d'alignement qui suivent la souris — longs, fins aux extrémités
+           (fondu en dégradé), pour aligner facilement une nouvelle case sur les autres. */
+        .align-guide {
+            position:       absolute;
+            pointer-events: none;
+            z-index:        5;
+            display:        none;
+        }
+        .align-guide-v {
+            top: 0; bottom: 0; width: 1px;
+            background: linear-gradient(to bottom,
+                transparent 0%, rgba(220,38,38,.9) 12%,
+                rgba(220,38,38,.9) 88%, transparent 100%);
+        }
+        .align-guide-h {
+            left: 0; right: 0; height: 1px;
+            background: linear-gradient(to right,
+                transparent 0%, rgba(220,38,38,.9) 12%,
+                rgba(220,38,38,.9) 88%, transparent 100%);
+        }
+
+        /* Zone marker on the image */
+        .zone-marker {
+            position:        absolute;
+            transform:       translate(-50%, -50%);
+            background:      #1e3a5f;
+            color:           #fff;
+            font-size:       .72em;
+            font-weight:     600;
+            padding:         2px 7px;
+            border-radius:   10px;
+            white-space:     nowrap;
+            pointer-events:  auto;
+            cursor:          pointer;
+            box-shadow:      0 1px 4px rgba(0,0,0,.35);
+            transition:      background .15s;
+        }
+        .zone-marker:hover { background: #dc2626; }
+        .zone-marker::after { content: " ✕"; font-weight: 400; opacity: .7; }
+
+        /* Aperçu en pointillés de la taille réelle de la case réponse (largeur mise à
+           l'échelle de l'image affichée à l'écran ; hauteur = 28px, valeur fixe réelle). */
+        .zone-preview {
+            position:       absolute;
+            transform:      translate(-50%, -50%);
+            height:         28px;
+            border:         1.5px dashed #1e3a5f;
+            border-radius:  4px;
+            background:     rgba(30,58,95,.06);
+            pointer-events: none;
+        }
+
+        /* Popup mini-form — réutilisé pour l'ID de zone ET pour les sets d'options */
+        .mini-popup {
+            display:       none;
+            position:      fixed;
+            z-index:       1000;
+            background:    #fff;
+            border:        1px solid #ccc;
+            border-radius: 8px;
+            padding:       14px 16px;
+            box-shadow:    0 4px 16px rgba(0,0,0,.2);
+            min-width:     220px;
+        }
+        .mini-popup p   { margin: 0 0 10px; font-size: .88em; color: #555; }
+        .mini-popup input {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: .95em;
+            margin-bottom: 10px;
+        }
+        .mini-popup .popup-btns { display: flex; gap: 8px; }
+        .mini-popup .popup-btns button {
+            flex: 1;
+            padding: 6px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: .85em;
+        }
+        .popup-ok     { background: #1e3a5f; color: #fff; }
+        .popup-cancel { background: #e5e7eb; color: #333; }
+
+        /* ── Side panel ── */
+        .side-panel {
+            background:  #fff;
+            border-left: 1px solid #ddd;
+            display:     flex;
+            flex-direction: column;
+            overflow:    hidden;
+        }
+
+        .side-section {
+            padding: 14px 16px;
+            border-bottom: 1px solid #eee;
+        }
+        .side-section h3 {
+            margin: 0 0 10px;
+            font-size: .82em;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            color: #888;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .mini-btn {
+            text-transform: none;
+            letter-spacing: 0;
+            font-size: .95em;
+            background: #1e3a5f;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 3px 8px;
+            cursor: pointer;
+        }
+        .mini-btn:hover { background: #2d5487; }
+
+        /* Liste de zones ET liste de sets d'options partagent le même style */
+        .entity-list {
+            list-style: none;
+            margin:     0;
+            padding:    0;
+            max-height: 32vh;   /* sinon une longue liste pousse le markdown hors champ */
+            overflow-y: auto;
+        }
+        .entity-list li {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 0;
+            font-size: .85em;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .entity-list li:last-child { border-bottom: none; }
+        .entity-list .qid  { font-weight: 600; min-width: 50px; }
+        .entity-list .pos  { color: #888; flex: 1; }
+        .entity-list .edit-btn,
+        .entity-list .del-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: .9em;
+            padding: 0 4px;
+        }
+        .entity-list .edit-btn { color: #1e3a5f; }
+        .entity-list .del-btn  { color: #dc2626; }
+        .entity-empty { color: #bbb; font-size: .85em; font-style: italic; }
+
+        .markdown-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 14px 16px;
+            overflow: hidden;
+        }
+        .markdown-section h3 {
+            margin: 0 0 10px;
+            font-size: .82em;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            color: #888;
+        }
+        #markdown-output {
+            flex: 1;
+            width: 100%;
+            resize: none;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: .82em;
+            line-height: 1.6;
+            color: #333;
+            background: #fafafa;
+        }
+        #copy-btn {
+            margin-top: 8px;
+            padding: 7px;
+            width: 100%;
+            background: #059669;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: .85em;
+        }
+        #copy-btn:hover { background: #047857; }
+        #copy-status { font-size: .78em; color: #059669; margin-top: 4px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Outil d'authoring — Schémas interactifs</h1>
+    <a href="/">← Retour au site</a>
+</header>
+
+<!-- Auth gate -->
+<div id="auth-gate">
+    <h2>Connexion administrateur</h2>
+    <input type="password" id="admin-password" placeholder="Mot de passe admin" autocomplete="current-password">
+    <button id="admin-login-btn">Se connecter</button>
+    <div id="auth-error"></div>
+</div>
+
+<!-- Main app (hidden until logged in) -->
+<div id="app">
+    <div class="toolbar">
+        <label>Image :</label>
+        <select id="image-select">
+            <option value="">— choisir une image —</option>
+        </select>
+        <span style="color:#999; font-size:.85em;">ou</span>
+        <input type="text" id="image-manual" placeholder="nom_fichier.png">
+        <button id="load-btn">Charger</button>
+        <div class="toolbar-sep"></div>
+        <label>Taille :</label>
+        <select id="size-select">
+{{TAILLE_OPTIONS}}
+        </select>
+        <label>Alignement :</label>
+        <select id="align-select">
+            <option value="centre" selected>centre</option>
+            <option value="gauche">gauche</option>
+            <option value="droite">droite</option>
+        </select>
+        <div class="toolbar-sep"></div>
+        <label>Préfixe ID :</label>
+        <input type="text" id="qid-prefix" value="q" style="width:90px;">
+        <label>Largeur case (%) :</label>
+        <input type="number" id="echelle-input" value="100" min="10" max="500" step="5" style="width:70px;">
+        <label>Mode :</label>
+        <select id="mode-select" style="min-width:140px;">
+            <option value="symetrique" selected>symétrique</option>
+            <option value="asymetrique">asymetrique</option>
+        </select>
+        <div class="toolbar-sep"></div>
+        <label>Type de case :</label>
+        <select id="type-select" style="min-width:150px;">
+            <option value="rep" selected>réponse libre</option>
+            <option value="choix">choix multiple</option>
+            <option value="corrige">texte corrigé</option>
+        </select>
+        <label id="options-select-label" style="display:none;">Set d'options :</label>
+        <select id="options-select" style="display:none; min-width:170px;">
+            <option value="">— liste personnalisée —</option>
+        </select>
+        <label id="choix-input-label" style="display:none;">Choix (séparés par ,) :</label>
+        <input type="text" id="choix-input" placeholder="Alimenter, Distribuer, Convertir"
+               style="display:none; width:280px;">
+        <label id="corrige-input-label" style="display:none;">Texte affiché :</label>
+        <input type="text" id="corrige-input" placeholder="CONVERTIR"
+               style="display:none; width:160px;">
+    </div>
+
+    <div class="workspace">
+        <!-- Left: image -->
+        <div class="image-panel">
+            <p class="image-hint" id="image-hint">
+                Choisissez une image dans la liste ou tapez son nom, puis cliquez sur « Charger ».<br><br>
+                Cliquez ensuite sur l'image pour placer des zones de réponse.
+            </p>
+            <div class="schema-wrap" id="schema-wrap" style="display:none;">
+                <img id="schema-img" src="" alt="">
+                <div class="align-guide align-guide-v" id="guide-v"></div>
+                <div class="align-guide align-guide-h" id="guide-h"></div>
+                <!-- zone markers + previews are injected here -->
+            </div>
+        </div>
+
+        <!-- Right: zones + markdown -->
+        <div class="side-panel">
+            <div class="side-section">
+                <h3>
+                    Sets d'options
+                    <button id="set-add-btn" type="button" class="mini-btn">+ Set</button>
+                </h3>
+                <ul id="set-list" class="entity-list">
+                    <li id="set-empty" class="entity-empty">Aucun set défini</li>
+                </ul>
+            </div>
+            <div class="side-section">
+                <h3>Zones placées</h3>
+                <ul id="zone-list" class="entity-list">
+                    <li id="zone-empty" class="entity-empty">Aucune zone — cliquez sur l'image</li>
+                </ul>
+            </div>
+            <div class="markdown-section">
+                <h3>Markdown généré</h3>
+                <textarea id="markdown-output" readonly></textarea>
+                <button id="copy-btn">Copier</button>
+                <div id="copy-status"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Popup form for zone question ID -->
+<div id="zone-popup" class="mini-popup">
+    <p>ID de la question (ex: q1, legende_a…)</p>
+    <input type="text" id="popup-qid" placeholder="q1" autocomplete="off">
+    <div class="popup-btns">
+        <button id="popup-ok" class="popup-ok">Ajouter</button>
+        <button id="popup-cancel" class="popup-cancel">Annuler</button>
+    </div>
+</div>
+
+<!-- Popup form for creating/editing a named option set -->
+<div id="set-popup" class="mini-popup">
+    <p>Nom du set + choix (séparés par ,)</p>
+    <input type="text" id="set-popup-name" placeholder="fonctions" autocomplete="off">
+    <input type="text" id="set-popup-items" placeholder="X, CONVERTIR, ACQUÉRIR, TRANSMETTRE" autocomplete="off">
+    <div class="popup-btns">
+        <button id="set-popup-ok" class="popup-ok">Enregistrer</button>
+        <button id="set-popup-cancel" class="popup-cancel">Annuler</button>
+    </div>
+</div>
+
+<script>
+(function () {
+    // ── State ────────────────────────────────────────────────────────────────
+    // [{qid, x, y, echelle, mode}]  x/y in % (0–100), echelle in % (100 = taille par
+    // défaut), mode = "symetrique" | "asymetrique" — voir =rep> dans input_blocks.py
+    var zones      = [];
+    var pendingClick = null; // {x, y} waiting for qid input
+
+    // Sets d'options nommés, réutilisables par plusieurs zones "choix multiple"
+    // au lieu de retaper la même liste à chaque fois (voir =options> côté backend).
+    // [{name, items: []}] — conservés tant que l'outil reste ouvert, même en
+    // changeant d'image, pour pouvoir réutiliser un set sur plusieurs schémas.
+    var optionSets    = [];
+    var editingSetName = null; // nom du set en cours d'édition dans le popup, ou null si création
+
+    // Largeur par défaut d'une case (% de l'image) — doit rester synchronisé avec
+    // _DEFAULT_SCHEMA_ZONE_WIDTH_PERCENT dans core/blocks/input_blocks.py.
+    var DEFAULT_ZONE_WIDTH_PERCENT = 15;
+    // Hauteur réelle (fixe, en px) d'une case à une ligne — doit rester synchronisé
+    // avec _SCHEMA_ZONE_BASELINE_HEIGHT_PX dans core/blocks/input_blocks.py.
+    var BASELINE_ZONE_HEIGHT_PX = 28;
+
+    // ── Auth ─────────────────────────────────────────────────────────────────
+    var loginBtn  = document.getElementById("admin-login-btn");
+    var pwdInput  = document.getElementById("admin-password");
+    var authError = document.getElementById("auth-error");
+
+    function checkAlreadyAdmin() {
+        fetch("/api/admin/me")
+            .then(function (r) { return r.json(); })
+            .then(function (d) { if (d.admin) showApp(); })
+            .catch(function () {});
+    }
+    checkAlreadyAdmin();
+
+    loginBtn.addEventListener("click", function () {
+        var pwd = pwdInput.value;
+        fetch("/api/admin/login", {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({ mot_de_passe: pwd }),
+        })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+            if (res.ok) { showApp(); }
+            else        { authError.textContent = res.d.erreur || "Erreur"; }
+        })
+        .catch(function () { authError.textContent = "Erreur réseau"; });
+    });
+
+    pwdInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") loginBtn.click();
+    });
+
+    function showApp() {
+        document.getElementById("auth-gate").style.display = "none";
+        document.getElementById("app").style.display       = "block";
+        loadMediaList();
+    }
+
+    // ── Media list ───────────────────────────────────────────────────────────
+    var imageSelect = document.getElementById("image-select");
+
+    function loadMediaList() {
+        fetch("/api/admin/medias")
+            .then(function (r) { return r.ok ? r.json() : []; })
+            .then(function (files) {
+                files.forEach(function (f) {
+                    var opt = document.createElement("option");
+                    opt.value       = f;
+                    opt.textContent = f;
+                    imageSelect.appendChild(opt);
+                });
+            })
+            .catch(function () {});
+    }
+
+    // ── Load image ───────────────────────────────────────────────────────────
+    var loadBtn     = document.getElementById("load-btn");
+    var manualInput = document.getElementById("image-manual");
+    var schemaWrap  = document.getElementById("schema-wrap");
+    var schemaImg   = document.getElementById("schema-img");
+    var imageHint   = document.getElementById("image-hint");
+
+    // ── Réglages appliqués à la PROCHAINE case posée ─────────────────────────
+    var qidPrefixInput    = document.getElementById("qid-prefix");
+    var echelleInput      = document.getElementById("echelle-input");
+    var modeSelect        = document.getElementById("mode-select");
+    var typeSelect          = document.getElementById("type-select");
+    var optionsSelectLabel  = document.getElementById("options-select-label");
+    var optionsSelect       = document.getElementById("options-select");
+    var choixInput          = document.getElementById("choix-input");
+    var choixInputLabel     = document.getElementById("choix-input-label");
+    var corrigeInput        = document.getElementById("corrige-input");
+    var corrigeInputLabel   = document.getElementById("corrige-input-label");
+
+    // Pour "choix multiple" : soit on référence un set d'options existant
+    // (options-select), soit on retape une liste personnalisée pour cette
+    // seule zone (choix-input) — les deux champs ne sont jamais visibles ensemble.
+    function updateTypeUI() {
+        var isChoix   = typeSelect.value === "choix";
+        var isCorrige = typeSelect.value === "corrige";
+        var customMode = isChoix && !optionsSelect.value;
+
+        optionsSelectLabel.style.display = isChoix ? "" : "none";
+        optionsSelect.style.display      = isChoix ? "" : "none";
+        choixInput.style.display        = customMode ? "" : "none";
+        choixInputLabel.style.display   = customMode ? "" : "none";
+        corrigeInput.style.display      = isCorrige ? "" : "none";
+        corrigeInputLabel.style.display = isCorrige ? "" : "none";
+    }
+
+    typeSelect.addEventListener("change", updateTypeUI);
+    optionsSelect.addEventListener("change", updateTypeUI);
+
+    function refreshOptionsSetSelect() {
+        var current = optionsSelect.value;
+        optionsSelect.innerHTML = '<option value="">— liste personnalisée —</option>';
+        optionSets.forEach(function (s) {
+            var opt = document.createElement("option");
+            opt.value       = s.name;
+            opt.textContent = s.name + " (" + s.items.length + ")";
+            optionsSelect.appendChild(opt);
+        });
+        // Garde la sélection si le set existe toujours (ex: après renommage géré ailleurs).
+        if (optionSets.find(function (s) { return s.name === current; })) {
+            optionsSelect.value = current;
+        }
+        updateTypeUI();
+    }
+
+    loadBtn.addEventListener("click", loadImage);
+
+    function loadImage() {
+        var filename = manualInput.value.trim() || imageSelect.value;
+        if (!filename) return;
+        zones = [];
+        renderZoneList();
+        updateMarkdown();
+        clearMarkers();
+
+        schemaImg.src = "/medias/" + filename;
+        schemaImg.alt = filename;
+        schemaImg.onload = function () {
+            imageHint.style.display  = "none";
+            schemaWrap.style.display = "inline-block";
+        };
+        schemaImg.onerror = function () {
+            imageHint.style.display  = "block";
+            imageHint.textContent    = "Image introuvable : " + filename;
+            schemaWrap.style.display = "none";
+        };
+    }
+
+    imageSelect.addEventListener("change", function () {
+        if (imageSelect.value) {
+            manualInput.value = "";
+            loadImage();
+        }
+    });
+
+    // ── Click on image to place zone ─────────────────────────────────────────
+    schemaWrap.addEventListener("click", function (e) {
+        if (e.target.classList.contains("zone-marker")) return; // handled by marker
+
+        var rect = schemaImg.getBoundingClientRect();
+        var xPct = ((e.clientX - rect.left) / rect.width  * 100).toFixed(1);
+        var yPct = ((e.clientY - rect.top)  / rect.height * 100).toFixed(1);
+        openPopup(parseFloat(xPct), parseFloat(yPct), e.clientX, e.clientY);
+    });
+
+    // ── Repères d'alignement qui suivent la souris ───────────────────────────
+    var guideV = document.getElementById("guide-v");
+    var guideH = document.getElementById("guide-h");
+
+    schemaWrap.addEventListener("mousemove", function (e) {
+        var rect  = schemaImg.getBoundingClientRect();
+        var xPct  = (e.clientX - rect.left) / rect.width  * 100;
+        var yPct  = (e.clientY - rect.top)  / rect.height * 100;
+        guideV.style.left    = xPct + "%";
+        guideH.style.top     = yPct + "%";
+        guideV.style.display = "block";
+        guideH.style.display = "block";
+    });
+    schemaWrap.addEventListener("mouseleave", function () {
+        guideV.style.display = "none";
+        guideH.style.display = "none";
+    });
+
+    // ── Popup ────────────────────────────────────────────────────────────────
+    var popup      = document.getElementById("zone-popup");
+    var popupQid   = document.getElementById("popup-qid");
+    var popupOk    = document.getElementById("popup-ok");
+    var popupCancel = document.getElementById("popup-cancel");
+
+    function openPopup(xPct, yPct, clientX, clientY) {
+        pendingClick = { x: xPct, y: yPct };
+        // Position popup near click, keep in viewport
+        var left = Math.min(clientX + 12, window.innerWidth  - 250);
+        var top  = Math.min(clientY + 12, window.innerHeight - 140);
+        popup.style.left    = left + "px";
+        popup.style.top     = top  + "px";
+        popup.style.display = "block";
+        popupQid.value = nextQid();
+        popupQid.focus();
+        popupQid.select();
+    }
+
+    function closePopup() {
+        popup.style.display = "none";
+        pendingClick = null;
+        popupQid.value = "";
+    }
+
+    popupOk.addEventListener("click", confirmZone);
+    popupQid.addEventListener("keydown", function (e) {
+        if (e.key === "Enter")  confirmZone();
+        if (e.key === "Escape") closePopup();
+    });
+    popupCancel.addEventListener("click", closePopup);
+
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && popup.style.display === "block")    closePopup();
+        if (e.key === "Escape" && setPopup.style.display === "block") closeSetPopup();
+    });
+
+    function confirmZone() {
+        var qid = popupQid.value.trim();
+        if (!qid || !pendingClick) { closePopup(); return; }
+        if (zones.find(function (z) { return z.qid === qid; })) {
+            popupQid.style.outline = "2px solid #dc2626";
+            setTimeout(function () { popupQid.style.outline = ""; }, 800);
+            popupQid.title = "Cet ID existe déjà";
+            return;
+        }
+        // La largeur (%), le mode et le type actifs dans la barre d'outils s'appliquent
+        // à la case qu'on est en train de poser — ils restent modifiables pour les suivantes.
+        // Pour "corrige", qid ne sert qu'en interne (liste des zones, doublons) : ce
+        // type n'a pas d'identifiant de réponse dans le markdown généré.
+        var type       = typeSelect.value;
+        var optionsSet = (type === "choix" && optionsSelect.value) ? optionsSelect.value : null;
+        var choices    = (type === "choix" && !optionsSet)
+            ? choixInput.value.split(",").map(function (s) { return s.trim(); }).filter(Boolean)
+            : [];
+        var texte = type === "corrige" ? corrigeInput.value.trim() : "";
+        zones.push({
+            qid:        qid,
+            x:          pendingClick.x,
+            y:          pendingClick.y,
+            echelle:    parseFloat(echelleInput.value) || 100,
+            mode:       modeSelect.value,
+            type:       type,
+            texte:      texte,
+            choices:    choices,
+            optionsSet: optionsSet,
+        });
+        closePopup();
+        renderZoneList();
+        renderMarkers();
+        updateMarkdown();
+    }
+
+    function nextQid() {
+        // Suggest next available {prefix}1, {prefix}2, …
+        var prefix = qidPrefixInput.value.trim() || "q";
+        for (var i = 1; i <= 99; i++) {
+            var candidate = prefix + i;
+            if (!zones.find(function (z) { return z.qid === candidate; })) return candidate;
+        }
+        return "";
+    }
+
+    // ── Zone list (side panel) ───────────────────────────────────────────────
+    var zoneList  = document.getElementById("zone-list");
+    var zoneEmpty = document.getElementById("zone-empty");
+
+    function renderZoneList() {
+        // Remove existing zone items (keep #zone-empty)
+        Array.from(zoneList.querySelectorAll(".zone-item")).forEach(function (el) { el.remove(); });
+
+        zoneEmpty.style.display = zones.length === 0 ? "list-item" : "none";
+
+        zones.forEach(function (z, idx) {
+            var extra = "";
+            if (z.echelle && z.echelle !== 100) extra += " · " + z.echelle + "%";
+            if (z.mode === "asymetrique")       extra += " · asym.";
+            if (z.type === "choix") {
+                extra += z.optionsSet
+                    ? " · set:" + z.optionsSet
+                    : " · choix (" + (z.choices || []).length + ")";
+            }
+            if (z.type === "corrige")           extra += " · corrigé";
+            // Pour "corrige", le texte affiché est plus parlant que l'ID interne.
+            var label = z.type === "corrige" ? ('"' + (z.texte || "") + '"') : z.qid;
+            var li = document.createElement("li");
+            li.className = "zone-item";
+            li.innerHTML =
+                '<span class="qid">' + label + '</span>' +
+                '<span class="pos">x=' + z.x + '% y=' + z.y + '%' + extra + '</span>' +
+                '<button class="del-btn" title="Supprimer">✕</button>';
+            li.querySelector(".del-btn").addEventListener("click", function () {
+                zones.splice(idx, 1);
+                renderZoneList();
+                renderMarkers();
+                updateMarkdown();
+            });
+            zoneList.appendChild(li);
+        });
+    }
+
+    // ── Option sets (side panel) ─────────────────────────────────────────────
+    var setList  = document.getElementById("set-list");
+    var setEmpty = document.getElementById("set-empty");
+
+    function renderSetList() {
+        Array.from(setList.querySelectorAll(".set-item")).forEach(function (el) { el.remove(); });
+
+        setEmpty.style.display = optionSets.length === 0 ? "list-item" : "none";
+
+        optionSets.forEach(function (s) {
+            var li = document.createElement("li");
+            li.className = "set-item";
+            li.innerHTML =
+                '<span class="qid">' + s.name + '</span>' +
+                '<span class="pos">' + s.items.length + ' choix</span>' +
+                '<button class="edit-btn" title="Modifier">✎</button>' +
+                '<button class="del-btn" title="Supprimer">✕</button>';
+            li.querySelector(".edit-btn").addEventListener("click", function () { openSetPopup(s.name); });
+            li.querySelector(".del-btn").addEventListener("click", function () { deleteSet(s.name); });
+            setList.appendChild(li);
+        });
+
+        refreshOptionsSetSelect();
+    }
+
+    function deleteSet(name) {
+        var inUse = zones.some(function (z) { return z.optionsSet === name; });
+        if (inUse) {
+            alert('Impossible de supprimer "' + name + '" : au moins une zone l\'utilise encore.');
+            return;
+        }
+        optionSets = optionSets.filter(function (s) { return s.name !== name; });
+        renderSetList();
+    }
+
+    // ── Set popup (création + édition) ───────────────────────────────────────
+    var setPopup       = document.getElementById("set-popup");
+    var setPopupName   = document.getElementById("set-popup-name");
+    var setPopupItems  = document.getElementById("set-popup-items");
+    var setPopupOk     = document.getElementById("set-popup-ok");
+    var setPopupCancel = document.getElementById("set-popup-cancel");
+
+    document.getElementById("set-add-btn").addEventListener("click", function () {
+        openSetPopup(null);
+    });
+
+    function openSetPopup(name) {
+        editingSetName = name;
+        if (name) {
+            var set = optionSets.find(function (s) { return s.name === name; });
+            setPopupName.value  = set.name;
+            setPopupItems.value = set.items.join(", ");
+        } else {
+            setPopupName.value  = "";
+            setPopupItems.value = "";
+        }
+        // Centré dans la fenêtre — pas de point de clic à suivre comme pour le popup de zone.
+        setPopup.style.left    = (window.innerWidth  / 2 - 160) + "px";
+        setPopup.style.top     = (window.innerHeight / 2 - 100) + "px";
+        setPopup.style.display = "block";
+        setPopupName.focus();
+    }
+
+    function closeSetPopup() {
+        setPopup.style.display = "none";
+        editingSetName = null;
+    }
+
+    function confirmSet() {
+        var name  = setPopupName.value.trim();
+        var items = setPopupItems.value.split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+        if (!name || !items.length) { closeSetPopup(); return; }
+
+        var clash = optionSets.find(function (s) { return s.name === name && s.name !== editingSetName; });
+        if (clash) {
+            setPopupName.style.outline = "2px solid #dc2626";
+            setTimeout(function () { setPopupName.style.outline = ""; }, 800);
+            setPopupName.title = "Ce nom de set existe déjà";
+            return;
+        }
+
+        if (editingSetName) {
+            var set = optionSets.find(function (s) { return s.name === editingSetName; });
+            // Si le nom change, les zones qui référencent l'ancien nom doivent suivre —
+            // sinon le markdown généré référencerait un set qui n'existe plus (corrigeable
+            // par l'auteur sans avoir à recréer toutes les zones concernées).
+            if (editingSetName !== name) {
+                zones.forEach(function (z) {
+                    if (z.optionsSet === editingSetName) z.optionsSet = name;
+                });
+            }
+            set.name  = name;
+            set.items = items;
+        } else {
+            optionSets.push({ name: name, items: items });
+        }
+
+        closeSetPopup();
+        renderSetList();
+        renderZoneList();
+        updateMarkdown();
+    }
+
+    setPopupOk.addEventListener("click", confirmSet);
+    setPopupName.addEventListener("keydown", function (e) {
+        if (e.key === "Enter")  confirmSet();
+        if (e.key === "Escape") closeSetPopup();
+    });
+    setPopupItems.addEventListener("keydown", function (e) {
+        if (e.key === "Enter")  confirmSet();
+        if (e.key === "Escape") closeSetPopup();
+    });
+    setPopupCancel.addEventListener("click", closeSetPopup);
+
+    // ── Markers on image ─────────────────────────────────────────────────────
+    function clearMarkers() {
+        Array.from(schemaWrap.querySelectorAll(".zone-marker, .zone-preview")).forEach(function (el) { el.remove(); });
+    }
+
+    function renderMarkers() {
+        clearMarkers();
+        // Largeur de l'image affichée à l'écran MAINTENANT — pas forcément la même
+        // qu'au final dans le document, donc l'aperçu n'a de sens que dans cet éditeur.
+        var imgWidthPx = schemaImg.getBoundingClientRect().width;
+
+        zones.forEach(function (z, idx) {
+            var preview = document.createElement("div");
+            preview.className     = "zone-preview";
+            preview.style.left    = z.x + "%";
+            preview.style.top     = z.y + "%";
+            preview.style.width   = (imgWidthPx * (DEFAULT_ZONE_WIDTH_PERCENT / 100) * ((z.echelle || 100) / 100)) + "px";
+            preview.style.height  = BASELINE_ZONE_HEIGHT_PX + "px";
+            schemaWrap.appendChild(preview);
+
+            var marker = document.createElement("div");
+            marker.className   = "zone-marker";
+            marker.textContent = z.qid;
+            marker.style.left  = z.x + "%";
+            marker.style.top   = z.y + "%";
+            marker.title       = "Cliquer pour supprimer";
+            marker.addEventListener("click", function (e) {
+                e.stopPropagation();
+                zones.splice(idx, 1);
+                renderZoneList();
+                renderMarkers();
+                updateMarkdown();
+            });
+            schemaWrap.appendChild(marker);
+        });
+    }
+
+    // ── Markdown generation ──────────────────────────────────────────────────
+    var markdownOutput = document.getElementById("markdown-output");
+    var sizeSelect     = document.getElementById("size-select");
+    var alignSelect    = document.getElementById("align-select");
+
+    sizeSelect.addEventListener("change",  updateMarkdown);
+    alignSelect.addEventListener("change", updateMarkdown);
+
+    function updateMarkdown() {
+        var filename = schemaImg.src
+            ? schemaImg.src.replace(/.*\/medias\//, "")
+            : "";
+        if (!filename) { markdownOutput.value = ""; return; }
+
+        var size  = sizeSelect.value;
+        var align = alignSelect.value;
+
+        var flags = filename;
+        if (size  !== "m")      flags += " " + size;
+        if (align !== "centre") flags += " " + align;
+
+        // Les sets référencés par au moins une zone doivent être définis AVANT le
+        // ::schema (=options> doit précéder tout =choix> qui le référence — le
+        // document est lu en un seul passage, du haut vers le bas).
+        var usedSetNames = [];
+        zones.forEach(function (z) {
+            if (z.type === "choix" && z.optionsSet && usedSetNames.indexOf(z.optionsSet) < 0) {
+                usedSetNames.push(z.optionsSet);
+            }
+        });
+
+        var lines = [];
+        usedSetNames.forEach(function (setName) {
+            var set = optionSets.find(function (s) { return s.name === setName; });
+            if (!set) return;
+            var line = "=options> " + setName;
+            set.items.forEach(function (it) { line += " | " + it; });
+            lines.push(line);
+        });
+        if (usedSetNames.length) lines.push("");
+
+        lines.push("::schema " + flags);
+        zones.forEach(function (z) {
+            var name = z.type === "choix" ? "choix" : (z.type === "corrige" ? "corrige" : "rep");
+            // =corrige> n'a pas d'identifiant de réponse : le texte affiché remplace le qid.
+            var head = name === "corrige" ? '"' + (z.texte || "") + '"' : z.qid;
+            var line = "  =" + name + "> " + head + " x=" + z.x + "% y=" + z.y + "%";
+            if (z.echelle && z.echelle !== 100)    line += " e=" + z.echelle + "%";
+            if (z.mode === "asymetrique")          line += " asymetrique";
+            if (name === "choix") {
+                if (z.optionsSet) {
+                    line += " options=" + z.optionsSet;
+                } else {
+                    (z.choices || []).forEach(function (c) { line += " | " + c; });
+                }
+            }
+            lines.push(line);
+        });
+        lines.push("::/schema");
+        markdownOutput.value = lines.join("\n");
+    }
+
+    // La largeur affichée de l'image change avec la fenêtre → les aperçus en
+    // pointillés (calculés en px à partir de cette largeur) doivent suivre.
+    window.addEventListener("resize", function () {
+        if (zones.length) renderMarkers();
+    });
+
+    // ── Copy ────────────────────────────────────────────────────────────────
+    var copyBtn    = document.getElementById("copy-btn");
+    var copyStatus = document.getElementById("copy-status");
+
+    copyBtn.addEventListener("click", function () {
+        var text = markdownOutput.value;
+        if (!text) return;
+        navigator.clipboard.writeText(text)
+            .then(function () {
+                copyStatus.textContent = "✓ Copié !";
+                setTimeout(function () { copyStatus.textContent = ""; }, 2000);
+            })
+            .catch(function () {
+                markdownOutput.select();
+                document.execCommand("copy");
+                copyStatus.textContent = "✓ Copié !";
+                setTimeout(function () { copyStatus.textContent = ""; }, 2000);
+            });
+    });
+
+})();
+</script>
+</body>
+</html>

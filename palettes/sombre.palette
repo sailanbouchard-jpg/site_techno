@@ -1,0 +1,128 @@
+# palettes/sombre.palette
+# ─────────────────────────────────────────────────────────────────
+# Palette "sombre" — thème sombre pour les activités du soir
+# ou pour une présentation en salle avec vidéoprojecteur.
+# ─────────────────────────────────────────────────────────────────
+
+[corps]
+police     = Arial, sans-serif
+taille     = 16px
+couleur    = #ffffff
+interligne = 1.7
+
+[h1]
+taille  = 1.9em    couleur = #ffffff    poids = bold
+
+[h2]
+taille  = 1.4em    couleur = #d0d8ff    poids = bold
+
+[h3]
+taille  = 1.15em   couleur = #b0b8d0    poids = bold
+
+[pg]
+fond    = #000000    bordure = #5ba3d9
+
+[def]
+fond    = #1a2744    bordure = #5ba3d9    texte = #aacdf0
+
+[alr]
+fond    = #3d2a00    bordure = #e67e00    texte = #f5c06a
+
+[bleu]
+fond = #1a2744    bordure = #5ba3d9
+
+[vert]
+fond = #1a2e1a    bordure = #5ac87a
+
+[orange]
+fond = #3d2a00    bordure = #e67e00
+
+[rouge]
+fond = #3d1010    bordure = #e05050
+
+[jaune]
+fond = #3a3000    bordure = #f0c040
+
+[violet]
+fond = #2a1040    bordure = #b070e0
+
+[gris]
+fond = #2a2a2a    bordure = #888888
+
+[ques]
+couleur = #a8ccee    police = Georgia, serif    taille = 1.1em
+
+[rep]
+fond = #2c2415    fond_cadre = #201a0e    bordure = #c8a84a    texte = #f0e4bf    bouton_fond = #c9aa50    bouton_texte = #1a1200
+police_rep = Caveat, cursive    taille_rep = 1.2em    facteur_compact = 0.75
+charger_fond = #6366f1    charger_texte = #ffffff    annuler_fond = #dc2626    annuler_texte = #ffffff    charge_statut = #a78bfa
+
+[obj]
+fond = #2a2000    bordure = #f0c040    texte = #f5e090    label = Objectif
+
+[resume]
+fond = #1a2744    bordure = #5ba3d9    texte = #aacdf0    titre = Synthèse
+
+[qcm]
+fond = #1e2a3a    bordure = #5ba3d9    texte = #d0e8ff    bouton_fond = #2563eb    bouton_texte = #ffffff
+ok_fond = #1a3a1a    ok_bordure = #4ade80    err_fond = #3a1a1a    err_bordure = #f87171
+
+[assoc]
+fond = #1e2a3a    bordure = #5ba3d9    texte = #d0e8ff    item_fond = #2a3a4a    item_bordure = #3a5a7a
+ok_fond = #1a3a1a    bouton_fond = #2563eb    bouton_texte = #ffffff
+
+[trier]
+fond = #1e2a3a    bordure = #5ba3d9    texte = #d0e8ff    item_fond = #2a3a4a    item_bordure = #3a5a7a
+ok_fond = #1a3a1a    ok_bordure = #4ade80    bouton_fond = #2563eb    bouton_texte = #ffffff
+
+[repg]
+fond = #2c2415    fond_cadre = #201a0e    bordure = #c8a84a    texte = #f0e4bf
+champ_fond = #1a1200    champ_bordure = #c8a84a    bouton_fond = #c9aa50    bouton_texte = #1a1200
+
+[lien]
+fond = #1a2744    bordure = #5ba3d9    texte = #aacdf0
+
+[tbl]
+fond = #1a1a2a    bordure = #3a4a6a    entete_fond = #1e2d4a    entete_texte = #aaccff
+
+[diag]
+largeur_case_xs  = 114px    largeur_case_s   = 144px    largeur_case_m = 174px
+largeur_case_l   = 214px    largeur_case_xl  = 264px    hauteur_case   = 80px
+rayon_case       = 8px
+ecart_colonnes   = 56px
+ecart_cases_xs   = 6px       ecart_cases_s    = 12px     ecart_cases_m  = 18px
+ecart_cases_l    = 26px      ecart_cases_xl   = 36px
+ecart_cousins_xs = 0px       ecart_cousins_s  = 0px      ecart_cousins_m = 0px
+ecart_cousins_l  = 0px       ecart_cousins_xl = 0px
+case_marge       = 1.6px 2px
+fleche_couleur   = #8aa8c8  fleche_epaisseur = 2px
+titre_couleur    = #d0d8ff  titre_taille     = .9em
+case_taille      = .85em    case_interligne  = 1.25
+
+[dracine]
+fond = #2a2a2a    bordure = #888888    texte = #ffffff
+largeur_xs = 78px    largeur_s = 108px    largeur_m = 138px
+largeur_l  = 178px   largeur_xl = 218px
+marge = 2px 2.8px
+
+[obj3d]
+# Visualisateur 3D (bloc =3D>). Valeurs numeriques passees au WebGL via data-*.
+fond            = #1e1f24
+couleur_defaut  = #9aa2ab
+lumiere         = 1.0
+ambiance        = 0.35
+hauteur         = 420px
+bordure         = #3a3d44     rayon = 8px    accent = #5aa9e6
+controle_fond   = #2a2d33     controle_bordure = #4a4e56
+controle_texte  = #e5e7eb     controle_fond_survol = #3a3d44
+
+[pages]
+largeur_sidebar     = 10%
+largeur_sidebar_min = 58px
+largeur_sidebar_max = 100px
+ecart_miniatures    = 6px
+padding_sidebar     = 4px
+padding_page        = 18px 24px
+hauteur_a4          = 1123px
+marge_pages         = 32px
+rayon_miniature     = 3px

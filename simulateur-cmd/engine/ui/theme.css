@@ -1,0 +1,115 @@
+/*
+  theme.css — TOUTE la personnalisation visuelle du terminal.
+
+  C'est l'équivalent des fichiers .palette du site : couleurs, police,
+  dimensions de l'écran, espacements, effets (lueur, scanlines)…
+  Pour changer le look du terminal, on modifie CE fichier, jamais
+  terminal.css (qui ne contient que la structure).
+
+  Thème par défaut : « hacker » (vert phosphore sur noir).
+  Autres thèmes : ajouter une classe .theme-xxx qui redéfinit les variables,
+  et mettre theme:'xxx' dans le profil de la machine.
+*/
+
+:root {
+  /* ── Dimensions & typographie ── */
+  --term-largeur: 920px;              /* largeur de la fenêtre du terminal */
+  --term-hauteur: 540px;              /* hauteur de l'écran */
+  --term-police: "Cascadia Mono", "Consolas", "DejaVu Sans Mono", "Courier New", monospace;
+  --term-taille: 15px;
+  --term-interligne: 1.55;
+  --term-espacement: 16px 20px;       /* marges internes de l'écran */
+  --term-rayon: 10px;                 /* arrondi de la fenêtre */
+
+  /* ── Barre de fenêtre ── */
+  --term-barre-hauteur: 34px;
+  --term-barre-espacement: 0 14px;
+  --term-point-taille: 11px;
+  --term-barre-taille-texte: 12px;
+  --term-barre-espacement-lettres: 0.08em;
+
+  /* ── Éditeur ── */
+  --term-editeur-espacement: 6px 14px;
+  --term-editeur-taille-pied: 12px;
+
+  /* ── Couleurs — thème hacker ── */
+  --term-fond: #050807;               /* fond de l'écran */
+  --term-fond-cadre: #0a0f0d;         /* fond de la fenêtre */
+  --term-bordure: #1c2f24;
+  --term-ombre: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 24px rgba(61, 255, 119, 0.07);
+  --term-texte: #b8f5c4;              /* texte par défaut */
+  --term-caret: #3dff77;              /* curseur de saisie */
+
+  --term-barre-fond: #0d1512;
+  --term-barre-texte: #4f7a5f;
+  --term-point-1: #ff5566;
+  --term-point-2: #ffe066;
+  --term-point-3: #3dff77;
+
+  --term-editeur-bande-fond: #0d1512;
+  --term-editeur-bande-texte: #7fae8e;
+
+  --term-ascenseur: #1c2f24;
+
+  /* Effets « écran cathodique » */
+  --term-lueur: 0 0 8px rgba(61, 255, 119, 0.25);
+  --term-scanline: rgba(0, 0, 0, 0.9);
+  --term-scanline-opacite: 0.14;
+
+  /* Couleurs nommées (utilisées par les balises [[…]] du moteur) */
+  --term-vert: #3dff77;
+  --term-cyan: #41e7ff;
+  --term-bleu: #61a5ff;
+  --term-jaune: #ffe066;
+  --term-orange: #ffb347;
+  --term-rouge: #ff5566;
+  --term-violet: #c792ea;
+  --term-gris: #5f7a68;
+  --term-blanc: #eafff0;
+
+  --term-invite: #3dff77;             /* couleur de l'invite (eleve@poste$) */
+}
+
+/* ── Classes de balisage : [[style]]…[[/]] → <span class="mk-style"> ── */
+
+.mk-vert   { color: var(--term-vert); }
+.mk-cyan   { color: var(--term-cyan); }
+.mk-bleu   { color: var(--term-bleu); }
+.mk-jaune  { color: var(--term-jaune); }
+.mk-orange { color: var(--term-orange); }
+.mk-rouge  { color: var(--term-rouge); }
+.mk-violet { color: var(--term-violet); }
+.mk-gris   { color: var(--term-gris); }
+.mk-blanc  { color: var(--term-blanc); }
+
+.mk-titre  { color: var(--term-cyan); font-weight: bold; text-shadow: 0 0 10px rgba(65, 231, 255, 0.35); }
+.mk-gras   { font-weight: bold; }
+.mk-dim    { opacity: 0.55; }
+.mk-ok     { color: var(--term-vert); font-weight: bold; }
+.mk-err    { color: var(--term-rouge); font-weight: bold; }
+.mk-warn   { color: var(--term-jaune); }
+.mk-flag   { color: var(--term-jaune); font-weight: bold; text-shadow: 0 0 10px rgba(255, 224, 102, 0.35); }
+
+.mk-dossier { color: var(--term-cyan); font-weight: bold; }
+.mk-fichier { color: var(--term-texte); }
+.mk-cache   { color: var(--term-gris); font-style: italic; }
+.mk-invite  { color: var(--term-invite); font-weight: bold; }
+
+/* ── Thème alternatif : « ambre » (CRT orange rétro) ──
+   Exemple d'extension : theme:'ambre' dans le profil machine. */
+
+.theme-ambre {
+  --term-fond: #0a0602;
+  --term-fond-cadre: #120b04;
+  --term-bordure: #3a2a10;
+  --term-texte: #ffd9a0;
+  --term-caret: #ffb347;
+  --term-barre-fond: #1a1006;
+  --term-barre-texte: #a07a45;
+  --term-editeur-bande-fond: #1a1006;
+  --term-editeur-bande-texte: #c99e63;
+  --term-lueur: 0 0 8px rgba(255, 179, 71, 0.3);
+  --term-vert: #ffcf70;
+  --term-cyan: #ffe6b0;
+  --term-invite: #ffb347;
+}

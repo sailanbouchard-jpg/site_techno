@@ -1,0 +1,111 @@
+/*
+  style-config.css
+  ─────────────────
+  Rôle : regrouper TOUTES les valeurs visuelles de l'interface du simulateur
+  (couleurs, tailles, marges, polices...) sous forme de variables CSS.
+  C'est le SEUL fichier à modifier pour changer l'apparence de l'interface
+  (panneaux, boutons, disposition) sans toucher à style.css ni au JS.
+
+  THÈME « ARDOISE » : le canvas (ciel clair) occupe tout l'écran, l'interface
+  flotte dessus en panneaux gris-bleu foncé semi-transparents — contraste fort,
+  lisible au vidéoprojecteur, sans écraser le dessin.
+
+  Ne doit PAS contenir : de règle de mise en page (sélecteurs, flex, grid...).
+  Ça vit dans style.css, qui ne fait que CONSOMMER ces variables via var(--...).
+
+  Dépendances : aucune.
+*/
+
+:root {
+  /* ── Panneaux flottants (HUD) ── */
+  --hud-bg: rgba(28, 36, 46, 0.92);
+  --hud-bg-soft: rgba(38, 48, 60, 0.85);
+  --hud-border: rgba(255, 255, 255, 0.09);
+  --hud-radius: 12px;
+  --hud-shadow: 0 8px 24px rgba(8, 16, 26, 0.38);
+  --hud-blur: 7px;
+  --hud-gap: 10px;
+  --hud-margin: 12px;
+
+  /* ── Texte sur panneaux sombres ── */
+  --color-text: #e8edf2;
+  --color-text-muted: #9db0c0;
+  --color-text-faint: #6b7c8c;
+
+  /* ── Couleurs d'action ── */
+  --color-accent: #58a6d6;         /* sélection / actif */
+  --color-accent-soft: rgba(88, 166, 214, 0.16);
+  --color-accent-ring: rgba(88, 166, 214, 0.45);
+  --color-play: #4cae6d;           /* bouton Tester (lancer) */
+  --color-play-hover: #57c07c;
+  --color-danger: #e8697d;
+
+  /* ── Boutons / contrôles ── */
+  --ctrl-bg: rgba(255, 255, 255, 0.055);
+  --ctrl-bg-hover: rgba(255, 255, 255, 0.12);
+  --ctrl-border: rgba(255, 255, 255, 0.10);
+  --ctrl-radius: 8px;
+  --ctrl-active-bg: var(--color-accent);
+  --ctrl-active-text: #0e1720;
+  --sep-color: rgba(255, 255, 255, 0.10);
+  --color-disabled-text: #66788a;
+
+  /* ── Champs de saisie (sur fond sombre) ── */
+  --input-bg: rgba(12, 18, 25, 0.55);
+  --input-border: rgba(255, 255, 255, 0.14);
+  --input-text: #eef3f7;
+
+  /* ── Typographie ── */
+  --font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-size-base: 13px;
+  --font-size-title: 14px;
+  --font-size-small: 11px;
+  --font-size-tiny: 10px;
+
+  /* ── Espacements ── */
+  --spacing-small: 6px;
+  --spacing-medium: 12px;
+  --spacing-large: 20px;
+
+  /* ── Dimensions des panneaux ── */
+  --inspector-width: 272px;
+  --library-width: 232px;
+  --field-input-width: 96px;
+  --top-offset: 62px;      /* haut des panneaux latéraux (sous la barre du haut) */
+  --bottom-offset: 86px;   /* bas des bandeaux contextuels (au-dessus de la barre du bas) */
+
+  /* ── Palette de matériaux ── */
+  --mat-chip-width: 44px;
+  --mat-bar-width: 30px;
+  --swatch-size: 14px;     /* pastille de l'inspecteur */
+
+  /* ── Icônes ── */
+  --icon-size: 17px;
+  --tool-icon-size: 20px;
+
+  /* ── Éditeur de forces (hérité) ── */
+  --force-color-swatch-size: 12px;
+  --force-field-input-width: 70px;
+  --force-slider-value-width: 70px;
+
+  /* ── Canvas (plein écran, sous le HUD) ── */
+  --canvas-fallback-bg: #bfe3f2;
+
+  /* ── Aperçu du vent ── */
+  --wind-preview-height: 88px;
+
+  /* ── Compatibilité (anciens noms encore consommés) ── */
+  --color-background: #10161d;
+  --color-panel-background: var(--hud-bg-soft);
+  --color-border: var(--ctrl-border);
+  --border-radius: var(--ctrl-radius);
+  --button-radius: var(--ctrl-radius);
+  --elevation-1: 0 2px 8px rgba(8, 16, 26, 0.35);
+
+  /* Menu du clic droit (si réactivé un jour) */
+  --menu-bg: var(--hud-bg);
+  --menu-radius: 10px;
+  --menu-shadow: var(--hud-shadow);
+  --menu-hover: rgba(255, 255, 255, 0.08);
+  --menu-danger-hover: rgba(232, 105, 125, 0.16);
+}

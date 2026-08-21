@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administration — Technologie</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f4f6f8; min-height: 100vh; }
+
+    header {
+      background: white; border-bottom: 1px solid #e0e0e0;
+      padding: 14px 32px; display: flex; align-items: center; justify-content: space-between;
+    }
+    header h1 { font-size: 1.1rem; color: #1a1a1a; }
+    .btn-logout { padding: 6px 14px; background: #fee2e2; color: #991b1b; border: none; border-radius: 5px; cursor: pointer; font-size: .85rem; }
+    .btn-logout:hover { background: #fecaca; }
+
+    /* ── Login ── */
+    #login-screen { max-width: 340px; margin: 80px auto; background: white; border-radius: 10px; padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+    #login-screen h2 { font-size: 1.2rem; margin-bottom: 20px; }
+    #login-screen label { display: block; font-size: .85rem; color: #555; margin-bottom: 4px; }
+    #login-screen input { width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: .95rem; margin-bottom: 14px; outline: none; }
+    #login-screen input:focus { border-color: #3b82f6; }
+    .btn-primary { width: 100%; padding: 9px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: .95rem; }
+    .btn-primary:hover { background: #2563eb; }
+    .err-msg { font-size: .85rem; color: #991b1b; margin-top: 10px; }
+
+    /* ── Layout ── */
+    #app { display: none; }
+    .content { max-width: 1100px; margin: 28px auto; padding: 0 20px; }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex; align-items: center; gap: 3px;
+      margin-bottom: 22px; flex-wrap: wrap;
+      border-bottom: 2px solid #e5e7eb; padding-bottom: 0;
+    }
+    .tab {
+      padding: 8px 16px; border: 1px solid #ddd; border-bottom: none;
+      border-radius: 6px 6px 0 0; background: white; cursor: pointer;
+      font-size: .88rem; color: #555; transition: background .15s;
+      position: relative; top: 2px;
+    }
+    .tab:hover { background: #f0f4ff; color: #3b82f6; }
+    .tab.active { background: #3b82f6; color: white; border-color: #3b82f6; }
+    .tab-sep {
+      padding: 4px 8px 4px 14px; font-size: .72rem; color: #9ca3af;
+      font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+      align-self: flex-end; margin-bottom: 4px; white-space: nowrap;
+    }
+
+    /* ── Panels ── */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ── Cards ── */
+    .card { background: white; border-radius: 8px; border: 1px solid #e0e0e0; padding: 20px 24px; margin-bottom: 20px; }
+    .card h3 { font-size: .95rem; margin-bottom: 16px; color: #333; }
+
+    /* ── Forms ── */
+    .form-row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+    .form-row .field { display: flex; flex-direction: column; gap: 4px; }
+    .form-row label { font-size: .8rem; color: #555; }
+    .form-row input, .form-row select {
+      padding: 7px 10px; border: 1px solid #ddd; border-radius: 5px;
+      font-size: .9rem; outline: none; min-width: 130px;
+    }
+    .form-row input:focus, .form-row select:focus { border-color: #3b82f6; }
+    .btn-add { padding: 7px 16px; background: #10b981; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: .9rem; white-space: nowrap; }
+    .btn-add:hover { background: #059669; }
+    .form-feedback { font-size: .82rem; margin-top: 8px; min-height: 18px; }
+    .form-feedback.ok  { color: #065f46; }
+    .form-feedback.err { color: #991b1b; }
+
+    /* ── Tables ── */
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    th { text-align: left; padding: 8px 10px; background: #f8f9fa; color: #555; font-weight: 600; border-bottom: 2px solid #e0e0e0; white-space: nowrap; }
+    td { padding: 9px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafbff; }
+
+    /* ── Buttons ── */
+    .btn-sm { padding: 4px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: .8rem; margin-right: 4px; white-space: nowrap; }
+    .btn-reset  { background: #fef3c7; color: #92400e; }
+    .btn-reset:hover  { background: #fde68a; }
+    .btn-del    { background: #fee2e2; color: #991b1b; }
+    .btn-del:hover    { background: #fecaca; }
+    .btn-edit   { background: #e0f2fe; color: #0369a1; }
+    .btn-edit:hover   { background: #bae6fd; }
+    .btn-files  { background: #ede9fe; color: #6d28d9; }
+    .btn-files:hover  { background: #ddd6fe; }
+    .btn-dl     { background: #e0f2fe; color: #0369a1; }
+    .btn-dl:hover     { background: #bae6fd; }
+    .btn-toggle-open   { background: #d1fae5; color: #065f46; }
+    .btn-toggle-open:hover   { background: #a7f3d0; }
+    .btn-toggle-closed { background: #f3f4f6; color: #374151; }
+    .btn-toggle-closed:hover { background: #e5e7eb; }
+
+    /* ── Tags ── */
+    .tag { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: .75rem; margin: 1px; }
+    .tag-niveau { background: #fef3c7; color: #92400e; }
+    .tag-classe { background: #ede9fe; color: #6d28d9; }
+    .tag-none   { background: #f3f4f6; color: #9ca3af; font-style: italic; font-size: .78rem; }
+
+    /* ── Badges dépôts ── */
+    .badge-open   { display:inline-block; padding:2px 8px; background:#dcfce7; color:#065f46; border-radius:10px; font-size:.75rem; font-weight:600; }
+    .badge-closed { display:inline-block; padding:2px 8px; background:#f3f4f6; color:#6b7280; border-radius:10px; font-size:.75rem; }
+
+    /* ── Inputs groupes (onglets classes) ── */
+    .grp-input {
+      padding: 4px 6px; border: 1px solid #ddd; border-radius: 4px;
+      font-size: .85rem; outline: none; width: 62px; text-align: center;
+      transition: border-color .2s;
+    }
+    .grp-input:focus { border-color: #3b82f6; }
+    .grp-col { min-width: 100px; }
+
+    /* ── Hint ── */
+    .hint { font-size: .8rem; color: #888; margin-top: 6px; }
+    kbd {
+      background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 3px;
+      padding: 1px 5px; font-size: .78rem; font-family: monospace;
+    }
+
+    /* ── Modal reset / niveau / classe ── */
+    #modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35);
+      z-index: 1000; align-items: center; justify-content: center;
+    }
+    #modal-overlay.open { display: flex; }
+    #modal {
+      background: white; border-radius: 10px; padding: 28px; width: 380px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.15);
+    }
+    #modal h3 { margin-bottom: 16px; font-size: 1rem; }
+    #modal-input-container select,
+    #modal-input-container input {
+      width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 5px;
+      font-size: .95rem; outline: none; margin-bottom: 14px;
+    }
+    #modal-input-container select:focus,
+    #modal-input-container input:focus { border-color: #3b82f6; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .btn-cancel  { padding: 7px 16px; background: #f3f4f6; color: #444; border: none; border-radius: 5px; cursor: pointer; font-size: .9rem; }
+    .btn-confirm { padding: 7px 16px; background: #3b82f6; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: .9rem; }
+    #modal-err { font-size: .82rem; color: #991b1b; margin-bottom: 10px; min-height: 18px; }
+
+    /* ── Modal fichiers dépôts ── */
+    #files-modal-overlay {
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.4);
+      z-index:1100; align-items:center; justify-content:center;
+    }
+    #files-modal-overlay.open { display:flex; }
+    #files-modal {
+      background:white; border-radius:10px; padding:28px 28px 20px;
+      width:720px; max-width:94vw; max-height:82vh; overflow-y:auto;
+      box-shadow:0 8px 32px rgba(0,0,0,.18);
+    }
+    #files-modal h3 { margin-bottom:16px; font-size:1rem; }
+    .files-modal-footer { display:flex; justify-content:flex-end; margin-top:16px; }
+  </style>
+</head>
+<body>
+
+<!-- ══ Login ══════════════════════════════════════════════════════════════════ -->
+<div id="login-screen">
+  <h2>Administration</h2>
+  <label>Mot de passe</label>
+  <input type="password" id="admin-pwd" placeholder="Mot de passe admin" autofocus>
+  <button class="btn-primary" onclick="adminLogin()">Accéder</button>
+  <div class="err-msg" id="login-err"></div>
+</div>
+
+<!-- ══ App ════════════════════════════════════════════════════════════════════ -->
+<div id="app">
+  <header>
+    <h1>Administration — Technologie</h1>
+    <button class="btn-logout" onclick="adminLogout()">Déconnexion</button>
+  </header>
+
+  <div class="content">
+
+    <!-- ── Barre d'onglets ── -->
+    <div class="tabs" id="tabs-container">
+      <button class="tab active" id="tab-eleves" onclick="showTab('eleves', this)">Élèves</button>
+      <!-- Onglets classes injectés par JS -->
+      <span id="tabs-classes"></span>
+      <button class="tab" id="tab-depots" onclick="showTab('depots', this)">Dépôts</button>
+    </div>
+
+    <!-- ── Panel Élèves ── -->
+    <div class="panel active" id="panel-eleves">
+
+      <div class="card">
+        <h3>Créer un compte élève</h3>
+        <div class="form-row">
+          <div class="field">
+            <label>Identifiant</label>
+            <input type="text" id="new-id" placeholder="prenom.nom">
+          </div>
+          <div class="field">
+            <label>Mot de passe</label>
+            <input type="text" id="new-pwd" placeholder="motdepasse">
+          </div>
+          <button class="btn-add" onclick="createEleve()">Ajouter</button>
+        </div>
+        <p class="hint" style="margin-top:8px">Le niveau et la classe sont assignés séparément après la création.</p>
+        <div class="form-feedback" id="new-eleve-fb"></div>
+      </div>
+
+      <div class="card">
+        <h3>Liste des élèves</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Identifiant</th>
+              <th>Niveau</th>
+              <th>Classe</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="eleves-tbody">
+            <tr><td colspan="5" style="color:#aaa;text-align:center;padding:20px">Chargement…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Panels classes injectés par JS ── -->
+    <div id="panels-classes"></div>
+
+    <!-- ── Panel Dépôts ── -->
+    <div class="panel" id="panel-depots">
+      <div class="card">
+        <h3>Nouveau lien de dépôt</h3>
+        <div class="form-row">
+          <div class="field">
+            <label>Titre</label>
+            <input type="text" id="dp-titre" placeholder="Rendu activité 2" style="min-width:200px">
+          </div>
+          <div class="field">
+            <label>Classe</label>
+            <select id="dp-classe">
+              <option value="">— choisir —</option>
+            </select>
+          </div>
+          <button class="btn-add" onclick="createDrop()">Créer</button>
+        </div>
+        <div class="form-feedback" id="dp-fb"></div>
+      </div>
+
+      <div class="card">
+        <h3>Liens de dépôt</h3>
+        <table>
+          <thead><tr><th>Titre</th><th>Classe</th><th>Statut</th><th>Fichiers</th><th>Actions</th></tr></thead>
+          <tbody id="drops-tbody">
+            <tr><td colspan="5" style="color:#aaa;text-align:center;padding:20px">Chargement…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
+
+<!-- ══ Modal fichiers dépôts ══════════════════════════════════════════════════ -->
+<div id="files-modal-overlay">
+  <div id="files-modal">
+    <h3 id="files-modal-title">Fichiers</h3>
+    <table id="files-modal-table">
+      <thead><tr><th>Élève</th><th>Fichier</th><th>Taille</th><th>Déposé le</th><th>Télécharger</th><th>Supprimer</th></tr></thead>
+      <tbody id="files-modal-tbody"></tbody>
+    </table>
+    <div class="files-modal-footer">
+      <button class="btn-cancel" onclick="closeFilesModal()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal générique (niveau / classe / mdp) ════════════════════════════════ -->
+<div id="modal-overlay">
+  <div id="modal">
+    <h3 id="modal-title">Action</h3>
+    <div id="modal-err"></div>
+    <div id="modal-input-container">
+      <!-- Input ou select injecté dynamiquement -->
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel"  onclick="closeModal()">Annuler</button>
+      <button class="btn-confirm" onclick="confirmModal()">Valider</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// ÉTAT
+// ════════════════════════════════════════════════════════════════
+var CLASSES        = {};   // { "5eme": ["5eA","5eB","5eC"], ... }
+var catalog        = {};   // { "5eme": [{slug, title, activities:[...]}], ... }
+var allEleves      = [];   // [{ id, identifiant, niveau, classe, groupes:[] }]
+var allGroupes     = [];   // [{ eleve_id, identifiant, niveau, classe, activite_slug, numero_groupe }]
+var modalAction    = null;
+var currentClasse  = null; // onglet classe actif
+
+// ════════════════════════════════════════════════════════════════
+// TABS
+// ════════════════════════════════════════════════════════════════
+function showTab(name, btn) {
+  document.querySelectorAll(".tab").forEach(function(t){ t.classList.remove("active"); });
+  document.querySelectorAll(".panel").forEach(function(p){ p.classList.remove("active"); });
+  btn.classList.add("active");
+  var panel = document.getElementById("panel-" + name);
+  if (panel) panel.classList.add("active");
+}
+
+function showClasseTab(classe, btn) {
+  currentClasse = classe;
+  showTab("classe-" + classe, btn);
+  renderClassePanel(classe);
+}
+
+// ════════════════════════════════════════════════════════════════
+// AUTH
+// ════════════════════════════════════════════════════════════════
+async function adminLogin() {
+  var pwd = document.getElementById("admin-pwd").value;
+  var r   = await fetch("/api/admin/login", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({mot_de_passe: pwd}),
+  });
+  if (r.ok) {
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    await initApp();
+  } else {
+    document.getElementById("login-err").textContent = "Mot de passe incorrect";
+  }
+}
+document.getElementById("admin-pwd").addEventListener("keydown", function(e){
+  if (e.key === "Enter") adminLogin();
+});
+
+async function adminLogout() {
+  await fetch("/api/admin/logout", {method:"POST"});
+  location.reload();
+}
+
+async function checkSession() {
+  var r = await fetch("/api/admin/me");
+  var d = await r.json();
+  if (d.admin) {
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    await initApp();
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// INITIALISATION
+// ════════════════════════════════════════════════════════════════
+async function initApp() {
+  await Promise.all([loadClasses(), loadCatalog()]);
+  buildClassTabs();
+  await Promise.all([loadEleves(), loadGroupes(), loadDrops()]);
+}
+
+async function loadClasses() {
+  var r = await fetch("/api/classes");
+  CLASSES = await r.json();
+}
+
+async function loadCatalog() {
+  var r = await fetch("/api/catalog");
+  catalog = await r.json();
+}
+
+// ════════════════════════════════════════════════════════════════
+// CONSTRUCTION DES ONGLETS CLASSES
+// ════════════════════════════════════════════════════════════════
+function buildClassTabs() {
+  var tabsEl   = document.getElementById("tabs-classes");
+  var panelsEl = document.getElementById("panels-classes");
+  tabsEl.innerHTML   = "";
+  panelsEl.innerHTML = "";
+
+  Object.keys(CLASSES).forEach(function(niveau) {
+    var sep = document.createElement("span");
+    sep.className   = "tab-sep";
+    sep.textContent = niveau;
+    tabsEl.appendChild(sep);
+
+    CLASSES[niveau].forEach(function(classe) {
+      var btn       = document.createElement("button");
+      btn.className = "tab";
+      btn.id        = "tab-classe-" + classe;
+      btn.textContent = classe;
+      btn.onclick   = (function(c, b){ return function(){ showClasseTab(c, b); }; })(classe, btn);
+      tabsEl.appendChild(btn);
+
+      var panel     = document.createElement("div");
+      panel.className = "panel";
+      panel.id      = "panel-classe-" + classe;
+      panelsEl.appendChild(panel);
+    });
+  });
+
+  // Popule aussi le select dp-classe (dépôts)
+  buildDpClasseSelect();
+}
+
+function buildDpClasseSelect() {
+  var sel = document.getElementById("dp-classe");
+  sel.innerHTML = '<option value="">— choisir —</option><option value="*">Toutes les classes (*)</option>';
+  Object.keys(CLASSES).forEach(function(niv) {
+    var grp = document.createElement("optgroup");
+    grp.label = niv;
+    CLASSES[niv].forEach(function(c) {
+      var opt = document.createElement("option");
+      opt.value = c; opt.textContent = c;
+      grp.appendChild(opt);
+    });
+    sel.appendChild(grp);
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
+// ONGLET CLASSE — rendu du tableau groupes
+// ════════════════════════════════════════════════════════════════
+function getNiveauForClasse(classe) {
+  for (var niv in CLASSES) {
+    if (CLASSES[niv].indexOf(classe) !== -1) return niv;
+  }
+  return null;
+}
+
+function getActivitiesForNiveau(niveau) {
+  if (!niveau || !catalog[niveau]) return [];
+  var acts = [];
+  catalog[niveau].forEach(function(seq) {
+    seq.activities.forEach(function(act) {
+      acts.push({ slug: niveau + "/" + seq.slug + "/" + act.slug, title: act.title });
+    });
+  });
+  return acts;
+}
+
+function buildGroupMap() {
+  var map = {};
+  allGroupes.forEach(function(g) {
+    if (!map[g.eleve_id]) map[g.eleve_id] = {};
+    map[g.eleve_id][g.activite_slug] = g.numero_groupe;
+  });
+  return map;
+}
+
+function renderClassePanel(classe) {
+  var niveau     = getNiveauForClasse(classe);
+  var students   = allEleves.filter(function(e){ return e.classe === classe; });
+  var activities = getActivitiesForNiveau(niveau);
+  var groupMap   = buildGroupMap();
+
+  var panel = document.getElementById("panel-classe-" + classe);
+  if (!panel) return;
+
+  if (activities.length === 0) {
+    panel.innerHTML =
+      '<div class="card"><p class="hint">Aucune activité trouvée pour le niveau ' +
+      esc(niveau || "?") + '.</p></div>';
+    return;
+  }
+
+  var actHeaders = activities.map(function(a) {
+    var short = a.title.length > 24 ? a.title.substring(0, 22) + "…" : a.title;
+    return '<th class="grp-col" title="' + esc(a.slug) + '">' + esc(short) + '</th>';
+  }).join("");
+
+  var rows;
+  if (students.length === 0) {
+    rows = '<tr><td colspan="' + (activities.length + 1) +
+      '" style="color:#aaa;text-align:center;padding:20px">Aucun élève assigné à cette classe</td></tr>';
+  } else {
+    rows = students.map(function(e) {
+      var cells = activities.map(function(a) {
+        var g = (groupMap[e.id] && groupMap[e.id][a.slug] !== undefined)
+                ? groupMap[e.id][a.slug] : "";
+        return '<td><input type="number" min="1" class="grp-input" ' +
+          'data-eleve="' + e.id + '" ' +
+          'data-slug="'  + esc(a.slug)  + '" ' +
+          'data-classe="' + esc(classe) + '" ' +
+          'value="' + g + '" placeholder="—"></td>';
+      }).join("");
+      return '<tr><td><strong>' + esc(e.identifiant) + '</strong></td>' + cells + '</tr>';
+    }).join("");
+  }
+
+  panel.innerHTML =
+    '<div class="card">' +
+      '<h3>' + esc(classe) +
+        ' <span style="font-weight:400;color:#888;font-size:.85rem">— ' +
+        esc(niveau || "?") + ' — ' + students.length + ' élève(s)</span></h3>' +
+      '<p class="hint">Saisissez le n° de groupe et appuyez sur <kbd>Entrée</kbd>. ' +
+        'Laissez vide pour retirer l\'assignation.</p>' +
+      '<div class="form-feedback" id="fb-' + esc(classe) + '" style="margin:6px 0 2px"></div>' +
+      '<div style="overflow-x:auto"><table>' +
+        '<thead><tr><th>Élève</th>' + actHeaders + '</tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table></div>' +
+    '</div>';
+
+  // Listeners sur les inputs groupe
+  panel.querySelectorAll(".grp-input").forEach(function(inp) {
+    var prev = inp.value;
+    inp.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") { e.preventDefault(); if (inp.value !== prev) { prev = inp.value; saveGroupInput(inp); } }
+    });
+    inp.addEventListener("blur", function() {
+      if (inp.value !== prev) { prev = inp.value; saveGroupInput(inp); }
+    });
+  });
+}
+
+async function saveGroupInput(inp) {
+  var eleveId       = parseInt(inp.dataset.eleve);
+  var activite_slug = inp.dataset.slug;
+  var classe        = inp.dataset.classe;
+  var val           = inp.value.trim();
+
+  if (val === "") {
+    // Retirer l'assignation
+    await fetch("/api/admin/groupes/" + eleveId + "/" + activite_slug, {method:"DELETE"});
+    allGroupes = allGroupes.filter(function(g){
+      return !(g.eleve_id === eleveId && g.activite_slug === activite_slug);
+    });
+    flashBorder(inp, "#6b7280");
+    setFb(classe, "Assignation retirée", false);
+    return;
+  }
+
+  var numero_groupe = parseInt(val);
+  if (isNaN(numero_groupe) || numero_groupe < 1) {
+    flashBorder(inp, "#ef4444");
+    setFb(classe, "N° de groupe invalide (minimum : 1)", true);
+    return;
+  }
+
+  var r = await fetch("/api/admin/groupes", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({eleve_id: eleveId, activite_slug: activite_slug, numero_groupe: numero_groupe}),
+  });
+  var data = await r.json();
+  if (r.ok) {
+    flashBorder(inp, "#10b981");
+    setFb(classe, "✓ Groupe " + numero_groupe + " enregistré", false);
+    // Mise à jour locale
+    var ex = allGroupes.find(function(g){ return g.eleve_id === eleveId && g.activite_slug === activite_slug; });
+    if (ex) { ex.numero_groupe = numero_groupe; }
+    else { allGroupes.push({eleve_id: eleveId, activite_slug: activite_slug, numero_groupe: numero_groupe}); }
+  } else {
+    flashBorder(inp, "#ef4444");
+    setFb(classe, "✗ " + (data.erreur || "Erreur"), true);
+  }
+}
+
+function flashBorder(el, color) {
+  el.style.borderColor = color;
+  setTimeout(function(){ el.style.borderColor = ""; }, 1300);
+}
+
+function setFb(classe, msg, isErr) {
+  var el = document.getElementById("fb-" + classe);
+  if (!el) return;
+  el.textContent = msg;
+  el.className   = "form-feedback " + (isErr ? "err" : "ok");
+  setTimeout(function(){ el.textContent = ""; el.className = "form-feedback"; }, 3500);
+}
+
+// ════════════════════════════════════════════════════════════════
+// ÉLÈVES
+// ════════════════════════════════════════════════════════════════
+async function loadEleves() {
+  var r    = await fetch("/api/admin/eleves");
+  allEleves = await r.json();
+  renderElevesTable();
+}
+
+function renderElevesTable() {
+  var tbody = document.getElementById("eleves-tbody");
+  if (allEleves.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:#aaa;text-align:center;padding:20px">Aucun élève</td></tr>';
+    return;
+  }
+  tbody.innerHTML = allEleves.map(function(e) {
+    var nTag = e.niveau
+      ? '<span class="tag tag-niveau">' + esc(e.niveau) + '</span> '
+      : '<span class="tag-none">—</span> ';
+    var cTag = e.classe
+      ? '<span class="tag tag-classe">' + esc(e.classe) + '</span> '
+      : '<span class="tag-none">—</span> ';
+    return '<tr>' +
+      '<td style="color:#888">' + e.id + '</td>' +
+      '<td><strong>' + esc(e.identifiant) + '</strong></td>' +
+      '<td>' + nTag +
+        '<button class="btn-sm btn-edit" ' +
+          'onclick="openNiveauModal(' + e.id + ',\'' + esc(e.niveau||"") + '\',\'' + esc(e.identifiant) + '\')">Modifier</button>' +
+      '</td>' +
+      '<td>' + cTag +
+        '<button class="btn-sm btn-edit" ' +
+          'onclick="openClasseModal(' + e.id + ',\'' + esc(e.classe||"") + '\',\'' + esc(e.identifiant) + '\')">Modifier</button>' +
+      '</td>' +
+      '<td>' +
+        '<button class="btn-sm btn-reset" ' +
+          'onclick="openResetModal(' + e.id + ',\'' + esc(e.identifiant) + '\')">Réinit. mdp</button>' +
+        '<button class="btn-sm btn-del" ' +
+          'onclick="deleteEleve(' + e.id + ',\'' + esc(e.identifiant) + '\')">Supprimer</button>' +
+      '</td>' +
+    '</tr>';
+  }).join("");
+}
+
+async function createEleve() {
+  var identifiant  = document.getElementById("new-id").value.trim();
+  var mot_de_passe = document.getElementById("new-pwd").value.trim();
+  var fb           = document.getElementById("new-eleve-fb");
+  if (!identifiant || !mot_de_passe) {
+    fb.textContent = "Identifiant et mot de passe requis."; fb.className = "form-feedback err"; return;
+  }
+  var r    = await fetch("/api/admin/eleves", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({identifiant: identifiant, mot_de_passe: mot_de_passe}),
+  });
+  var data = await r.json();
+  if (r.ok) {
+    fb.textContent = "✓ Élève « " + esc(identifiant) + " » créé."; fb.className = "form-feedback ok";
+    document.getElementById("new-id").value  = "";
+    document.getElementById("new-pwd").value = "";
+    await loadEleves();
+  } else {
+    fb.textContent = data.erreur; fb.className = "form-feedback err";
+  }
+}
+
+async function deleteEleve(id, identifiant) {
+  if (!confirm("Supprimer l'élève « " + identifiant + " » et toutes ses données (groupes, réponses, bloc-notes) ?")) return;
+  await fetch("/api/admin/eleves/" + id, {method:"DELETE"});
+  await loadEleves();
+  await loadGroupes();
+}
+
+// ════════════════════════════════════════════════════════════════
+// GROUPES (chargement global)
+// ════════════════════════════════════════════════════════════════
+async function loadGroupes() {
+  var r    = await fetch("/api/admin/groupes");
+  allGroupes = await r.json();
+  if (currentClasse) renderClassePanel(currentClasse);
+}
+
+// ════════════════════════════════════════════════════════════════
+// MODALS
+// ════════════════════════════════════════════════════════════════
+function openNiveauModal(id, niveauActuel, identifiant) {
+  modalAction = {type:"niveau", id:id};
+  document.getElementById("modal-title").textContent = "Niveau — " + identifiant;
+  document.getElementById("modal-err").textContent   = "";
+  var niveaux = Object.keys(CLASSES);
+  document.getElementById("modal-input-container").innerHTML =
+    '<select id="modal-input">' +
+      '<option value="">— aucun —</option>' +
+      niveaux.map(function(n){
+        return '<option value="' + n + '"' + (n === niveauActuel ? ' selected' : '') + '>' + n + '</option>';
+      }).join("") +
+    '</select>';
+  document.getElementById("modal-overlay").classList.add("open");
+}
+
+function openClasseModal(id, classeActuelle, identifiant) {
+  modalAction = {type:"classe", id:id};
+  document.getElementById("modal-title").textContent = "Classe — " + identifiant;
+  document.getElementById("modal-err").textContent   = "";
+  var opts = '<option value="">— aucune —</option>';
+  Object.keys(CLASSES).forEach(function(niv) {
+    opts += '<optgroup label="' + esc(niv) + '">';
+    CLASSES[niv].forEach(function(c) {
+      opts += '<option value="' + c + '"' + (c === classeActuelle ? ' selected' : '') + '>' + c + '</option>';
+    });
+    opts += '</optgroup>';
+  });
+  document.getElementById("modal-input-container").innerHTML =
+    '<select id="modal-input">' + opts + '</select>';
+  document.getElementById("modal-overlay").classList.add("open");
+}
+
+function openResetModal(id, identifiant) {
+  modalAction = {type:"reset", id:id};
+  document.getElementById("modal-title").textContent = "Réinitialiser mdp — " + identifiant;
+  document.getElementById("modal-err").textContent   = "";
+  document.getElementById("modal-input-container").innerHTML =
+    '<input type="password" id="modal-input" placeholder="Nouveau mot de passe">';
+  var inp = document.getElementById("modal-input");
+  inp.addEventListener("keydown", function(e){
+    if (e.key === "Enter")  confirmModal();
+    if (e.key === "Escape") closeModal();
+  });
+  document.getElementById("modal-overlay").classList.add("open");
+  inp.focus();
+}
+
+function closeModal() {
+  document.getElementById("modal-overlay").classList.remove("open");
+  modalAction = null;
+}
+
+async function confirmModal() {
+  if (!modalAction) return;
+  var el    = document.getElementById("modal-input");
+  var val   = el ? el.value : "";
+  var errEl = document.getElementById("modal-err");
+  errEl.textContent = "";
+
+  if (modalAction.type === "reset") {
+    var mdp = val.trim();
+    if (!mdp) { errEl.textContent = "Le mot de passe ne peut pas être vide."; return; }
+    var r = await fetch("/api/admin/eleves/" + modalAction.id + "/reset-mdp", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({nouveau_mdp: mdp}),
+    });
+    if (r.ok) { closeModal(); }
+    else { errEl.textContent = "Erreur lors de la réinitialisation."; }
+
+  } else if (modalAction.type === "niveau") {
+    var r = await fetch("/api/admin/eleves/" + modalAction.id, {
+      method:"PATCH", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({niveau: val || null}),
+    });
+    if (r.ok) { closeModal(); await loadEleves(); }
+    else { errEl.textContent = "Erreur lors de la mise à jour."; }
+
+  } else if (modalAction.type === "classe") {
+    var r = await fetch("/api/admin/eleves/" + modalAction.id, {
+      method:"PATCH", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({classe: val || null}),
+    });
+    if (r.ok) { closeModal(); await loadEleves(); }
+    else { errEl.textContent = "Erreur lors de la mise à jour."; }
+  }
+}
+
+document.getElementById("modal-overlay").addEventListener("click", function(e){
+  if (e.target === this) closeModal();
+});
+
+// ════════════════════════════════════════════════════════════════
+// DÉPÔTS
+// ════════════════════════════════════════════════════════════════
+var dropsData = [];
+var filesModalLinkId = null;
+
+function fmtSize(b) {
+  if (b < 1024) return b + " o";
+  if (b < 1024*1024) return Math.round(b/1024) + " Ko";
+  return (b/1024/1024).toFixed(1) + " Mo";
+}
+
+function fmtDate(iso) {
+  if (!iso) return "—";
+  var d = new Date(iso);
+  return d.toLocaleDateString("fr-FR") + " " + d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+
+async function loadDrops() {
+  var r   = await fetch("/api/admin/drops");
+  dropsData = await r.json();
+  renderDropsTable();
+}
+
+function renderDropsTable() {
+  var tbody = document.getElementById("drops-tbody");
+  if (!dropsData || dropsData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:#aaa;text-align:center;padding:20px">Aucun lien de dépôt</td></tr>';
+    return;
+  }
+  tbody.innerHTML = dropsData.map(function(d) {
+    var badge = d.is_open
+      ? '<span class="badge-open">Ouvert</span>'
+      : '<span class="badge-closed">Fermé</span>';
+    var toggleBtn = d.is_open
+      ? '<button class="btn-sm btn-toggle-open"   onclick="toggleDrop(' + d.id + ',0)">Fermer</button>'
+      : '<button class="btn-sm btn-toggle-closed" onclick="toggleDrop(' + d.id + ',1)">Rouvrir</button>';
+    return '<tr>' +
+      '<td><strong>' + esc(d.titre) + '</strong></td>' +
+      '<td><span class="tag tag-classe">' + esc(d.classe) + '</span></td>' +
+      '<td>' + badge + '</td>' +
+      '<td style="text-align:center">' + d.nb_fichiers + '</td>' +
+      '<td>' +
+        '<button class="btn-sm btn-files" onclick="openFilesModal(' + d.id + ',\'' + esc(d.titre).replace(/'/g,"\\'") + '\')">Fichiers</button>' +
+        toggleBtn +
+        '<button class="btn-sm btn-del" onclick="deleteDrop(' + d.id + ',\'' + esc(d.titre).replace(/'/g,"\\'") + '\')">Supprimer</button>' +
+      '</td>' +
+    '</tr>';
+  }).join("");
+}
+
+async function createDrop() {
+  var titre  = document.getElementById("dp-titre").value.trim();
+  var classe = document.getElementById("dp-classe").value;
+  var fb     = document.getElementById("dp-fb");
+  if (!titre || !classe) {
+    fb.textContent = "Titre et classe requis."; fb.className = "form-feedback err"; return;
+  }
+  var r    = await fetch("/api/admin/drops", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({titre: titre, classe: classe}),
+  });
+  var data = await r.json();
+  if (r.ok) {
+    fb.textContent = "✓ Lien « " + titre + " » créé."; fb.className = "form-feedback ok";
+    document.getElementById("dp-titre").value = "";
+    document.getElementById("dp-classe").value = "";
+    loadDrops();
+  } else {
+    fb.textContent = data.erreur || "Erreur"; fb.className = "form-feedback err";
+  }
+}
+
+async function toggleDrop(id, newState) {
+  await fetch("/api/admin/drops/" + id, {
+    method:"PATCH", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({is_open: newState}),
+  });
+  loadDrops();
+}
+
+async function deleteDrop(id, titre) {
+  if (!confirm("Supprimer le lien « " + titre + " » et tous ses fichiers ?")) return;
+  await fetch("/api/admin/drops/" + id, {method:"DELETE"});
+  loadDrops();
+}
+
+async function openFilesModal(linkId, titre) {
+  filesModalLinkId = linkId;
+  document.getElementById("files-modal-title").textContent = "Fichiers — " + titre;
+  document.getElementById("files-modal-tbody").innerHTML =
+    '<tr><td colspan="6" style="color:#aaa;text-align:center;padding:16px">Chargement…</td></tr>';
+  document.getElementById("files-modal-overlay").classList.add("open");
+  var r     = await fetch("/api/admin/drops/" + linkId + "/fichiers");
+  var files = await r.json();
+  renderFilesModal(files, linkId);
+}
+
+function renderFilesModal(files, linkId) {
+  var tbody = document.getElementById("files-modal-tbody");
+  if (!files || files.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="color:#aaa;text-align:center;padding:16px">Aucun fichier déposé</td></tr>';
+    return;
+  }
+  tbody.innerHTML = files.map(function(f) {
+    return '<tr id="fm-file-' + f.id + '">' +
+      '<td><strong>' + esc(f.identifiant) + '</strong></td>' +
+      '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(f.nom_original) + '">' + esc(f.nom_original) + '</td>' +
+      '<td>' + fmtSize(f.taille) + '</td>' +
+      '<td>' + fmtDate(f.uploade_le) + '</td>' +
+      '<td><a class="btn-sm btn-dl" href="/api/admin/drops/' + linkId + '/fichiers/' + f.id + '" download>Télécharger</a></td>' +
+      '<td><button class="btn-sm btn-del" onclick="adminDeleteFile(' + f.id + ',' + linkId + ')">Supprimer</button></td>' +
+    '</tr>';
+  }).join("");
+}
+
+async function adminDeleteFile(fichierId, linkId) {
+  if (!confirm("Supprimer ce fichier ?")) return;
+  var r = await fetch("/api/admin/drops/" + linkId + "/fichiers/" + fichierId, {method:"DELETE"});
+  if (r.ok) {
+    var li = document.getElementById("fm-file-" + fichierId);
+    if (li) li.remove();
+    loadDrops();
+  }
+}
+
+function closeFilesModal() {
+  document.getElementById("files-modal-overlay").classList.remove("open");
+  filesModalLinkId = null;
+}
+document.getElementById("files-modal-overlay").addEventListener("click", function(e){
+  if (e.target === this) closeFilesModal();
+});
+
+// ════════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════════
+checkSession();
+</script>
+</body>
+</html>

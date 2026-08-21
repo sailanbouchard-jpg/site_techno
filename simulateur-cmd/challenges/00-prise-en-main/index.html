@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Défi 00 — Prise en main du terminal</title>
+
+  <!-- Structure du terminal + thème (couleurs/dimensions) — voir engine/ui/ -->
+  <link rel="stylesheet" href="../../engine/ui/terminal.css">
+  <link rel="stylesheet" href="../../engine/ui/theme.css">
+
+  <style>
+    /* ── Mise en page de la PAGE du défi (le look du terminal vit dans theme.css) ── */
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--term-fond);
+      color: var(--term-texte);
+      font-family: var(--term-police);
+      padding: 18px;
+    }
+
+    .page-entete {
+      text-align: center;
+      margin: 6px 0 18px;
+    }
+
+    .page-entete h1 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: 0.12em;
+      color: var(--term-cyan);
+      text-shadow: 0 0 12px rgba(65, 231, 255, 0.35);
+    }
+
+    .page-entete p {
+      margin: 6px 0 0;
+      color: var(--term-gris);
+      font-size: 13px;
+    }
+
+    .page-corps {
+      display: flex;
+      gap: 18px;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    #terminal { flex: 1 1 640px; min-width: 340px; }
+
+    /* ── Panneau de mission ── */
+
+    .panneau {
+      flex: 0 0 340px;
+      min-width: 300px;
+      border: 1px solid var(--term-bordure);
+      border-radius: var(--term-rayon);
+      background: var(--term-fond-cadre);
+      box-shadow: var(--term-ombre);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .panneau-badge {
+      display: inline-block;
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      color: var(--term-jaune);
+      border: 1px solid var(--term-bordure);
+      border-radius: 4px;
+      padding: 3px 8px;
+    }
+
+    .panneau h2 {
+      margin: 8px 0 0;
+      font-size: 17px;
+      color: var(--term-vert);
+      text-shadow: var(--term-lueur);
+    }
+
+    .panneau-consigne {
+      margin: 0;
+      white-space: pre-line;
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: var(--term-texte);
+    }
+
+    .panneau button {
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--term-vert);
+      background: transparent;
+      border: 1px solid var(--term-vert);
+      border-radius: 5px;
+      padding: 7px 14px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .panneau button:hover:not(:disabled) {
+      background: var(--term-vert);
+      color: var(--term-fond);
+    }
+
+    .panneau button:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    #liste-indices {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--term-jaune);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    #liste-indices li { margin-bottom: 6px; }
+
+    #zone-flag { display: flex; gap: 8px; }
+
+    #champ-flag {
+      flex: 1;
+      min-width: 0;
+      font-family: inherit;
+      font-size: 13.5px;
+      color: var(--term-jaune);
+      background: var(--term-fond);
+      border: 1px solid var(--term-bordure);
+      border-radius: 5px;
+      padding: 7px 10px;
+      outline: none;
+      caret-color: var(--term-caret);
+    }
+
+    #champ-flag:focus { border-color: var(--term-vert); }
+
+    #message-validation {
+      margin: 10px 0 0;
+      min-height: 1.4em;
+      font-size: 13.5px;
+    }
+
+    #message-validation.est-erreur { color: var(--term-rouge); animation: secousse 0.35s; }
+    #message-validation.est-ok     { color: var(--term-vert); }
+
+    .panneau-progression {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      font-size: 18px;
+      color: var(--term-gris);
+      border-top: 1px solid var(--term-bordure);
+      padding-top: 12px;
+    }
+
+    .panneau-progression .fait    { color: var(--term-vert); }
+    .panneau-progression .courant { color: var(--term-jaune); }
+
+    .panneau-final {
+      text-align: center;
+      color: var(--term-vert);
+      font-size: 15px;
+      line-height: 1.8;
+      text-shadow: var(--term-lueur);
+    }
+
+    #btn-recommencer {
+      border-color: var(--term-bordure);
+      color: var(--term-gris);
+      font-size: 11px;
+      padding: 4px 10px;
+      align-self: center;
+    }
+
+    /* ── Animations de réussite / échec ── */
+
+    .panneau.reussite { animation: flash-reussite 0.9s ease; }
+
+    @keyframes flash-reussite {
+      0%   { box-shadow: var(--term-ombre); }
+      35%  { box-shadow: 0 0 34px var(--term-vert); }
+      100% { box-shadow: var(--term-ombre); }
+    }
+
+    @keyframes secousse {
+      0%, 100% { transform: translateX(0); }
+      25%      { transform: translateX(-5px); }
+      75%      { transform: translateX(5px); }
+    }
+  </style>
+</head>
+<body>
+  <header class="page-entete">
+    <h1>### DÉFI 00 — PRISE EN MAIN DU TERMINAL ###</h1>
+    <p>Trois niveaux. Un seul poste. Montre que tu sais lui parler.</p>
+  </header>
+
+  <main class="page-corps">
+    <div id="terminal"></div>
+
+    <aside class="panneau" id="panneau">
+      <div>
+        <span class="panneau-badge" id="niveau-badge">NIVEAU –</span>
+        <h2 id="niveau-titre">Chargement…</h2>
+      </div>
+
+      <p class="panneau-consigne" id="niveau-consigne"></p>
+
+      <div class="panneau-indices">
+        <button id="btn-indice">◈ Indice</button>
+        <ul id="liste-indices"></ul>
+      </div>
+
+      <div class="panneau-validation">
+        <div id="zone-flag">
+          <input id="champ-flag" placeholder="TECHNO{…}" autocomplete="off" spellcheck="false">
+          <button id="btn-valider">Valider</button>
+        </div>
+        <button id="btn-verifier" hidden>⟳ Vérifier l'état de la machine</button>
+        <p id="message-validation"></p>
+      </div>
+
+      <div class="panneau-progression" id="progression"></div>
+      <button id="btn-recommencer" title="Efface la sauvegarde et repart du niveau 1">recommencer le défi</button>
+    </aside>
+  </main>
+
+  <script type="module">
+    // La page n'importe QUE engine.js et sa définition de défi.
+    import { Terminal, LocalStorageAdapter } from "../../engine/engine.js";
+    import { createChallenge } from "./challenge.def.js";
+
+    // ── Identifiant élève : compte du site si connecté, valeur factice en dev ──
+    async function getStudentId() {
+      try {
+        const r = await fetch("/api/me");
+        if (r.ok) {
+          const moi = await r.json();
+          if (moi.connecte) return "eleve-" + moi.eleve_id;
+        }
+      } catch { /* hors site (file://, démo) → identifiant de dev */ }
+      return "dev-eleve";
+    }
+
+    // ── Références DOM du panneau ──
+    const panneau     = document.getElementById("panneau");
+    const badge       = document.getElementById("niveau-badge");
+    const titre       = document.getElementById("niveau-titre");
+    const consigne    = document.getElementById("niveau-consigne");
+    const btnIndice   = document.getElementById("btn-indice");
+    const listeIndices = document.getElementById("liste-indices");
+    const zoneFlag    = document.getElementById("zone-flag");
+    const champFlag   = document.getElementById("champ-flag");
+    const btnValider  = document.getElementById("btn-valider");
+    const btnVerifier = document.getElementById("btn-verifier");
+    const message     = document.getElementById("message-validation");
+    const progression = document.getElementById("progression");
+    const btnRecommencer = document.getElementById("btn-recommencer");
+
+    // ── Assemblage : défi + machine + terminal ──
+    const adapter   = new LocalStorageAdapter();
+    const studentId = await getStudentId();
+    const defi      = createChallenge(studentId, adapter);
+
+    defi.events.on("level:complete", () => {
+      panneau.classList.remove("reussite");
+      void panneau.offsetWidth; // relance l'animation CSS
+      panneau.classList.add("reussite");
+      terminal.io.writeLine("");
+      terminal.io.writeLine("[[ok]]  >>> NIVEAU RÉUSSI — bien joué ! <<<[[/]]");
+      terminal.io.writeLine("");
+    });
+    defi.events.on("level:enter", majPanneau);
+    defi.events.on("challenge:complete", afficherFin);
+
+    await defi.init();
+
+    // On rallume la machine à chaque visite : sensation de « vrai ordi ».
+    defi.machine.power = "off";
+    const terminal = Terminal.mount(document.getElementById("terminal"), defi.machine, { adapter });
+    defi.attachSession(terminal.session);
+
+    // Abonné APRÈS le montage du terminal (jamais déclenché pendant init()).
+    defi.events.on("challenge:complete", () => {
+      terminal.io.writeLine("[[ok]]  ### DÉFI TERMINÉ — félicitations ! ###[[/]]");
+    });
+
+    majPanneau();
+    if (defi.done) afficherFin();
+
+    // ── Rendu du panneau ──
+    function majPanneau() {
+      if (defi.done) return;
+      const niveau = defi.currentLevel;
+      badge.textContent = `NIVEAU ${defi.currentLevelIndex + 1}/${defi.levels.length}`;
+      titre.textContent = niveau.title;
+      consigne.textContent = niveau.brief;
+      message.textContent = "";
+      message.className = "";
+      champFlag.value = "";
+
+      // Indices déjà révélés pour ce niveau (persiste au sein de la session).
+      listeIndices.innerHTML = "";
+      for (const indice of defi.revealedHints) ajouterIndice(indice);
+      btnIndice.disabled = defi.revealedHints.length >= (niveau.hints || []).length;
+
+      // Mode de validation : flag saisi, ou état de la machine.
+      const parFlag = niveau.mode !== "etat";
+      zoneFlag.hidden = !parFlag;
+      btnVerifier.hidden = parFlag;
+
+      majProgression();
+    }
+
+    function majProgression() {
+      const total = defi.levels.length;
+      progression.innerHTML = defi.levels
+        .map((_, i) => {
+          if (i < defi.currentLevelIndex) return '<span class="fait">●</span>';
+          if (i === defi.currentLevelIndex && !defi.done) return '<span class="courant">◉</span>';
+          return "<span>○</span>";
+        })
+        .join("");
+    }
+
+    function ajouterIndice(texte) {
+      const li = document.createElement("li");
+      li.textContent = texte;
+      listeIndices.appendChild(li);
+    }
+
+    function afficherFin() {
+      badge.textContent = "TERMINÉ";
+      titre.textContent = defi.title;
+      consigne.classList.add("panneau-final");
+      consigne.textContent =
+        "### DÉFI TERMINÉ ###\nLes trois niveaux sont validés.\nTu sais maintenant parler à une machine.";
+      zoneFlag.hidden = true;
+      btnVerifier.hidden = true;
+      btnIndice.disabled = true;
+      listeIndices.innerHTML = "";
+      message.textContent = "";
+      message.className = "";
+      majProgression();
+    }
+
+    // ── Interactions ──
+    btnIndice.addEventListener("click", () => {
+      const indice = defi.revealHint();
+      if (indice) ajouterIndice(indice);
+      btnIndice.disabled = defi.revealedHints.length >= (defi.currentLevel?.hints || []).length;
+    });
+
+    async function tenter(soumission) {
+      const resultat = await defi.submit(soumission);
+      if (!resultat.success) {
+        message.textContent = "✗ Pas encore — relis la consigne (ou demande un indice).";
+        message.className = "est-erreur";
+        void message.offsetWidth;
+      }
+      // En cas de succès, les événements level:enter / challenge:complete
+      // mettent le panneau à jour.
+    }
+
+    btnValider.addEventListener("click", () => tenter(champFlag.value));
+    champFlag.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") tenter(champFlag.value);
+    });
+    btnVerifier.addEventListener("click", () => tenter(""));
+
+    btnRecommencer.addEventListener("click", async () => {
+      if (!confirm("Effacer ta progression et repartir du niveau 1 ?")) return;
+      await defi.reset();
+      location.reload();
+    });
+  </script>
+</body>
+</html>

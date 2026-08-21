@@ -1,0 +1,13 @@
+# Données élèves et secrets — ne jamais versionner
+data.db
+uploads/
+secret_key.txt
+
+# Dossier généré par build.py
+site/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/

@@ -1,0 +1,4 @@
+{
+  "//": "Uniquement pour que Node traite les .js en modules ES lors des tests headless (node test-headless.js). Aucune dépendance, aucun build.",
+  "type": "module"
+}

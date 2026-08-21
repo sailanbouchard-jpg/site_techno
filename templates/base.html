@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{titre}} — Technologie</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&display=swap">
+{{page_style}}
+</head>
+
+<body class="{{body_class}}">
+
+    {{navbar}}
+
+    <div class="activity-wrapper">
+        <div class="page-sidebar" id="page-sidebar"></div>
+        <main>
+            {{entrainement_bar}}
+            {{contenu}}
+        </main>
+    </div>
+
+    <script>
+    // Icône du bouton "Annuler" injecté dynamiquement quand on charge la réponse d'un
+    // camarade (=rep> et =choix>) — partagée par les deux IIFE plus bas, voir CLAUDE.md
+    // (pas de texte sur les boutons sauvegarder/charger/annuler, icônes seulement).
+    var ICON_ANNULER =
+        '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" ' +
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+    </script>
+
+    <script>
+    // ── Bloc =rep> : chargement et sauvegarde des réponses ──────────────────
+    (function () {
+        // Parse l'URL pour obtenir l'activite_slug : "4eme/activite_01_lepanneau"
+        // (fonctionne pour /4eme/activite_01_lepanneau.html)
+        function getActiviteSlug() {
+            var path = window.location.pathname
+                .replace(/^\//, "")
+                .replace(/\.html$/, "");
+            // Doit contenir au moins un "/" (section/slug)
+            return path.indexOf("/") !== -1 ? path : null;
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            // .block-rep est aussi porté par =choix> (block-rep block-choix) : ce script
+            // ne sait gérer que la textarea/le bouton Sauvegarder de =rep>, =choix> a son
+            // propre script (_initChoix) — d'où le :not(.block-choix) sur repBlocks.
+            var blocks    = document.querySelectorAll(".block-rep");
+            var repBlocks = document.querySelectorAll(".block-rep:not(.block-choix)");
+            if (blocks.length === 0) return;
+
+            var activiteSlug  = getActiviteSlug();
+            var entrainement  = document.body.classList.contains("entrainement-mode");
+            if (!activiteSlug) return;
+
+            // Charge les réponses existantes (=rep> uniquement)
+            fetch("/api/reponses?activite=" + encodeURIComponent(activiteSlug))
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (data) {
+                    if (!data || !data.reponses) return;
+                    data.reponses.forEach(function (rep) {
+                        var block = document.querySelector(
+                            '.block-rep:not(.block-choix)[data-question-id="' + rep.question_id + '"]'
+                        );
+                        if (block) {
+                            var ta = block.querySelector(".rep-textarea");
+                            ta.value = rep.contenu;
+                            ta.dispatchEvent(new Event("input")); // déclenche auto-grow si schema-zone
+                            block.querySelector(".rep-status").textContent = "Chargé";
+                            block.querySelector(".rep-status").style.color = "#666";
+                        }
+                    });
+                })
+                .catch(function () {});
+
+            // Masque les boutons Charger si l'activité n'est pas du niveau de l'élève
+            // (pas de groupe possible → chargement de groupe sans sens)
+            var actSection = activiteSlug.split("/")[0];
+            fetch("/api/me")
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (me) {
+                    if (!me || !me.connecte || !me.niveau) return;
+                    if (me.niveau !== actSection) {
+                        blocks.forEach(function (b) {
+                            var lb = b.querySelector(".rep-load-btn");
+                            if (lb) lb.style.display = "none";
+                        });
+                    }
+                })
+                .catch(function () {});
+
+            var MAX_CHARS = 2000;
+
+            // Branche les boutons Sauvegarder et Charger (=rep> uniquement)
+            repBlocks.forEach(function (block) {
+                var btn       = block.querySelector(".rep-save-btn");
+                var loadBtn   = block.querySelector(".rep-load-btn");
+                var textarea  = block.querySelector(".rep-textarea");
+                var status    = block.querySelector(".rep-status");
+                var qid       = block.dataset.questionId;
+                var isCompact = block.classList.contains("compact-zone");
+                var backupVal = null;
+
+                // Mode entraînement : pas de sauvegarde automatique — le bouton
+                // Sauvegarder disparaît, seul =verif> peut sauvegarder ce bloc.
+                // Le bouton Charger (réponses de camarades) n'a pas de sens non plus :
+                // la réponse se recharge seule si elle a été validée par =verif>.
+                if (entrainement) {
+                    btn.style.display = "none";
+                    if (loadBtn) loadBtn.style.display = "none";
+                }
+
+                // Auto-grow pour les zones compactes (schéma et tableau)
+                if (isCompact) {
+                    function makeAutoGrow(ta) {
+                        function grow() {
+                            ta.style.height = "auto";
+                            ta.style.height = ta.scrollHeight + "px";
+                        }
+                        ta.addEventListener("input", grow);
+                        grow();
+                    }
+                    makeAutoGrow(textarea);
+                }
+
+                // Injecte le compteur de caractères
+                var counter = document.createElement("span");
+                counter.className = "rep-counter";
+                block.querySelector(".rep-footer").appendChild(counter);
+
+                function updateCounter() {
+                    var len  = textarea.value.length;
+                    var over = len > MAX_CHARS;
+                    counter.textContent = len + " / " + MAX_CHARS;
+                    counter.classList.toggle("rep-counter--warn",  len >= MAX_CHARS * 0.9 && !over);
+                    counter.classList.toggle("rep-counter--over",  over);
+                    btn.disabled = over;
+                }
+                textarea.addEventListener("input", updateCounter);
+                updateCounter();
+
+                // Empêche tout collage : Ctrl/Cmd+V, clic-droit → Coller, glisser-déposer
+                function blockPaste(e) {
+                    e.preventDefault();
+                    status.textContent = "⚠ Collage désactivé — écris ta réponse";
+                    status.style.color = "#991b1b";
+                    setTimeout(function () {
+                        if (status.textContent.indexOf("Collage") !== -1) {
+                            status.textContent = "";
+                        }
+                    }, 2500);
+                }
+                textarea.addEventListener("paste", blockPaste);
+                textarea.addEventListener("drop",  blockPaste);
+
+                // ── Bouton Charger ─────────────────────────────────────────────
+                if (loadBtn) {
+                    loadBtn.addEventListener("click", function () {
+                        // Ferme la liste si déjà ouverte
+                        var existing = block.querySelector(".rep-group-list");
+                        if (existing) {
+                            existing.parentNode.removeChild(existing);
+                            return;
+                        }
+
+                        fetch("/api/reponses/groupe?activite=" + encodeURIComponent(activiteSlug) +
+                              "&question_id=" + encodeURIComponent(qid))
+                            .then(function (r) { return r.ok ? r.json() : []; })
+                            .then(function (members) {
+                                if (!Array.isArray(members) || members.length === 0) {
+                                    status.textContent = "Aucune réponse de groupe disponible";
+                                    status.style.color = "";
+                                    setTimeout(function () {
+                                        if (status.textContent.indexOf("Aucune") !== -1) {
+                                            status.textContent = "";
+                                        }
+                                    }, 3000);
+                                    return;
+                                }
+
+                                var list = document.createElement("div");
+                                list.className = "rep-group-list";
+
+                                members.forEach(function (m) {
+                                    var item = document.createElement("button");
+                                    item.type = "button";
+                                    item.className = "rep-group-item";
+                                    item.textContent = m.identifiant;
+                                    item.addEventListener("click", function () {
+                                        // Sauvegarde la réponse actuelle avant de charger
+                                        backupVal = textarea.value;
+                                        textarea.value = m.contenu;
+                                        textarea.dispatchEvent(new Event("input"));
+
+                                        // Ferme la liste
+                                        list.parentNode && list.parentNode.removeChild(list);
+
+                                        // Remplace le bouton Charger par Annuler
+                                        loadBtn.style.display = "none";
+                                        var cancelBtn = document.createElement("button");
+                                        cancelBtn.type = "button";
+                                        cancelBtn.className = "rep-cancel-btn";
+                                        cancelBtn.style.cssText =
+                                            "background:var(--rep-annuler-fond);color:var(--rep-annuler-texte);";
+                                        cancelBtn.setAttribute("aria-label", "Annuler");
+                                        cancelBtn.title = "Annuler";
+                                        cancelBtn.innerHTML = ICON_ANNULER;
+                                        loadBtn.parentNode.insertBefore(cancelBtn, loadBtn);
+
+                                        // Texte de statut
+                                        status.textContent = "réponse de " + m.identifiant + " chargée";
+                                        status.style.color = "var(--rep-charge-statut)";
+
+                                        // Annuler → restaure la réponse d'origine
+                                        cancelBtn.addEventListener("click", function () {
+                                            textarea.value = backupVal !== null ? backupVal : "";
+                                            textarea.dispatchEvent(new Event("input"));
+                                            backupVal = null;
+                                            cancelBtn.parentNode && cancelBtn.parentNode.removeChild(cancelBtn);
+                                            loadBtn.style.display = "";
+                                            status.textContent = "";
+                                            status.style.color = "";
+                                        });
+                                    });
+                                    list.appendChild(item);
+                                });
+
+                                // .rep-footer peut être niché dans .rep-zone-anchor (mode schéma) —
+                                // on insère relativement à son vrai parent, pas à block directement.
+                                var footerEl = block.querySelector(".rep-footer");
+                                footerEl.parentNode.insertBefore(list, footerEl);
+
+                                // Ferme sur clic extérieur
+                                function outsideClick(e) {
+                                    if (!block.contains(e.target)) {
+                                        var l = block.querySelector(".rep-group-list");
+                                        if (l) l.parentNode.removeChild(l);
+                                        document.removeEventListener("click", outsideClick, true);
+                                    }
+                                }
+                                setTimeout(function () {
+                                    document.addEventListener("click", outsideClick, true);
+                                }, 0);
+                            })
+                            .catch(function () {});
+                    });
+                }
+
+                // ── Bouton Sauvegarder ─────────────────────────────────────────
+                btn.addEventListener("click", function () {
+                    if (textarea.value.length > MAX_CHARS) return;
+                    btn.disabled = true;
+                    status.textContent = "Enregistrement…";
+                    status.style.color = "#555";
+
+                    fetch("/api/reponses", {
+                        method:  "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body:    JSON.stringify({
+                            activite_slug: activiteSlug,
+                            question_id:   qid,
+                            contenu:       textarea.value,
+                        }),
+                    })
+                    .then(function (r) { return r.json().then(function(d){ return {ok: r.ok, d: d}; }); })
+                    .then(function (res) {
+                        if (res.ok) {
+                            status.textContent = "✓ Sauvegardé";
+                            status.style.color = "#065f46";
+                            // Nettoie l'état "réponse chargée"
+                            var cancelBtn = block.querySelector(".rep-cancel-btn");
+                            if (cancelBtn) {
+                                cancelBtn.parentNode && cancelBtn.parentNode.removeChild(cancelBtn);
+                                loadBtn.style.display = "";
+                                backupVal = null;
+                            }
+                        } else {
+                            status.textContent = res.d.erreur || "Erreur";
+                            status.style.color = "#991b1b";
+                        }
+                    })
+                    .catch(function () {
+                        status.textContent = "Erreur réseau";
+                        status.style.color = "#991b1b";
+                    })
+                    .finally(function () { btn.disabled = false; });
+                });
+            });
+        });
+    })();
+    </script>
+
+    <script>
+    // ── Blocs interactifs : QCM, Associer, Trier, RepG, Résumé, Vue condensée ──
+    (function () {
+        function getActiviteSlug() {
+            var path = window.location.pathname.replace(/^\//, "").replace(/\.html$/, "");
+            return path.indexOf("/") !== -1 ? path : null;
+        }
+
+        var activiteSlug = getActiviteSlug();
+        var entrainement = document.body.classList.contains("entrainement-mode");
+
+        // ── Sauvegarde générique ─────────────────────────────────────────────
+        function saveAnswer(qid, contenu, onOk, onErr) {
+            if (!activiteSlug) return;
+            fetch("/api/reponses", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ activite_slug: activiteSlug, question_id: qid, contenu: contenu }),
+            })
+            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+            .then(function (res) { res.ok ? onOk() : onErr(res.d.erreur || "Erreur"); })
+            .catch(function () { onErr("Erreur réseau"); });
+        }
+
+        // ── Chargement de toutes les réponses au démarrage ──────────────────
+        document.addEventListener("DOMContentLoaded", function () {
+            if (!activiteSlug) return;
+            fetch("/api/reponses?activite=" + encodeURIComponent(activiteSlug))
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (data) {
+                    if (!data || !data.reponses) return;
+                    data.reponses.forEach(function (rep) {
+                        var qid     = rep.question_id;
+                        var contenu = rep.contenu;
+
+                        // QCM
+                        var qcmBlock = document.querySelector('.block-qcm[data-question-id="' + qid + '"]');
+                        if (qcmBlock) {
+                            var saved = contenu.split("|");
+                            qcmBlock.querySelectorAll(".qcm-choice input").forEach(function (inp) {
+                                var txt = inp.closest(".qcm-choice").querySelector(".qcm-choice-text").textContent;
+                                if (saved.indexOf(txt) !== -1) inp.checked = true;
+                            });
+                        }
+
+                        // Choix (réponse à choix multiple)
+                        var choixBlock = document.querySelector('.block-choix[data-question-id="' + qid + '"]');
+                        if (choixBlock && contenu) _choixSetValue(choixBlock, contenu);
+
+                        // Associer
+                        var assocBlock = document.querySelector('.block-assoc[data-question-id="' + qid + '"]');
+                        if (assocBlock && contenu) {
+                            try {
+                                var pairs = JSON.parse(contenu);
+                                _assocRestorePairs(assocBlock, pairs);
+                            } catch (e) {}
+                        }
+
+                        // Trier
+                        var trierBlock = document.querySelector('.block-trier[data-question-id="' + qid + '"]');
+                        if (trierBlock && contenu) {
+                            var order = contenu.split("|");
+                            _trierRestoreOrder(trierBlock, order);
+                        }
+
+                        // RepG
+                        var repgBlock = document.querySelector('.block-repg[data-question-id="' + qid + '"]');
+                        if (repgBlock && contenu) {
+                            try {
+                                var fields = JSON.parse(contenu);
+                                repgBlock.querySelectorAll(".repg-field").forEach(function (inp) {
+                                    if (fields[inp.dataset.field] !== undefined) {
+                                        inp.value = fields[inp.dataset.field];
+                                    }
+                                });
+                            } catch (e) {}
+                        }
+
+                        // Résumé placeholders
+                        _updateResumePlaceholders(qid, contenu);
+                    });
+                })
+                .catch(function () {});
+
+            _shuffleChoixOptions();
+            _initQcm();
+            _initChoix();
+            _initAssoc();
+            _initTrier();
+            _initRepg();
+            _initCondenseButton();
+            _initDiag();
+        });
+
+        // ── Mise à jour des placeholders {{q}} dans ::resume ────────────────
+        function _updateResumePlaceholders(qid, contenu) {
+            document.querySelectorAll('.res-ph[data-qid="' + qid + '"]').forEach(function (span) {
+                if (contenu && contenu.trim()) {
+                    span.textContent = contenu;
+                    span.classList.add("filled");
+                } else {
+                    span.textContent = "…";
+                    span.classList.remove("filled");
+                }
+            });
+        }
+
+        // ── QCM ─────────────────────────────────────────────────────────────
+        function _initQcm() {
+            document.querySelectorAll(".block-qcm").forEach(function (block) {
+                var qid    = block.dataset.questionId;
+                var btn    = block.querySelector(".qcm-btn");
+                var reset  = block.querySelector(".qcm-reset-btn");
+                var status = block.querySelector(".qcm-status");
+
+                btn.addEventListener("click", function () {
+                    var choices  = block.querySelectorAll(".qcm-choice");
+                    var selected = block.querySelectorAll(".qcm-choice input:checked");
+                    if (selected.length === 0) {
+                        status.textContent = "Sélectionne une réponse.";
+                        status.style.color = "#d97706";
+                        return;
+                    }
+
+                    var allCorrect = Array.from(choices).every(function (c) {
+                        return c.querySelector("input").checked === (c.dataset.correct === "true");
+                    });
+                    status.textContent = allCorrect ? "✓ Correct !" : "✗ Pas encore la bonne réponse…";
+                    status.style.color = allCorrect ? "#065f46" : "#991b1b";
+
+                    var selectedTexts = [];
+                    choices.forEach(function (c) {
+                        if (c.querySelector("input").checked)
+                            selectedTexts.push(c.querySelector(".qcm-choice-text").textContent);
+                    });
+                    // Mode entraînement : ne sauvegarde que si la réponse est entièrement juste.
+                    if (!entrainement || allCorrect) {
+                        saveAnswer(qid, selectedTexts.join("|"), function () {}, function () {});
+                    }
+                });
+
+                if (reset) {
+                    reset.addEventListener("click", function () {
+                        block.querySelectorAll(".qcm-choice input").forEach(function (inp) { inp.checked = false; });
+                        status.textContent = "";
+                    });
+                }
+            });
+        }
+
+        // ── Associer ────────────────────────────────────────────────────────
+        function _initAssoc() {
+            document.querySelectorAll(".block-assoc").forEach(function (block) {
+                // Shuffle right column on load
+                var rightArr  = Array.from(block.querySelectorAll(".assoc-right"));
+                var rightParent = rightArr[0] && rightArr[0].parentNode;
+                if (rightParent) {
+                    for (var i = rightArr.length - 1; i > 0; i--) {
+                        var j = Math.floor(Math.random() * (i + 1));
+                        var tmp = rightArr[i]; rightArr[i] = rightArr[j]; rightArr[j] = tmp;
+                    }
+                    rightArr.forEach(function (el) { rightParent.appendChild(el); });
+                }
+
+                var state = { pairs: {}, selectedLeft: null };
+                block._assocState = state;
+                var svg = block.querySelector(".assoc-svg");
+
+                function _drawLine(lEl, rEl, color) {
+                    var svgRect = svg.getBoundingClientRect();
+                    var lRect   = lEl.getBoundingClientRect();
+                    var rRect   = rEl.getBoundingClientRect();
+                    var line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                    line.setAttribute("x1", lRect.right  - svgRect.left);
+                    line.setAttribute("y1", lRect.top + lRect.height / 2 - svgRect.top);
+                    line.setAttribute("x2", rRect.left   - svgRect.left);
+                    line.setAttribute("y2", rRect.top  + rRect.height / 2 - svgRect.top);
+                    line.setAttribute("stroke", color || "#64748b");
+                    line.setAttribute("stroke-width", "2.5");
+                    line.setAttribute("stroke-linecap", "round");
+                    svg.appendChild(line);
+                }
+
+                function _redrawAll(colorFn) {
+                    while (svg.firstChild) svg.removeChild(svg.firstChild);
+                    Object.keys(state.pairs).forEach(function (lk) {
+                        var lEl = block.querySelector('.assoc-left[data-key="' + lk + '"]');
+                        var rEl = block.querySelector('.assoc-right[data-key="' + state.pairs[lk] + '"]');
+                        if (lEl && rEl) _drawLine(lEl, rEl, colorFn ? colorFn(lk) : "#64748b");
+                    });
+                }
+                state.redraw = _redrawAll;
+
+                block.querySelectorAll(".assoc-item").forEach(function (item) {
+                    item.addEventListener("click", function () {
+                        var side = item.classList.contains("assoc-left") ? "left" : "right";
+
+                        if (side === "left") {
+                            block.querySelectorAll(".assoc-left.assoc-selected")
+                                 .forEach(function (el) { el.classList.remove("assoc-selected"); });
+                            if (state.selectedLeft === item) { state.selectedLeft = null; return; }
+                            state.selectedLeft = item;
+                            item.classList.add("assoc-selected");
+                        } else {
+                            if (!state.selectedLeft) return;
+                            var lKey = state.selectedLeft.dataset.key;
+                            var rKey = item.dataset.key;
+                            delete state.pairs[lKey];
+                            Object.keys(state.pairs).forEach(function (lk) {
+                                if (state.pairs[lk] === rKey) delete state.pairs[lk];
+                            });
+                            state.pairs[lKey] = rKey;
+                            state.selectedLeft.classList.remove("assoc-selected");
+                            state.selectedLeft = null;
+                            _redrawAll();
+                        }
+                    });
+                });
+
+                block.querySelector(".assoc-verify-btn").addEventListener("click", function () {
+                    var expected = {};
+                    block.dataset.correct.split("|").forEach(function (p) {
+                        var idx = p.indexOf("=");
+                        expected[p.substring(0, idx)] = p.substring(idx + 1);
+                    });
+                    var allOk = Object.keys(expected).every(function (lk) {
+                        return state.pairs[lk] === expected[lk];
+                    });
+                    _redrawAll(function (lk) {
+                        return state.pairs[lk] === expected[lk] ? "#16a34a" : "#dc2626";
+                    });
+                    var status = block.querySelector(".assoc-status");
+                    status.textContent = allOk ? "✓ Toutes les associations sont correctes !" : "✗ Certaines associations sont incorrectes.";
+                    status.style.color = allOk ? "#065f46" : "#991b1b";
+                    // Mode entraînement : ne sauvegarde que si tout est juste.
+                    if (!entrainement || allOk) {
+                        saveAnswer(block.dataset.questionId, JSON.stringify(state.pairs), function () {}, function () {});
+                    }
+                });
+
+                block.querySelector(".assoc-reset-btn").addEventListener("click", function () {
+                    state.pairs = {}; state.selectedLeft = null;
+                    block.querySelectorAll(".assoc-item").forEach(function (el) {
+                        el.classList.remove("assoc-selected");
+                    });
+                    while (svg.firstChild) svg.removeChild(svg.firstChild);
+                    block.querySelector(".assoc-status").textContent = "";
+                });
+            });
+
+            window.addEventListener("resize", function () {
+                document.querySelectorAll(".block-assoc").forEach(function (block) {
+                    if (block._assocState && block._assocState.redraw) block._assocState.redraw();
+                });
+            });
+        }
+
+        // ── Diagramme fonctionnel ─────────────────────────────────────────────
+        // Trace les flèches entre une ::dcase ([data-diag-parent]) et la case
+        // ([data-diag-id]) qu'elle référence — même procédé que les traits
+        // d'::associer ci-dessus (svg superposé, lignes recalculées via
+        // getBoundingClientRect). Générique : gère aussi bien l'éventail
+        // racine → niveau 2 qu'un embranchement à n'importe quel niveau.
+        function _initDiag() {
+            document.querySelectorAll(".block-diag").forEach(function (diag) {
+                const svg       = diag.querySelector(".diag-svg");
+                const couleur   = diag.dataset.flecheCouleur   || "#888888";
+                const epaisseur = diag.dataset.flecheEpaisseur || "2px";
+
+                function _drawArrow(fromEl, toEl) {
+                    const svgRect  = svg.getBoundingClientRect();
+                    const fromRect = fromEl.getBoundingClientRect();
+                    const toRect   = toEl.getBoundingClientRect();
+
+                    const x1 = fromRect.right - svgRect.left;
+                    const y1 = fromRect.top + fromRect.height / 2 - svgRect.top;
+                    const x2 = toRect.left   - svgRect.left;
+                    const y2 = toRect.top  + toRect.height / 2 - svgRect.top;
+
+                    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                    line.setAttribute("x1", x1);
+                    line.setAttribute("y1", y1);
+                    line.setAttribute("x2", x2);
+                    line.setAttribute("y2", y2);
+                    line.setAttribute("stroke", couleur);
+                    line.setAttribute("stroke-width", epaisseur);
+                    svg.appendChild(line);
+
+                    // Tête de flèche : petit triangle plein orienté selon l'angle de la ligne
+                    const angle  = Math.atan2(y2 - y1, x2 - x1);
+                    const taille = 8;
+                    const p1x = x2 - taille * Math.cos(angle - Math.PI / 6);
+                    const p1y = y2 - taille * Math.sin(angle - Math.PI / 6);
+                    const p2x = x2 - taille * Math.cos(angle + Math.PI / 6);
+                    const p2y = y2 - taille * Math.sin(angle + Math.PI / 6);
+
+                    const tete = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+                    tete.setAttribute("points", x2 + "," + y2 + " " + p1x + "," + p1y + " " + p2x + "," + p2y);
+                    tete.setAttribute("fill", couleur);
+                    svg.appendChild(tete);
+                }
+
+                // Aligne un élément sur le centre vertical d'un groupe d'enfants donné
+                // (jamais l'inverse) — utilisé à la fois pour une ::dcase (enfants =
+                // ses solutions techniques) et pour ::dracine (enfants = les cases qui
+                // ont parent=racine). Ne décale que vers le bas, jamais vers le haut.
+                function _alignSurEnfants(el, enfants) {
+                    if (enfants.length === 0) return;
+                    const centreEnfants = enfants.reduce(function (somme, enfant) {
+                        const r = enfant.getBoundingClientRect();
+                        return somme + r.top + r.height / 2;
+                    }, 0) / enfants.length;
+
+                    const rect    = el.getBoundingClientRect();
+                    const centre  = rect.top + rect.height / 2;
+                    const decalage = centreEnfants - centre;
+                    if (decalage > 0) el.style.marginTop = decalage + "px";
+                }
+
+                // Aligne chaque case sur le centre vertical de ses cases-enfants (niveau
+                // suivant), puis la racine sur le centre vertical des cases qui s'y
+                // rattachent. Le dernier niveau n'a pas d'enfant : il garde l'espacement
+                // naturel de la colonne et "décide" donc de la hauteur totale — c'est
+                // lui qui a le plus de cases quand une fonction a plusieurs solutions.
+                function _alignLevels() {
+                    const niveaux = Array.from(diag.querySelectorAll(".block-dniveau"));
+                    const dracine = diag.querySelector(".block-dracine");
+
+                    // Repart de zéro à chaque passage : sans ça, un ré-alignement après
+                    // redimensionnement ne ferait qu'accumuler de la marge à chaque fois.
+                    // Le dernier niveau n'est jamais touché par la boucle ci-dessous (pas
+                    // d'enfant pour s'y aligner) : son margin-top vient du serveur (palette
+                    // [diag] ecart_cousins, voir render_dcase_open) et doit rester intact.
+                    niveaux.slice(0, -1).forEach(function (niveau) {
+                        niveau.querySelectorAll(".block-dcase").forEach(function (c) { c.style.marginTop = ""; });
+                    });
+                    if (dracine) dracine.style.marginTop = "";
+
+                    // Traite les niveaux de la fin vers le début : chaque case s'aligne sur
+                    // le niveau à sa droite, qui doit donc déjà être figé dans sa position
+                    // définitive avant qu'on s'en serve de référence.
+                    for (let i = niveaux.length - 2; i >= 0; i--) {
+                        niveaux[i].querySelectorAll(".block-dcase").forEach(function (caseEl) {
+                            const id = caseEl.dataset.diagId;
+                            if (!id) return;
+                            const enfants = Array.from(diag.querySelectorAll('[data-diag-parent="' + id + '"]'));
+                            _alignSurEnfants(caseEl, enfants);
+                        });
+                    }
+
+                    // La racine s'aligne en dernier sur le 1er niveau, désormais figé.
+                    if (dracine) {
+                        const enfants = Array.from(diag.querySelectorAll('[data-diag-parent="racine"]'));
+                        _alignSurEnfants(dracine, enfants);
+                    }
+                }
+
+                function _redraw() {
+                    _alignLevels();
+                    while (svg.firstChild) svg.removeChild(svg.firstChild);
+                    diag.querySelectorAll("[data-diag-parent]").forEach(function (caseEl) {
+                        const parentEl = diag.querySelector('[data-diag-id="' + caseEl.dataset.diagParent + '"]');
+                        if (parentEl) _drawArrow(parentEl, caseEl);
+                    });
+                }
+
+                _redraw();
+                window.addEventListener("resize", _redraw);
+
+                // Une textarea de réponse qui s'agrandit (auto-grow) doit faire
+                // bouger le point d'arrivée de sa flèche — ResizeObserver couvre
+                // ce cas sans dépendre du code d'auto-grow lui-même.
+                if (window.ResizeObserver) {
+                    const ro = new ResizeObserver(_redraw);
+                    diag.querySelectorAll(".block-dcase, .block-dracine").forEach(function (el) {
+                        ro.observe(el);
+                    });
+                }
+            });
+        }
+
+        function _assocRestorePairs(block, savedPairs) {
+            if (!block._assocState) return;
+            var st = block._assocState;
+            Object.keys(savedPairs).forEach(function (k) { st.pairs[k] = savedPairs[k]; });
+            if (st.redraw) st.redraw();
+        }
+
+        // ── Trier ────────────────────────────────────────────────────────────
+        function _initTrier() {
+            document.querySelectorAll(".block-trier").forEach(function (block) {
+                var list     = block.querySelector(".trier-list");
+                var status   = block.querySelector(".trier-status");
+                var btn      = block.querySelector(".trier-btn");
+                var dragging = null;
+
+                // Shuffle items on load
+                var items = Array.from(list.querySelectorAll(".trier-item"));
+                for (var i = items.length - 1; i > 0; i--) {
+                    var j = Math.floor(Math.random() * (i + 1));
+                    list.appendChild(items[j]);
+                    items.splice(j, 1, items[i]);
+                    items.splice(i, 1, items[j]); // swap
+                }
+                // simpler shuffle:
+                items = Array.from(list.querySelectorAll(".trier-item"));
+                for (var k = items.length - 1; k > 0; k--) {
+                    var r = Math.floor(Math.random() * (k + 1));
+                    list.insertBefore(items[r], items[k]);
+                    // re-query after DOM change
+                    items = Array.from(list.querySelectorAll(".trier-item"));
+                }
+
+                list.addEventListener("dragstart", function (e) {
+                    dragging = e.target.closest(".trier-item");
+                    if (dragging) dragging.classList.add("trier-dragging");
+                });
+                list.addEventListener("dragend", function () {
+                    if (dragging) dragging.classList.remove("trier-dragging");
+                    list.querySelectorAll(".trier-item").forEach(function (el) {
+                        el.classList.remove("trier-over");
+                    });
+                    dragging = null;
+                });
+                list.addEventListener("dragover", function (e) {
+                    e.preventDefault();
+                    var target = e.target.closest(".trier-item");
+                    if (!target || target === dragging) return;
+                    list.querySelectorAll(".trier-item").forEach(function (el) {
+                        el.classList.remove("trier-over");
+                    });
+                    target.classList.add("trier-over");
+                    var rect     = target.getBoundingClientRect();
+                    var midpoint = rect.top + rect.height / 2;
+                    if (e.clientY < midpoint) {
+                        list.insertBefore(dragging, target);
+                    } else {
+                        list.insertBefore(dragging, target.nextSibling);
+                    }
+                });
+
+                btn.addEventListener("click", function () {
+                    var current  = Array.from(list.querySelectorAll(".trier-item")).map(function (el) { return el.dataset.val; });
+                    var correct  = block.dataset.correct.split("|");
+                    var allOk    = current.join("|") === correct.join("|");
+                    var okF      = block.dataset.okFond;
+                    var okB      = block.dataset.okBordure;
+                    list.querySelectorAll(".trier-item").forEach(function (el, i) {
+                        el.style.borderColor = current[i] === correct[i] ? okB : "#dc2626";
+                        el.style.background  = current[i] === correct[i] ? okF : el.style.background;
+                    });
+                    status.textContent = allOk ? "✓ Ordre correct !" : "✗ Pas encore dans le bon ordre.";
+                    status.style.color = allOk ? "#065f46" : "#991b1b";
+                    // Mode entraînement : ne sauvegarde que si l'ordre est juste.
+                    if (!entrainement || allOk) {
+                        saveAnswer(block.dataset.questionId, current.join("|"), function () {}, function () {});
+                    }
+                });
+            });
+        }
+
+        function _trierRestoreOrder(block, order) {
+            var list  = block.querySelector(".trier-list");
+            var items = Array.from(list.querySelectorAll(".trier-item"));
+            order.forEach(function (val) {
+                var el = items.find(function (i) { return i.dataset.val === val; });
+                if (el) list.appendChild(el);
+            });
+        }
+
+        // ── RepG ─────────────────────────────────────────────────────────────
+        function _initRepg() {
+            document.querySelectorAll(".block-repg").forEach(function (block) {
+                var qid    = block.dataset.questionId;
+                var btn    = block.querySelector(".repg-save-btn");
+                var status = block.querySelector(".repg-status");
+
+                // Mode entraînement : pas de sauvegarde automatique sur ce bloc.
+                if (entrainement) { btn.style.display = "none"; return; }
+
+                btn.addEventListener("click", function () {
+                    var data = {};
+                    block.querySelectorAll(".repg-field").forEach(function (inp) {
+                        data[inp.dataset.field] = inp.value;
+                    });
+                    status.textContent = "Enregistrement…";
+                    status.style.color = "#555";
+                    saveAnswer(qid, JSON.stringify(data),
+                        function () { status.textContent = "✓ Sauvegardé"; status.style.color = "#065f46"; },
+                        function (e) { status.textContent = e; status.style.color = "#991b1b"; }
+                    );
+                    // Update resume placeholders using the concatenated values
+                    var fullText = Object.values(data).filter(Boolean).join(" / ");
+                    _updateResumePlaceholders(qid, fullText);
+                });
+            });
+        }
+
+        // ── Choix (réponse à choix multiple) ────────────────────────────────
+
+        // Mélange l'ordre des propositions de chaque =options> au chargement de la
+        // page (une permutation aléatoire par nom de set, partagée par tous les
+        // =choix> qui le référencent) : un refresh donne un nouvel ordre, mais tous
+        // les =choix> d'une même =options> restent synchronisés sur cette page.
+        function _shuffleChoixOptions() {
+            var setsToLists = {};
+            document.querySelectorAll(".choix-list[data-options-set]").forEach(function (list) {
+                var setName = list.dataset.optionsSet;
+                (setsToLists[setName] = setsToLists[setName] || []).push(list);
+            });
+            Object.keys(setsToLists).forEach(function (setName) {
+                var lists = setsToLists[setName];
+                var order = [];
+                for (var i = 0; i < lists[0].children.length; i++) order.push(i);
+                for (var i = order.length - 1; i > 0; i--) {
+                    var j = Math.floor(Math.random() * (i + 1));
+                    var tmp = order[i]; order[i] = order[j]; order[j] = tmp;
+                }
+                lists.forEach(function (list) {
+                    var children = Array.prototype.slice.call(list.children);
+                    order.forEach(function (idx) { list.appendChild(children[idx]); });
+                });
+            });
+        }
+
+        function _choixSetValue(block, value) {
+            var field = block.querySelector(".choix-field");
+            field.textContent = value && value.trim() ? value : field.dataset.placeholder;
+            field.classList.toggle("is-placeholder", !(value && value.trim()));
+        }
+
+        function _initChoix() {
+            document.querySelectorAll(".block-choix").forEach(function (block) {
+                var qid      = block.dataset.questionId;
+                var field    = block.querySelector(".choix-field");
+                var list     = block.querySelector(".choix-list");
+                var loadBtn  = block.querySelector(".rep-load-btn");
+                var status   = block.querySelector(".rep-status");
+                var backupVal = null;
+
+                // Mode entraînement : le chargement "réponse d'un camarade" n'a pas de
+                // sens ici — seul =verif> peut faire réapparaître une réponse, et
+                // seulement si elle a déjà été validée juste (voir repBlocks plus haut).
+                if (entrainement && loadBtn) loadBtn.style.display = "none";
+
+                function closeList() {
+                    list.classList.remove("is-open");
+                    block.style.zIndex = "";
+                    var diagBox = block.closest(".block-dcase, .block-dracine-col");
+                    if (diagBox) diagBox.style.zIndex = "";
+                }
+                function openList() {
+                    list.classList.add("is-open");
+                    block.style.zIndex = 50; // passe au-dessus des zones voisines pendant l'ouverture
+                    // Dans un ::diag, chaque ::dcase/::dracine est lui-même positionné avec son
+                    // propre z-index (voir style.css) : remonter seulement .block-choix ne suffit
+                    // pas, la liste reste alors coincée derrière les cases suivantes du diagramme.
+                    var diagBox = block.closest(".block-dcase, .block-dracine-col");
+                    if (diagBox) diagBox.style.zIndex = 50;
+                }
+
+                field.addEventListener("click", function (e) {
+                    e.stopPropagation();
+                    if (block.classList.contains("verif-frozen")) return;
+                    list.classList.contains("is-open") ? closeList() : openList();
+                });
+                field.addEventListener("keydown", function (e) {
+                    if (block.classList.contains("verif-frozen")) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        list.classList.contains("is-open") ? closeList() : openList();
+                    }
+                });
+
+                list.querySelectorAll(".choix-option").forEach(function (opt) {
+                    opt.addEventListener("click", function (e) {
+                        e.stopPropagation();
+                        var value = opt.dataset.value;
+                        _choixSetValue(block, value);
+                        closeList();
+                        // Mode entraînement : pas de sauvegarde automatique sur ce bloc —
+                        // seul =verif> peut sauvegarder, et seulement si tout est juste.
+                        if (!entrainement) {
+                            status.textContent = "Enregistrement…";
+                            status.style.color = "#555";
+                            saveAnswer(qid, value,
+                                function () { status.textContent = "✓ Sauvegardé"; status.style.color = "#065f46"; },
+                                function (e) { status.textContent = e; status.style.color = "#991b1b"; }
+                            );
+                        }
+                        _updateResumePlaceholders(qid, value);
+                    });
+                });
+
+                document.addEventListener("click", function (e) {
+                    if (!block.contains(e.target)) closeList();
+                });
+
+                // ── Bouton Charger (réponse d'un camarade de groupe) ────────────
+                if (loadBtn) {
+                    loadBtn.addEventListener("click", function (e) {
+                        e.stopPropagation();
+                        var existing = block.querySelector(".rep-group-list");
+                        if (existing) { existing.parentNode.removeChild(existing); return; }
+
+                        fetch("/api/reponses/groupe?activite=" + encodeURIComponent(activiteSlug) +
+                              "&question_id=" + encodeURIComponent(qid))
+                            .then(function (r) { return r.ok ? r.json() : []; })
+                            .then(function (members) {
+                                if (!Array.isArray(members) || members.length === 0) {
+                                    status.textContent = "Aucune réponse de groupe disponible";
+                                    status.style.color = "";
+                                    setTimeout(function () {
+                                        if (status.textContent.indexOf("Aucune") !== -1) status.textContent = "";
+                                    }, 3000);
+                                    return;
+                                }
+
+                                var groupList = document.createElement("div");
+                                groupList.className = "rep-group-list";
+
+                                members.forEach(function (m) {
+                                    var item = document.createElement("button");
+                                    item.type = "button";
+                                    item.className = "rep-group-item";
+                                    item.textContent = m.identifiant;
+                                    item.addEventListener("click", function () {
+                                        backupVal = field.classList.contains("is-placeholder") ? "" : field.textContent;
+                                        _choixSetValue(block, m.contenu);
+
+                                        groupList.parentNode && groupList.parentNode.removeChild(groupList);
+
+                                        loadBtn.style.display = "none";
+                                        var cancelBtn = document.createElement("button");
+                                        cancelBtn.type = "button";
+                                        cancelBtn.className = "rep-cancel-btn";
+                                        cancelBtn.style.cssText =
+                                            "background:var(--rep-annuler-fond,#b91c1c);color:var(--rep-annuler-texte,#fff);";
+                                        cancelBtn.setAttribute("aria-label", "Annuler");
+                                        cancelBtn.title = "Annuler";
+                                        cancelBtn.innerHTML = ICON_ANNULER;
+                                        loadBtn.parentNode.insertBefore(cancelBtn, loadBtn);
+
+                                        status.textContent = "réponse de " + m.identifiant + " chargée";
+                                        status.style.color = "var(--rep-charge-statut)";
+
+                                        cancelBtn.addEventListener("click", function () {
+                                            _choixSetValue(block, backupVal || "");
+                                            backupVal = null;
+                                            cancelBtn.parentNode && cancelBtn.parentNode.removeChild(cancelBtn);
+                                            loadBtn.style.display = "";
+                                            status.textContent = "";
+                                            status.style.color = "";
+                                        });
+                                    });
+                                    groupList.appendChild(item);
+                                });
+
+                                // .rep-footer peut être niché dans .rep-zone-anchor (mode schéma) —
+                                // on insère relativement à son vrai parent, pas à block directement.
+                                var footerEl = block.querySelector(".rep-footer");
+                                footerEl.parentNode.insertBefore(groupList, footerEl);
+
+                                function outsideClick(e) {
+                                    if (!block.contains(e.target)) {
+                                        var l = block.querySelector(".rep-group-list");
+                                        if (l) l.parentNode.removeChild(l);
+                                        document.removeEventListener("click", outsideClick, true);
+                                    }
+                                }
+                                setTimeout(function () { document.addEventListener("click", outsideClick, true); }, 0);
+                            })
+                            .catch(function () {});
+                    });
+                }
+            });
+        }
+
+        // ── Bouton vue condensée ─────────────────────────────────────────────
+        function _initCondenseButton() {
+            var btn = document.createElement("button");
+            btn.id          = "btn-condense";
+            btn.textContent = "Vue condensée";
+            btn.title       = "Afficher uniquement les questions et réponses";
+            btn.addEventListener("click", function () {
+                var condensed = document.body.classList.toggle("condensed");
+                btn.textContent = condensed ? "Vue complète" : "Vue condensée";
+            });
+            document.body.appendChild(btn);
+        }
+
+    })();
+    </script>
+
+    <script>
+    // ── Bloc =verif> : vérifie des =rep>/=choix> antérieurs + mode entraînement ──
+    (function () {
+        function getActiviteSlug() {
+            var path = window.location.pathname.replace(/^\//, "").replace(/\.html$/, "");
+            return path.indexOf("/") !== -1 ? path : null;
+        }
+
+        var activiteSlug = getActiviteSlug();
+        var entrainement = document.body.classList.contains("entrainement-mode");
+
+        function saveAnswer(qid, contenu, onOk, onErr) {
+            if (!activiteSlug) return;
+            fetch("/api/reponses", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ activite_slug: activiteSlug, question_id: qid, contenu: contenu }),
+            })
+            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+            .then(function (res) { res.ok ? onOk() : onErr(res.d.erreur || "Erreur"); })
+            .catch(function () { onErr("Erreur réseau"); });
+        }
+
+        // =verif> ne sait corriger que =rep>/=choix> (seuls blocs sans correction
+        // intégrée) — un bloc qcm/associer/trier/repg référencé par erreur est ignoré.
+        function findBlock(qid) {
+            return document.querySelector('.block-rep[data-question-id="' + qid + '"]');
+        }
+
+        function getCurrentValue(qid) {
+            var block = findBlock(qid);
+            if (!block) return null;
+            if (block.classList.contains("block-choix")) {
+                var field = block.querySelector(".choix-field");
+                return field.classList.contains("is-placeholder") ? "" : field.textContent;
+            }
+            var ta = block.querySelector(".rep-textarea");
+            return ta ? ta.value : null;
+        }
+
+        function clearInputValue(qid) {
+            var block = findBlock(qid);
+            if (!block) return;
+            if (block.classList.contains("block-choix")) {
+                var field = block.querySelector(".choix-field");
+                field.textContent = field.dataset.placeholder;
+                field.classList.add("is-placeholder");
+            } else {
+                var ta = block.querySelector(".rep-textarea");
+                if (ta) { ta.value = ""; ta.dispatchEvent(new Event("input")); }
+            }
+        }
+
+        function setBlockMark(qid, ok) {
+            var block = findBlock(qid);
+            if (!block) return;
+            var status = block.querySelector(".rep-status");
+            if (!status) return;
+            status.innerHTML = '<span class="verif-mark" style="color:var(--verif-' +
+                (ok ? "valide" : "croix") + ');">' + (ok ? "✓" : "✗") + '</span>';
+        }
+
+        function clearBlockMark(qid) {
+            var block = findBlock(qid);
+            if (!block) return;
+            var status = block.querySelector(".rep-status");
+            if (status) status.innerHTML = "";
+        }
+
+        function freezeBlock(qid) {
+            var block = findBlock(qid);
+            if (!block) return;
+            block.classList.add("verif-frozen");
+            var ta = block.querySelector(".rep-textarea");
+            if (ta) ta.disabled = true;
+        }
+
+        function unfreezeBlock(qid) {
+            var block = findBlock(qid);
+            if (!block) return;
+            block.classList.remove("verif-frozen");
+            var ta = block.querySelector(".rep-textarea");
+            if (ta) ta.disabled = false;
+        }
+
+        function removeCorrigeText(qid) {
+            document.querySelectorAll('.verif-corrige-text[data-qid="' + qid + '"]').forEach(function (el) {
+                el.parentNode.removeChild(el);
+            });
+        }
+
+        // Positionné en pixels sous la case (calculé depuis sa position réelle) :
+        // fonctionne pareil que la case soit en mode normal, compact ou schéma,
+        // sans toucher au calcul de centrage x/y porté par .rep-zone-anchor.
+        function showCorrigeText(qid, valeur) {
+            var block = findBlock(qid);
+            if (!block) return;
+            removeCorrigeText(qid);
+
+            var div = document.createElement("div");
+            div.className     = "verif-corrige-text";
+            div.dataset.qid    = qid;
+            div.textContent    = valeur;
+
+            var container = block.closest(".schema-container");
+            if (container) {
+                var blockRect     = block.getBoundingClientRect();
+                var containerRect = container.getBoundingClientRect();
+                div.style.position = "absolute";
+                div.style.left     = (blockRect.left  - containerRect.left) + "px";
+                div.style.top      = (blockRect.bottom - containerRect.top + 4) + "px";
+                div.style.width    = blockRect.width + "px";
+                container.appendChild(div);
+            } else {
+                block.parentNode.insertBefore(div, block.nextSibling);
+            }
+        }
+
+        function resetVerifBlock(verifBlock, qids) {
+            qids.forEach(function (qid) {
+                clearInputValue(qid);
+                unfreezeBlock(qid);
+                clearBlockMark(qid);
+                removeCorrigeText(qid);
+            });
+            var corrigeBtn = verifBlock.querySelector(".verif-corrige-btn");
+            var effacerBtn = verifBlock.querySelector(".verif-effacer-btn");
+            var status     = verifBlock.querySelector(".verif-status");
+            if (corrigeBtn) corrigeBtn.style.display = "none";
+            if (effacerBtn) effacerBtn.style.display = "none";
+            if (status)     status.textContent = "";
+        }
+
+        function parseAnswers(verifBlock) {
+            var answers = {};
+            (verifBlock.dataset.answers || "").split("|").forEach(function (part) {
+                if (!part) return;
+                var idx = part.indexOf("=");
+                if (idx === -1) return;
+                answers[part.substring(0, idx)] = part.substring(idx + 1);
+            });
+            return answers;
+        }
+
+        function initVerifBlock(block) {
+            var mode    = parseInt(block.dataset.mode, 10) || 1;
+            var answers = parseAnswers(block);
+            var qids    = Object.keys(answers);
+
+            var btn        = block.querySelector(".verif-btn");
+            var corrigeBtn = block.querySelector(".verif-corrige-btn");
+            var effacerBtn = block.querySelector(".verif-effacer-btn");
+            var status     = block.querySelector(".verif-status");
+
+            btn.addEventListener("click", function () {
+                var results = {};
+                qids.forEach(function (qid) {
+                    var current = getCurrentValue(qid);
+                    if (current === null) return; // type non supporté par =verif>, ignoré
+                    results[qid] = current.trim() === answers[qid].trim();
+                });
+                var allCorrect = Object.keys(results).every(function (qid) { return results[qid]; });
+
+                if (mode === 2) {
+                    status.textContent = allCorrect ? "✓ Validé" : "✗ Il y a des erreurs.";
+                    status.style.color = allCorrect ? "var(--verif-ok)" : "var(--verif-err)";
+                } else {
+                    qids.forEach(function (qid) {
+                        if (results[qid] !== undefined) setBlockMark(qid, results[qid]);
+                    });
+                    status.textContent = allCorrect ? "✓ Validé" : "";
+                    status.style.color = "var(--verif-ok)";
+
+                    if (mode === 3) {
+                        var show = !allCorrect;
+                        corrigeBtn.style.display = show ? "" : "none";
+                        effacerBtn.style.display = show ? "" : "none";
+                    }
+                }
+
+                // Mode entraînement : ne sauvegarde ce groupe de questions que
+                // lorsqu'il est entièrement juste — sinon rien n'est persisté.
+                if (entrainement && allCorrect) {
+                    qids.forEach(function (qid) {
+                        var current = getCurrentValue(qid);
+                        if (current !== null) saveAnswer(qid, current, function () {}, function () {});
+                    });
+                }
+            });
+
+            if (corrigeBtn) {
+                corrigeBtn.addEventListener("click", function () {
+                    qids.forEach(function (qid) {
+                        var current = getCurrentValue(qid);
+                        if (current === null) return;
+                        if (current.trim() !== answers[qid].trim()) showCorrigeText(qid, answers[qid]);
+                        freezeBlock(qid);
+                    });
+                });
+            }
+
+            if (effacerBtn) {
+                effacerBtn.addEventListener("click", function () {
+                    resetVerifBlock(block, qids);
+                });
+            }
+        }
+
+        // ── Bouton "Effacer les réponses" en haut de page (mode entraînement) ───
+        function initEntrainementClearButton() {
+            var clearBtn = document.getElementById("btn-effacer-entrainement");
+            if (!clearBtn) return;
+            clearBtn.addEventListener("click", function () {
+                document.querySelectorAll(".block-verif").forEach(function (verifBlock) {
+                    resetVerifBlock(verifBlock, Object.keys(parseAnswers(verifBlock)));
+                });
+                document.querySelectorAll(".block-rep[data-question-id]").forEach(function (block) {
+                    clearInputValue(block.dataset.questionId);
+                });
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll(".block-verif").forEach(initVerifBlock);
+            if (entrainement) initEntrainementClearButton();
+        });
+    })();
+    </script>
+
+    <script>
+        // ── Synchronisation des réponses =rep> vers les placeholders résumé ──
+        // Étend le script =rep> existant pour mettre à jour les spans .res-ph
+        // après chaque sauvegarde. Placé ici car dépend du script =rep> ci-dessus.
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll(".block-rep").forEach(function (block) {
+                var qid      = block.dataset.questionId;
+                var textarea = block.querySelector(".rep-textarea");
+                var origBtn  = block.querySelector(".rep-save-btn");
+                if (!origBtn || !textarea) return;
+                origBtn.addEventListener("click", function () {
+                    // Après un court délai (la sauvegarde est async), on met à jour
+                    setTimeout(function () {
+                        var txt = textarea.value;
+                        document.querySelectorAll('.res-ph[data-qid="' + qid + '"]').forEach(function (span) {
+                            if (txt && txt.trim()) {
+                                span.textContent = txt;
+                                span.classList.add("filled");
+                            } else {
+                                span.textContent = "…";
+                                span.classList.remove("filled");
+                            }
+                        });
+                    }, 300);
+                });
+            });
+        });
+    </script>
+
+    <script>
+        // GIF pause/resume on click (all .gif-img elements)
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelectorAll(".gif-img").forEach(img => {
+                img.dataset.originalSrc = img.src;
+                img.dataset.playing     = "true";
+                img.style.cursor        = "pointer";
+                img.title               = "Cliquer pour pause / lecture";
+
+                img.addEventListener("click", () => {
+                    if (img.dataset.playing === "true") {
+                        const canvas = document.createElement("canvas");
+                        canvas.width  = img.naturalWidth;
+                        canvas.height = img.naturalHeight;
+                        canvas.getContext("2d").drawImage(img, 0, 0);
+                        img.src              = canvas.toDataURL("image/png");
+                        img.dataset.playing  = "false";
+                    } else {
+                        img.src             = img.dataset.originalSrc;
+                        img.dataset.playing = "true";
+                    }
+                });
+            });
+        });
+    </script>
+
+    <script>
+    // ── Mode pages : sidebar de miniatures + suivi de la page active ──────────
+    (function () {
+        var pages = document.querySelectorAll(".pg-a4");
+        if (pages.length === 0) return;
+
+        var sidebar = document.getElementById("page-sidebar");
+        if (!sidebar) return;
+
+        var thumbs    = [];
+        var activeIdx = -1;
+
+        // Scale les miniatures selon la largeur reelle des pages (pas une constante fixe)
+        function applyScales() {
+            if (thumbs.length === 0 || pages.length === 0) return;
+            var pageW  = pages[0].offsetWidth;
+            var thumbW = thumbs[0].clientWidth;
+            var scale  = thumbW / pageW;
+            thumbs.forEach(function (wrapper) {
+                var inner = wrapper.querySelector(".pg-thumb-inner");
+                if (inner) {
+                    inner.style.width     = pageW + "px";
+                    inner.style.transform = "scale(" + scale + ")";
+                }
+            });
+        }
+
+        var _resizeTimer;
+        window.addEventListener("resize", function () {
+            clearTimeout(_resizeTimer);
+            _resizeTimer = setTimeout(applyScales, 80);
+        }, { passive: true });
+
+        function extractObjective() {
+            var objEl = document.querySelector(".pg-a4 .block-obj");
+            if (!objEl) return;
+
+            // Retire l'objectif du flux des pages
+            objEl.parentNode.removeChild(objEl);
+
+            // Crée le widget sidebar avec les mêmes couleurs inline
+            var box = document.createElement("div");
+            box.id = "pg-obj-box";
+            box.setAttribute("style", objEl.getAttribute("style") || "");
+            box.innerHTML = objEl.innerHTML;
+
+            // Place au-dessus des miniatures
+            sidebar.insertBefore(box, sidebar.firstChild);
+        }
+
+        function buildThumbnails() {
+            extractObjective();   // avant de cloner innerHTML des pages
+
+            pages.forEach(function (page, i) {
+                var wrapper = document.createElement("div");
+                wrapper.className       = "pg-thumb-wrapper";
+                wrapper.dataset.pageIdx = i;
+
+                var inner = document.createElement("div");
+                inner.className = "pg-thumb-inner";
+                inner.innerHTML = page.innerHTML;
+
+                var label = document.createElement("div");
+                label.className   = "pg-thumb-label";
+                label.textContent = "p." + (i + 1);
+
+                wrapper.appendChild(inner);
+                wrapper.appendChild(label);
+                sidebar.appendChild(wrapper);
+                thumbs.push(wrapper);
+
+                wrapper.addEventListener("click", function () {
+                    page.scrollIntoView({ behavior: "smooth", block: "start" });
+                });
+            });
+
+            applyScales();
+            setActive(0);
+        }
+
+        function setActive(idx) {
+            if (idx === activeIdx) return;
+            activeIdx = idx;
+            thumbs.forEach(function (t, i) {
+                t.classList.toggle("active", i === idx);
+            });
+            if (thumbs[idx]) {
+                thumbs[idx].scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }
+        }
+
+        function updateActive() {
+            var scrollY   = window.scrollY || window.pageYOffset;
+            var threshold = scrollY + window.innerHeight * 0.35;
+            var best      = 0;
+            for (var i = 0; i < pages.length; i++) {
+                if (pages[i].offsetTop <= threshold) best = i;
+            }
+            setActive(best);
+        }
+
+        window.addEventListener("scroll", updateActive, { passive: true });
+
+        document.addEventListener("DOMContentLoaded", function () {
+            setTimeout(function () {
+                buildThumbnails();
+                updateActive();
+            }, 400);
+        });
+    })();
+    </script>
+
+</body>
+</html>
