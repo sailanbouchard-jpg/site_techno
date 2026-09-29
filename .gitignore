@@ -2,6 +2,7 @@
 data.db
 uploads/
 secret_key.txt
+imprimantes.json
 
 # Dossier généré par build.py
 site/
@@ -11,3 +12,15 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# Cle API DeepSeek / Token Harbor
+deepseek_key.txt
+deepseek_session.json
+deepseek_conversations/
+.ds_sauvegardes/
+
+# Sauvegardes de la base (memes donnees eleves que data.db)
+data.db.*
+
+# Journaux du serveur
+*.log

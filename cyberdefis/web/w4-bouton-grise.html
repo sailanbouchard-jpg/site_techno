@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>W4 — Le bouton grisé</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/cyberdefis/style.css">
+</head>
+<body>
+
+  <div class="defis">
+    <div class="defis-page">
+
+      <div class="fil-ariane">
+        <a href="/index.html">Accueil</a> &gt; <a href="/cyberdefis/">Cyber-défis</a> &gt;
+        <a href="/cyberdefis/web/">Sous le capot du Web</a> &gt; W4
+      </div>
+
+      <div class="bandeau"><h1>W4 — Le bouton grisé</h1></div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Énoncé</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p>Accède à la page suivante pour te connecter en tant qu'administrateur.</p>
+            <p class="discret">Format attendu : <span class="monospace">FLAG{…}</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Connexion sécurisée</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p><a href="connexion_securisee.html">→ Connexion_sécurisée</a></p>
+          </div>
+        </div>
+      </div>
+
+      <div id="panneau"></div>
+
+    </div>
+  </div>
+
+  <script src="/cyberdefis/defis.js"></script>
+  <script>Defis.panneau({ defi: "w4" });</script>
+  <script src="/cyberdefis/site-nav.js"></script>
+</body>
+</html>

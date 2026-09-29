@@ -1,0 +1,31 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "serveur-flask",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "server.py"
+      ],
+      "port": 5000
+    },
+    {
+      "name": "atelier-statique",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "serveur_statique_atelier.py",
+        "5057"
+      ],
+      "port": 5057
+    },
+    {
+      "name": "atelier-statique-2",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "serveur_statique_atelier.py",
+        "5058"
+      ],
+      "port": 5058
+    }
+  ]
+}

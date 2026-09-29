@@ -12,9 +12,12 @@
 //  • axial en ligne, ZÉRO allocation : la tension de chaque segment est stockée
 //    dans segment._tension et RÉUTILISÉE par le scan d'efforts et le rendu ;
 //  • flexion en gradient ANALYTIQUE + cache topologique (voir bending.js) ;
-//  • scan des efforts/ruptures DÉCIMÉ : tous les EFFORT_SCAN_EVERY_STEPS pas au
-//    lieu de chaque pas (granularité ~4 ms, invisible face aux 80 ms de
-//    persistance exigés pour rompre), résultat caché sur beam._effort ;
+//  • scan des efforts/ruptures DÉCIMÉ : une fois tous les EFFORT_SCAN_PERIOD
+//    secondes simulées au lieu de chaque pas (granularité ~4 ms, invisible face
+//    aux 80 ms de persistance exigés pour rompre), caché sur beam._effort ;
+//  • PAS DE TEMPS ADAPTATIF et, en scène lourde, MISE À L'ÉCHELLE DES MASSES :
+//    c'est physics/solveur.js qui décide, une fois par état de topologie, du
+//    pas que la scène permet et de l'inertie à ajouter pour l'allonger ;
 //  • MISE EN SOMMEIL : à l'équilibre strict (stabilisée, sans vent, véhicule ni
 //    surcharge, calme plat durable), le pas entier est sauté. Réveil : vent
 //    activé, véhicule, ou modification de topologie (invalidateIndex).
@@ -25,14 +28,14 @@ import { addWindForces } from "./windForce.js";
 import { windSpeedAt } from "./wind.js";
 import { applyBending } from "./bending.js";
 import { integrateNode } from "./integrator.js";
-import { computeNodeEffectiveMass } from "./mass.js";
+import { reglerSolveur } from "./solveur.js";
 import { scanEfforts } from "./rupture.js";
 import { applyGroundContact } from "./ground.js";
 import { advanceMobileLoad } from "./vehicleMotion.js";
 import {
-  VELOCITY_DAMPING_PER_STEP, SETTLE_VELOCITY_DAMPING,
+  TAUX_AMORTISSEMENT, TAUX_AMORTISSEMENT_STABILISATION,
   SETTLE_SPEED_THRESHOLD, SETTLE_MIN_TIME, SETTLE_TIMEOUT,
-  EFFORT_SCAN_EVERY_STEPS, SLEEP_SPEED_THRESHOLD, SLEEP_DELAY,
+  SLEEP_SPEED_THRESHOLD, SLEEP_DELAY,
 } from "./config.js";
 
 export function step(structure, dt, currentTime, wind) {
@@ -59,6 +62,10 @@ export function step(structure, dt, currentTime, wind) {
   // 0. Index à jour pour tout le pas → toutes les recherches par id en O(1).
   //    (La topologie ne change qu'à l'étape 6, qui réinvalide l'index.)
   ensureIndex(structure);
+  // Réglage du solveur pour cette topologie : pas admissible, masses d'inertie
+  // (node._masse / node._masseInertie) et cadence du scan d'efforts. Lecture de
+  // cache tant que rien ne change ; recalculé après chaque rupture.
+  const reglage = reglerSolveur(structure);
 
   // Tampon de forces RÉUTILISÉ d'un pas à l'autre (zéro allocation par pas) :
   // une Map id→{fx,fy} persistante, remise à zéro ici. Jetée en même temps que
@@ -143,12 +150,16 @@ export function step(structure, dt, currentTime, wind) {
   // 4. Intégration des nœuds libres. Tant que la structure n'est pas STABILISÉE,
   //    on amortit fort (chargement quasi-statique → pas de dépassement).
   const settled = structure._settled === true;
-  const damping = settled ? VELOCITY_DAMPING_PER_STEP : SETTLE_VELOCITY_DAMPING;
+  // Amortissement converti depuis son taux par seconde : le pas n'est plus fixe,
+  // mais l'amortissement RÉEL, lui, ne doit pas dépendre du pas choisi.
+  const damping = Math.exp(-(settled ? TAUX_AMORTISSEMENT : TAUX_AMORTISSEMENT_STABILISATION) * dt);
   let maxSpeedSq = 0;
   for (const node of structure.nodes) {
     if (node.fixed) continue;
-    const mass = computeNodeEffectiveMass(structure, node);
-    integrateNode(node, forces.get(node.id), mass, dt, damping);
+    // Masse d'INERTIE (= la vraie masse, sauf pour les nœuds alourdis par le
+    // solveur en scène lourde — voir physics/solveur.js). Le POIDS, lui, a été
+    // calculé à l'étape 1 sur la vraie masse.
+    integrateNode(node, forces.get(node.id), node._masseInertie, dt, damping);
     const s2 = node.vx * node.vx + node.vy * node.vy;
     if (s2 > maxSpeedSq) maxSpeedSq = s2;
   }
@@ -172,15 +183,15 @@ export function step(structure, dt, currentTime, wind) {
     if (calm || structure._settleTime >= SETTLE_TIMEOUT) structure._settled = true;
   }
 
-  // 6. Scan des EFFORTS + RUPTURES, décimé (tous les EFFORT_SCAN_EVERY_STEPS
-  //    pas). Le scan met à jour beam._effort (réutilisé par le rendu) ; les
-  //    ruptures ne s'appliquent qu'une fois STABILISÉ : un pic transitoire de
-  //    mise en charge ne casse jamais rien.
+  // 6. Scan des EFFORTS + RUPTURES, décimé (une fois par EFFORT_SCAN_PERIOD de
+  //    temps simulé — soit reglage.pasParScan pas). Le scan met à jour
+  //    beam._effort (réutilisé par le rendu) ; les ruptures ne s'appliquent
+  //    qu'une fois STABILISÉ : un pic transitoire ne casse jamais rien.
   let brokenThisStep = 0;
   const countdown = (structure._effortCountdown ?? 0) - 1;
   if (countdown <= 0) {
-    structure._effortCountdown = EFFORT_SCAN_EVERY_STEPS;
-    brokenThisStep = scanEfforts(structure, dt * EFFORT_SCAN_EVERY_STEPS, structure._settled);
+    structure._effortCountdown = reglage.pasParScan;
+    brokenThisStep = scanEfforts(structure, dt * reglage.pasParScan, structure._settled);
   } else {
     structure._effortCountdown = countdown;
   }

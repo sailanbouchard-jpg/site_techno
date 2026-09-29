@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>R2 — Qui a branché son appareil au CDI ?</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/cyberdefis/style.css">
+</head>
+<body>
+
+  <div class="defis">
+    <div class="defis-page">
+
+      <div class="fil-ariane">
+        <a href="/index.html">Accueil</a> &gt; <a href="/cyberdefis/">Cyber-défis</a> &gt;
+        <a href="/cyberdefis/reseaux/">Réseaux informatiques</a> &gt; R2
+      </div>
+
+      <div class="bandeau"><h1>R2 — Qui a branché son appareil au CDI ?</h1></div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Énoncé</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p>
+              Le commutateur du CDI compte quatre prises occupées. Trois correspondent à des
+              machines de l'inventaire du collège, mais une quatrième n'y figure pas : un appareil
+              a été branché sans autorisation.
+            </p>
+            <p>Quel est le nom du fabricant de l'appareil inconnu ?</p>
+            <p class="discret">Format attendu : <span class="monospace">FLAG{FABRICANT}</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Adresses vues sur le commutateur CDI-SW01</div>
+        <div class="fenetre-corps">
+          <table>
+            <tr><th>Prise</th><th>Adresse MAC</th></tr>
+            <tr><td class="mono">01</td><td class="mono">D4:BE:D9:1A:2B:3C</td></tr>
+            <tr><td class="mono">02</td><td class="mono">3C:52:82:7A:8B:9C</td></tr>
+            <tr><td class="mono">03</td><td class="mono">8C:77:12:AB:CD:EF</td></tr>
+            <tr><td class="mono">04</td><td class="mono">D4:BE:D9:4E:5F:60</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Inventaire du collège (extrait)</div>
+        <div class="fenetre-corps">
+          <table>
+            <tr><th>Machine</th><th>Adresse MAC</th></tr>
+            <tr><td class="mono">POSTE-CDI-1</td><td class="mono">D4:BE:D9:1A:2B:3C</td></tr>
+            <tr><td class="mono">POSTE-CDI-2</td><td class="mono">D4:BE:D9:4E:5F:60</td></tr>
+            <tr><td class="mono">IMPRIMANTE-CDI</td><td class="mono">3C:52:82:7A:8B:9C</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div id="panneau"></div>
+
+    </div>
+  </div>
+
+  <script src="/cyberdefis/defis.js"></script>
+  <script>Defis.panneau({ defi: "r2" });</script>
+  <script src="/cyberdefis/site-nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,1197 @@
+{
+ "format": "cao-college-modele",
+ "id": "clip_a",
+ "nom": "Clip A",
+ "description": "Clip en porte-à-faux, classe A (SPEC-CLIP-A) : deux parties, assemblés en butée. Régler les paramètres, puis Dégrouper pour placer chaque pièce.",
+ "modifie_le": "2026-09-21T17:48:44.912315+00:00",
+ "document": {
+  "format": "cao-college",
+  "version": 2,
+  "nom": "Clip A",
+  "racine": {
+   "id": "n1_1edrn",
+   "type": "racine",
+   "nom": "Construction",
+   "enfants": [
+    {
+     "id": "n2_5h37b",
+     "type": "esquisse",
+     "nom": "Profil — Clip A — mâle",
+     "parametres": {
+      "plan": "XY",
+      "decalage": 0,
+      "sensExterieur": 1,
+      "points": {
+       "1": [
+        -5.5440000000000005,
+        -9.724
+       ],
+       "2": [
+        18.898123941801337,
+        -9.724
+       ],
+       "3": [
+        18.898123941801337,
+        -3.42
+       ],
+       "4": [
+        16.17812394180134,
+        -3.42
+       ],
+       "5": [
+        16.17812394180134,
+        -4.18
+       ],
+       "6": [
+        0,
+        -4.18
+       ],
+       "7": [
+        0,
+        -3.7800000000000002
+       ],
+       "8": [
+        1.26,
+        -2.52
+       ],
+       "9": [
+        0.3690454557049502,
+        -2.8890454557049505
+       ],
+       "10": [
+        18.398123941801337,
+        -2.52
+       ],
+       "11": [
+        18.698123941801338,
+        -2.22
+       ],
+       "12": [
+        18.698123941801338,
+        0
+       ],
+       "13": [
+        16.98251840539369,
+        0.8
+       ],
+       "14": [
+        16.14251840539369,
+        0.8
+       ],
+       "15": [
+        15,
+        0
+       ],
+       "16": [
+        1.26,
+        0
+       ],
+       "17": [
+        0,
+        1.26
+       ],
+       "18": [
+        0.3690454557049503,
+        0.36904545570495007
+       ],
+       "19": [
+        0,
+        6.804
+       ],
+       "20": [
+        -5.5440000000000005,
+        6.804
+       ]
+      },
+      "courbes": [
+       {
+        "id": "1",
+        "genre": "segment",
+        "a": "1",
+        "b": "2"
+       },
+       {
+        "id": "2",
+        "genre": "segment",
+        "a": "2",
+        "b": "3"
+       },
+       {
+        "id": "3",
+        "genre": "segment",
+        "a": "3",
+        "b": "4"
+       },
+       {
+        "id": "4",
+        "genre": "segment",
+        "a": "4",
+        "b": "5"
+       },
+       {
+        "id": "5",
+        "genre": "segment",
+        "a": "5",
+        "b": "6"
+       },
+       {
+        "id": "6",
+        "genre": "segment",
+        "a": "6",
+        "b": "7"
+       },
+       {
+        "id": "7",
+        "genre": "arc",
+        "a": "7",
+        "b": "8",
+        "m": "9",
+        "bombe": -0.4142135623730945
+       },
+       {
+        "id": "8",
+        "genre": "segment",
+        "a": "8",
+        "b": "10"
+       },
+       {
+        "id": "9",
+        "genre": "segment",
+        "a": "10",
+        "b": "11"
+       },
+       {
+        "id": "10",
+        "genre": "segment",
+        "a": "11",
+        "b": "12"
+       },
+       {
+        "id": "11",
+        "genre": "segment",
+        "a": "12",
+        "b": "13"
+       },
+       {
+        "id": "12",
+        "genre": "segment",
+        "a": "13",
+        "b": "14"
+       },
+       {
+        "id": "13",
+        "genre": "segment",
+        "a": "14",
+        "b": "15"
+       },
+       {
+        "id": "14",
+        "genre": "segment",
+        "a": "15",
+        "b": "16"
+       },
+       {
+        "id": "15",
+        "genre": "arc",
+        "a": "16",
+        "b": "17",
+        "m": "18",
+        "bombe": -0.41421356237309476
+       },
+       {
+        "id": "16",
+        "genre": "segment",
+        "a": "17",
+        "b": "19"
+       },
+       {
+        "id": "17",
+        "genre": "segment",
+        "a": "19",
+        "b": "20"
+       },
+       {
+        "id": "18",
+        "genre": "segment",
+        "a": "20",
+        "b": "1"
+       }
+      ],
+      "contraintes": [
+       {
+        "genre": "distanceH",
+        "a": "1",
+        "b": null,
+        "valeur": 5.5440000000000005,
+        "sens": -1,
+        "formule": "-(-{vclip_t_cadre})",
+        "id": "1"
+       },
+       {
+        "genre": "distanceV",
+        "a": "1",
+        "b": null,
+        "valeur": 9.724,
+        "sens": -1,
+        "formule": "-(-({vclip_T} + {vclip_b_fente} + {vclip_t_cadre}))",
+        "id": "2"
+       },
+       {
+        "genre": "distanceH",
+        "a": "2",
+        "b": null,
+        "valeur": 18.898123941801337,
+        "sens": 1,
+        "formule": "{vclip_u_tip} + {vclip_jeu}",
+        "id": "3"
+       },
+       {
+        "genre": "distanceV",
+        "a": "2",
+        "b": null,
+        "valeur": 9.724,
+        "sens": -1,
+        "formule": "-(-({vclip_T} + {vclip_b_fente} + {vclip_t_cadre}))",
+        "id": "4"
+       },
+       {
+        "genre": "distanceH",
+        "a": "3",
+        "b": null,
+        "valeur": 18.898123941801337,
+        "sens": 1,
+        "formule": "{vclip_u_tip} + {vclip_jeu}",
+        "id": "5"
+       },
+       {
+        "genre": "distanceV",
+        "a": "3",
+        "b": null,
+        "valeur": 3.42,
+        "sens": -1,
+        "formule": "-(-({vclip_T} + {vclip_s}))",
+        "id": "6"
+       },
+       {
+        "genre": "distanceH",
+        "a": "4",
+        "b": null,
+        "valeur": 16.17812394180134,
+        "sens": 1,
+        "formule": "{vclip_u_tip} - {vclip_l_boss}",
+        "id": "7"
+       },
+       {
+        "genre": "distanceV",
+        "a": "4",
+        "b": null,
+        "valeur": 3.42,
+        "sens": -1,
+        "formule": "-(-({vclip_T} + {vclip_s}))",
+        "id": "8"
+       },
+       {
+        "genre": "distanceH",
+        "a": "5",
+        "b": null,
+        "valeur": 16.17812394180134,
+        "sens": 1,
+        "formule": "{vclip_u_tip} - {vclip_l_boss}",
+        "id": "9"
+       },
+       {
+        "genre": "distanceV",
+        "a": "5",
+        "b": null,
+        "valeur": 4.18,
+        "sens": -1,
+        "formule": "-(-({vclip_T} + {vclip_b_fente}))",
+        "id": "10"
+       },
+       {
+        "genre": "surAxe",
+        "a": "6",
+        "axe": "vertical",
+        "id": "11"
+       },
+       {
+        "genre": "distanceV",
+        "a": "6",
+        "b": null,
+        "valeur": 4.18,
+        "sens": -1,
+        "formule": "-(-({vclip_T} + {vclip_b_fente}))",
+        "id": "12"
+       },
+       {
+        "genre": "surAxe",
+        "a": "7",
+        "axe": "vertical",
+        "id": "13"
+       },
+       {
+        "genre": "distanceV",
+        "a": "7",
+        "b": null,
+        "valeur": 3.7800000000000002,
+        "sens": -1,
+        "formule": "-(-({vclip_T} + {vclip_R}))",
+        "id": "14"
+       },
+       {
+        "genre": "distanceH",
+        "a": "8",
+        "b": null,
+        "valeur": 1.26,
+        "sens": 1,
+        "formule": "{vclip_R}",
+        "id": "15"
+       },
+       {
+        "genre": "distanceV",
+        "a": "8",
+        "b": null,
+        "valeur": 2.52,
+        "sens": -1,
+        "formule": "-(-{vclip_T})",
+        "id": "16"
+       },
+       {
+        "genre": "distanceH",
+        "a": "10",
+        "b": null,
+        "valeur": 18.398123941801337,
+        "sens": 1,
+        "formule": "{vclip_u_tip} - 0,3",
+        "id": "17"
+       },
+       {
+        "genre": "distanceV",
+        "a": "10",
+        "b": null,
+        "valeur": 2.52,
+        "sens": -1,
+        "formule": "-(-{vclip_T})",
+        "id": "18"
+       },
+       {
+        "genre": "distanceH",
+        "a": "11",
+        "b": null,
+        "valeur": 18.698123941801338,
+        "sens": 1,
+        "formule": "{vclip_u_tip}",
+        "id": "19"
+       },
+       {
+        "genre": "distanceV",
+        "a": "11",
+        "b": null,
+        "valeur": 2.22,
+        "sens": -1,
+        "formule": "-(-{vclip_T} + 0,3)",
+        "id": "20"
+       },
+       {
+        "genre": "distanceH",
+        "a": "12",
+        "b": null,
+        "valeur": 18.698123941801338,
+        "sens": 1,
+        "formule": "{vclip_u_tip}",
+        "id": "21"
+       },
+       {
+        "genre": "surAxe",
+        "a": "12",
+        "axe": "horizontal",
+        "id": "22"
+       },
+       {
+        "genre": "distanceH",
+        "a": "13",
+        "b": null,
+        "valeur": 16.98251840539369,
+        "sens": 1,
+        "formule": "{vclip_longueur} + {vclip_dy_retenue} + {vclip_c_crete}",
+        "id": "23"
+       },
+       {
+        "genre": "distanceV",
+        "a": "13",
+        "b": null,
+        "valeur": 0.8,
+        "sens": 1,
+        "formule": "{vclip_y}",
+        "id": "24"
+       },
+       {
+        "genre": "distanceH",
+        "a": "14",
+        "b": null,
+        "valeur": 16.14251840539369,
+        "sens": 1,
+        "formule": "{vclip_longueur} + {vclip_dy_retenue}",
+        "id": "25"
+       },
+       {
+        "genre": "distanceV",
+        "a": "14",
+        "b": null,
+        "valeur": 0.8,
+        "sens": 1,
+        "formule": "{vclip_y}",
+        "id": "26"
+       },
+       {
+        "genre": "distanceH",
+        "a": "15",
+        "b": null,
+        "valeur": 15,
+        "sens": 1,
+        "formule": "{vclip_longueur}",
+        "id": "27"
+       },
+       {
+        "genre": "surAxe",
+        "a": "15",
+        "axe": "horizontal",
+        "id": "28"
+       },
+       {
+        "genre": "distanceH",
+        "a": "16",
+        "b": null,
+        "valeur": 1.26,
+        "sens": 1,
+        "formule": "{vclip_R}",
+        "id": "29"
+       },
+       {
+        "genre": "surAxe",
+        "a": "16",
+        "axe": "horizontal",
+        "id": "30"
+       },
+       {
+        "genre": "surAxe",
+        "a": "17",
+        "axe": "vertical",
+        "id": "31"
+       },
+       {
+        "genre": "distanceV",
+        "a": "17",
+        "b": null,
+        "valeur": 1.26,
+        "sens": 1,
+        "formule": "{vclip_R}",
+        "id": "32"
+       },
+       {
+        "genre": "surAxe",
+        "a": "19",
+        "axe": "vertical",
+        "id": "33"
+       },
+       {
+        "genre": "distanceV",
+        "a": "19",
+        "b": null,
+        "valeur": 6.804,
+        "sens": 1,
+        "formule": "max({vclip_y} + {vclip_jeu}; {vclip_R}) + {vclip_t_cadre}",
+        "id": "34"
+       },
+       {
+        "genre": "distanceH",
+        "a": "20",
+        "b": null,
+        "valeur": 5.5440000000000005,
+        "sens": -1,
+        "formule": "-(-{vclip_t_cadre})",
+        "id": "35"
+       },
+       {
+        "genre": "distanceV",
+        "a": "20",
+        "b": null,
+        "valeur": 6.804,
+        "sens": 1,
+        "formule": "max({vclip_y} + {vclip_jeu}; {vclip_R}) + {vclip_t_cadre}",
+        "id": "36"
+       },
+       {
+        "genre": "rayon",
+        "courbe": "7",
+        "valeur": 1.26,
+        "formule": "{vclip_R}",
+        "id": "37"
+       },
+       {
+        "genre": "rayon",
+        "courbe": "15",
+        "valeur": 1.26,
+        "formule": "{vclip_R}",
+        "id": "38"
+       }
+      ]
+     },
+     "visible": false
+    },
+    {
+     "id": "n3_98nkw",
+     "type": "extrusion",
+     "nom": "Clip A — mâle",
+     "parametres": {
+      "hauteur": 6,
+      "sens": "haut",
+      "origine": {
+       "x": 6.677,
+       "y": -1.46,
+       "z": 0
+      },
+      "esquisse": "n2_5h37b"
+     },
+     "transformation": {
+      "position": {
+       "x": 6.677,
+       "y": -1.46,
+       "z": 0
+      }
+     },
+     "couleur": "#3a7bd5",
+     "formules": {
+      "parametre.hauteur": "{vclip_W}"
+     }
+    },
+    {
+     "id": "n4_3c8lk",
+     "type": "esquisse",
+     "nom": "Profil — Clip A — femelle",
+     "parametres": {
+      "plan": "XY",
+      "decalage": 0,
+      "sensExterieur": 1,
+      "points": {
+       "1": [
+        1.46,
+        1
+       ],
+       "2": [
+        12.530024064940777,
+        1
+       ],
+       "3": [
+        14.245629601348424,
+        0.2
+       ],
+       "4": [
+        15.085629601348424,
+        0.2
+       ],
+       "5": [
+        16.228148006742117,
+        1
+       ],
+       "6": [
+        18.898123941801337,
+        1
+       ],
+       "7": [
+        18.898123941801337,
+        6.5440000000000005
+       ],
+       "8": [
+        1.46,
+        6.5440000000000005
+       ]
+      },
+      "courbes": [
+       {
+        "id": "1",
+        "genre": "segment",
+        "a": "1",
+        "b": "2"
+       },
+       {
+        "id": "2",
+        "genre": "segment",
+        "a": "2",
+        "b": "3"
+       },
+       {
+        "id": "3",
+        "genre": "segment",
+        "a": "3",
+        "b": "4"
+       },
+       {
+        "id": "4",
+        "genre": "segment",
+        "a": "4",
+        "b": "5"
+       },
+       {
+        "id": "5",
+        "genre": "segment",
+        "a": "5",
+        "b": "6"
+       },
+       {
+        "id": "6",
+        "genre": "segment",
+        "a": "6",
+        "b": "7"
+       },
+       {
+        "id": "7",
+        "genre": "segment",
+        "a": "7",
+        "b": "8"
+       },
+       {
+        "id": "8",
+        "genre": "segment",
+        "a": "8",
+        "b": "1"
+       }
+      ],
+      "contraintes": [
+       {
+        "genre": "distanceH",
+        "a": "1",
+        "b": null,
+        "valeur": 1.46,
+        "sens": 1,
+        "formule": "{vclip_R} + {vclip_jeu}",
+        "id": "1"
+       },
+       {
+        "genre": "distanceV",
+        "a": "1",
+        "b": null,
+        "valeur": 1,
+        "sens": 1,
+        "formule": "{vclip_y} + {vclip_jeu}",
+        "id": "2"
+       },
+       {
+        "genre": "distanceH",
+        "a": "2",
+        "b": null,
+        "valeur": 12.530024064940777,
+        "sens": 1,
+        "formule": "{vclip_longueur} - {vclip_jeu} + si({vclip_demontable}; {vclip_jeu} / tan({vclip_beta_calc}); 0) - {vclip_c_crete} - {vclip_dy_rampe}",
+        "id": "3"
+       },
+       {
+        "genre": "distanceV",
+        "a": "2",
+        "b": null,
+        "valeur": 1,
+        "sens": 1,
+        "formule": "{vclip_y} + {vclip_jeu}",
+        "id": "4"
+       },
+       {
+        "genre": "distanceH",
+        "a": "3",
+        "b": null,
+        "valeur": 14.245629601348424,
+        "sens": 1,
+        "formule": "{vclip_longueur} - {vclip_jeu} + si({vclip_demontable}; {vclip_jeu} / tan({vclip_beta_calc}); 0) - {vclip_c_crete}",
+        "id": "5"
+       },
+       {
+        "genre": "distanceV",
+        "a": "3",
+        "b": null,
+        "valeur": 0.2,
+        "sens": 1,
+        "formule": "{vclip_jeu}",
+        "id": "6"
+       },
+       {
+        "genre": "distanceH",
+        "a": "4",
+        "b": null,
+        "valeur": 15.085629601348424,
+        "sens": 1,
+        "formule": "{vclip_longueur} - {vclip_jeu} + si({vclip_demontable}; {vclip_jeu} / tan({vclip_beta_calc}); 0)",
+        "id": "7"
+       },
+       {
+        "genre": "distanceV",
+        "a": "4",
+        "b": null,
+        "valeur": 0.2,
+        "sens": 1,
+        "formule": "{vclip_jeu}",
+        "id": "8"
+       },
+       {
+        "genre": "distanceH",
+        "a": "5",
+        "b": null,
+        "valeur": 16.228148006742117,
+        "sens": 1,
+        "formule": "{vclip_longueur} - {vclip_jeu} + si({vclip_demontable}; ({vclip_y} + {vclip_jeu}) / tan({vclip_beta_calc}); 0)",
+        "id": "9"
+       },
+       {
+        "genre": "distanceV",
+        "a": "5",
+        "b": null,
+        "valeur": 1,
+        "sens": 1,
+        "formule": "{vclip_y} + {vclip_jeu}",
+        "id": "10"
+       },
+       {
+        "genre": "distanceH",
+        "a": "6",
+        "b": null,
+        "valeur": 18.898123941801337,
+        "sens": 1,
+        "formule": "{vclip_u_tip} + {vclip_jeu}",
+        "id": "11"
+       },
+       {
+        "genre": "distanceV",
+        "a": "6",
+        "b": null,
+        "valeur": 1,
+        "sens": 1,
+        "formule": "{vclip_y} + {vclip_jeu}",
+        "id": "12"
+       },
+       {
+        "genre": "distanceH",
+        "a": "7",
+        "b": null,
+        "valeur": 18.898123941801337,
+        "sens": 1,
+        "formule": "{vclip_u_tip} + {vclip_jeu}",
+        "id": "13"
+       },
+       {
+        "genre": "distanceV",
+        "a": "7",
+        "b": null,
+        "valeur": 6.5440000000000005,
+        "sens": 1,
+        "formule": "{vclip_y} + {vclip_jeu} + {vclip_t_f}",
+        "id": "14"
+       },
+       {
+        "genre": "distanceH",
+        "a": "8",
+        "b": null,
+        "valeur": 1.46,
+        "sens": 1,
+        "formule": "{vclip_R} + {vclip_jeu}",
+        "id": "15"
+       },
+       {
+        "genre": "distanceV",
+        "a": "8",
+        "b": null,
+        "valeur": 6.5440000000000005,
+        "sens": 1,
+        "formule": "{vclip_y} + {vclip_jeu} + {vclip_t_f}",
+        "id": "16"
+       }
+      ]
+     },
+     "visible": false
+    },
+    {
+     "id": "n5_83dn2",
+     "type": "extrusion",
+     "nom": "Clip A — femelle",
+     "parametres": {
+      "hauteur": 6,
+      "sens": "haut",
+      "origine": {
+       "x": 10.179,
+       "y": 3.372,
+       "z": 0
+      },
+      "esquisse": "n4_3c8lk"
+     },
+     "transformation": {
+      "position": {
+       "x": 10.179,
+       "y": 3.372,
+       "z": 0
+      }
+     },
+     "couleur": "#e07b39",
+     "formules": {
+      "parametre.hauteur": "{vclip_W}"
+     }
+    }
+   ]
+  },
+  "variables": [
+   {
+    "id": "vclip_longueur",
+    "nom": "clip_longueur",
+    "formule": "15",
+    "min": "0,15 * ({vclip_e} + {vclip_delta}) / {vclip_eps_d}",
+    "max": "80",
+    "unite": "mm",
+    "aide": "Longueur flexible du bras, de la racine à la face de retenue. Plus long : clip plus souple. Minimum imposé par l'accroche et la matière."
+   },
+   {
+    "id": "vclip_hauteur",
+    "nom": "clip_hauteur",
+    "formule": "6",
+    "min": "3",
+    "max": "40",
+    "unite": "mm",
+    "aide": "Hauteur disponible selon Z (sens des couches). Le clip la prend entière, sauf si l'assemblage devenait trop dur."
+   },
+   {
+    "id": "vclip_accroche",
+    "nom": "clip_accroche",
+    "formule": "0,6",
+    "min": "0",
+    "max": "3",
+    "unite": "mm",
+    "aide": "Recouvrement des faces de retenue : de combien le crochet passe derrière la dent. Au moins 0,5 mm."
+   },
+   {
+    "id": "vclip_demontable",
+    "nom": "clip_demontable",
+    "formule": "1",
+    "min": "0",
+    "max": "1",
+    "unite": "0/1",
+    "aide": "1 : démontable, la face de retenue est inclinée pour pouvoir déclipser à la main. 0 : permanent, retenue à 90°.",
+    "valeurs": "0 ; 1"
+   },
+   {
+    "id": "vclip_ligne",
+    "nom": "clip_ligne",
+    "formule": "0,42",
+    "min": "0,2",
+    "max": "1",
+    "unite": "mm",
+    "aide": "Largeur de ligne du trancheur. Le clip s'imprime à plat : l'épaisseur du bras est un multiple de cette largeur. Valeurs usuelles : buses de 0,2 à 0,8 mm.",
+    "valeurs": "0,22 ; 0,27 ; 0,42 ; 0,45 ; 0,62 ; 0,82"
+   },
+   {
+    "id": "vclip_module",
+    "nom": "clip_module",
+    "formule": "1800",
+    "min": "300",
+    "max": "10000",
+    "unite": "MPa",
+    "aide": "Module d'élasticité de la matière imprimée (PETG ≈ 1800, PLA ≈ 2750, valeurs provisoires). Le calcul prend une fourchette de ±22 % autour.",
+    "valeurs": "1800 ; 2750"
+   },
+   {
+    "id": "vclip_deformation",
+    "nom": "clip_deformation",
+    "formule": "0,018",
+    "min": "0,002",
+    "max": "0,1",
+    "unite": "-",
+    "aide": "Déformation que la matière supporte sans blanchir sur toute la vie du clip (PETG ≈ 0,018, PLA ≈ 0,012). La conception n'en utilise que les deux tiers.",
+    "valeurs": "0,012 ; 0,018"
+   },
+   {
+    "id": "vclip_frottement",
+    "nom": "clip_frottement",
+    "formule": "0,7",
+    "min": "0,1",
+    "max": "1,5",
+    "unite": "-",
+    "aide": "Frottement le plus fort, imprimé sur imprimé. Il règle l'effort d'assemblage et l'angle de retenue."
+   },
+   {
+    "id": "vclip_couche",
+    "nom": "clip_couche",
+    "formule": "0,2",
+    "min": "0,2",
+    "max": "0,2",
+    "unite": "mm",
+    "aide": "Hauteur de couche : la hauteur du clip en est un multiple."
+   },
+   {
+    "id": "vclip_delta",
+    "nom": "clip_delta",
+    "formule": "0,1",
+    "min": "0,1",
+    "max": "0,1",
+    "unite": "mm",
+    "aide": "Incertitude dimensionnelle par face (valeur mesurée courante)."
+   },
+   {
+    "id": "vclip_alpha",
+    "nom": "clip_alpha",
+    "formule": "25",
+    "min": "25",
+    "max": "25",
+    "unite": "°",
+    "aide": "Angle de la rampe d'entrée."
+   },
+   {
+    "id": "vclip_effort",
+    "nom": "clip_effort",
+    "formule": "40,5",
+    "min": "40,5",
+    "max": "40,5",
+    "unite": "N",
+    "aide": "Effort d'assemblage acceptable par clip (un adulte, 81 N pour deux clips)."
+   },
+   {
+    "id": "vclip_k_T",
+    "nom": "clip_k_T",
+    "formule": "0,5",
+    "min": "0,5",
+    "max": "0,5",
+    "unite": "-",
+    "aide": "Réduction du module à chaud, pour la retenue garantie."
+   },
+   {
+    "id": "vclip_E_min",
+    "nom": "clip_E_min",
+    "formule": "0,78 * {vclip_module}",
+    "unite": "MPa",
+    "aide": "Module, cas le plus mou."
+   },
+   {
+    "id": "vclip_E_max",
+    "nom": "clip_E_max",
+    "formule": "1,22 * {vclip_module}",
+    "unite": "MPa",
+    "aide": "Module, cas le plus raide."
+   },
+   {
+    "id": "vclip_eps_cyc",
+    "nom": "clip_eps_cyc",
+    "formule": "{vclip_deformation}",
+    "unite": "-",
+    "aide": "Déformation limite de la matière."
+   },
+   {
+    "id": "vclip_eps_d",
+    "nom": "clip_eps_d",
+    "formule": "{vclip_deformation} / 1,5",
+    "unite": "-",
+    "aide": "Déformation de calcul (sécurité 1,5)."
+   },
+   {
+    "id": "vclip_mu_min",
+    "nom": "clip_mu_min",
+    "formule": "min(0,25; {vclip_frottement})",
+    "unite": "-",
+    "aide": "Frottement le plus faible, pour la retenue garantie."
+   },
+   {
+    "id": "vclip_jeu",
+    "nom": "clip_jeu",
+    "formule": "max(0,2; 2 * {vclip_delta})",
+    "unite": "mm",
+    "aide": "Jeu de fonctionnement."
+   },
+   {
+    "id": "vclip_g_stop",
+    "nom": "clip_g_stop",
+    "formule": "max(0,3; 3 * {vclip_delta})",
+    "unite": "mm",
+    "aide": "Écart supplémentaire avant la butée anti-surflexion."
+   },
+   {
+    "id": "vclip_e",
+    "nom": "clip_e",
+    "formule": "max({vclip_accroche}; 0,5; 5 * {vclip_delta})",
+    "unite": "mm",
+    "aide": "Accroche retenue (au moins 5 fois l'incertitude)."
+   },
+   {
+    "id": "vclip_T",
+    "nom": "clip_T",
+    "formule": "ent(min({vclip_longueur} / 5; {vclip_eps_d} * {vclip_longueur} ^ 2 / (1,5 * ({vclip_e} + {vclip_delta}))) / {vclip_ligne}) * {vclip_ligne}",
+    "min": "max({vclip_longueur} / 10; 3 * {vclip_ligne})",
+    "unite": "mm",
+    "aide": "Épaisseur du bras : plus grand multiple de la largeur de ligne tel que T ≤ L/5 et que la déformation au montage reste admissible. Doit rester ≥ L/10."
+   },
+   {
+    "id": "vclip_eps_montage",
+    "nom": "clip_eps_montage",
+    "formule": "1,5 * {vclip_T} * ({vclip_e} + {vclip_delta}) / {vclip_longueur} ^ 2",
+    "max": "{vclip_eps_d}",
+    "unite": "-",
+    "aide": "Déformation au montage."
+   },
+   {
+    "id": "vclip_s",
+    "nom": "clip_s",
+    "formule": "{vclip_e} + {vclip_g_stop}",
+    "unite": "mm",
+    "aide": "Écart entre le dos du bras et la butée."
+   },
+   {
+    "id": "vclip_eps_stop",
+    "nom": "clip_eps_stop",
+    "formule": "1,5 * {vclip_T} * ({vclip_s} + {vclip_delta}) / {vclip_longueur} ^ 2",
+    "max": "{vclip_eps_cyc}",
+    "unite": "-",
+    "aide": "Déformation maximale possible, bras contre la butée."
+   },
+   {
+    "id": "vclip_k_alpha",
+    "nom": "clip_k_alpha",
+    "formule": "({vclip_frottement} + tan({vclip_alpha})) / (1 - {vclip_frottement} * tan({vclip_alpha}))",
+    "unite": "-",
+    "aide": "Effort d'assemblage rapporté à la force de flexion."
+   },
+   {
+    "id": "vclip_W_ergo",
+    "nom": "clip_W_ergo",
+    "formule": "{vclip_effort} / ({vclip_k_alpha} * {vclip_E_max} * {vclip_T} ^ 3 * ({vclip_e} + {vclip_delta}) / (4 * {vclip_longueur} ^ 3))",
+    "unite": "mm",
+    "aide": "Hauteur au-delà de laquelle l'assemblage deviendrait trop dur."
+   },
+   {
+    "id": "vclip_W",
+    "nom": "clip_W",
+    "formule": "ent(min({vclip_hauteur}; {vclip_longueur} / 2; {vclip_W_ergo}) / {vclip_couche}) * {vclip_couche}",
+    "min": "max(3; {vclip_T})",
+    "unite": "mm",
+    "aide": "Hauteur réelle du clip selon Z. Doit rester ≥ max(3 ; T)."
+   },
+   {
+    "id": "vclip_P_max",
+    "nom": "clip_P_max",
+    "formule": "{vclip_E_max} * {vclip_W} * {vclip_T} ^ 3 * ({vclip_e} + {vclip_delta}) / (4 * {vclip_longueur} ^ 3)",
+    "unite": "N",
+    "aide": "Force de flexion, cas le plus dur."
+   },
+   {
+    "id": "vclip_P_ret",
+    "nom": "clip_P_ret",
+    "formule": "{vclip_k_T} * {vclip_E_min} * {vclip_W} * {vclip_T} ^ 3 * ({vclip_e} - {vclip_delta}) / (4 * {vclip_longueur} ^ 3)",
+    "unite": "N",
+    "aide": "Force de flexion, cas le plus mou."
+   },
+   {
+    "id": "vclip_Fa",
+    "nom": "clip_Fa",
+    "formule": "{vclip_P_max} * {vclip_k_alpha}",
+    "unite": "N",
+    "aide": "Effort d'assemblage d'un clip, au pire."
+   },
+   {
+    "id": "vclip_q",
+    "nom": "clip_q",
+    "formule": "{vclip_effort} / {vclip_P_max}",
+    "unite": "-",
+    "aide": "Effort acceptable rapporté à la force de flexion."
+   },
+   {
+    "id": "vclip_beta_calc",
+    "nom": "clip_beta_calc",
+    "formule": "ent(min(atan(0,5 / {vclip_frottement}); atan(({vclip_q} - {vclip_frottement}) / (1 + {vclip_q} * {vclip_frottement}))))",
+    "min": "si({vclip_demontable}; 10; -90)",
+    "unite": "°",
+    "aide": "Angle de retenue démontable : jamais d'auto-blocage, démontage faisable à la main."
+   },
+   {
+    "id": "vclip_beta",
+    "nom": "clip_beta",
+    "formule": "si({vclip_demontable}; {vclip_beta_calc}; 90)",
+    "unite": "°",
+    "aide": "Angle de la face de retenue."
+   },
+   {
+    "id": "vclip_Fd",
+    "nom": "clip_Fd",
+    "formule": "si({vclip_demontable}; {vclip_P_ret} * ({vclip_mu_min} + tan({vclip_beta_calc})) / (1 - {vclip_mu_min} * tan({vclip_beta_calc})); 0)",
+    "unite": "N",
+    "aide": "Retenue garantie d'un clip démontable, au pire (0 : clip permanent, retenue à vérifier par un essai d'arrachement)."
+   },
+   {
+    "id": "vclip_y",
+    "nom": "clip_y",
+    "formule": "{vclip_e} + {vclip_jeu}",
+    "unite": "mm",
+    "aide": "Hauteur du crochet au-dessus de la face du bras."
+   },
+   {
+    "id": "vclip_dy_retenue",
+    "nom": "clip_dy_retenue",
+    "formule": "si({vclip_demontable}; {vclip_y} / tan({vclip_beta_calc}); 0)",
+    "unite": "mm",
+    "aide": "Avancée de la face de retenue."
+   },
+   {
+    "id": "vclip_c_crete",
+    "nom": "clip_c_crete",
+    "formule": "max(0,8; 2 * {vclip_ligne})",
+    "unite": "mm",
+    "aide": "Sommet plat du crochet."
+   },
+   {
+    "id": "vclip_dy_rampe",
+    "nom": "clip_dy_rampe",
+    "formule": "{vclip_y} / tan({vclip_alpha})",
+    "unite": "mm",
+    "aide": "Longueur de la rampe d'entrée."
+   },
+   {
+    "id": "vclip_u_tip",
+    "nom": "clip_u_tip",
+    "formule": "{vclip_longueur} + {vclip_dy_retenue} + {vclip_c_crete} + {vclip_dy_rampe}",
+    "unite": "mm",
+    "aide": "Position du bout du bras."
+   },
+   {
+    "id": "vclip_R",
+    "nom": "clip_R",
+    "formule": "{vclip_T} / 2",
+    "unite": "mm",
+    "aide": "Congé de racine."
+   },
+   {
+    "id": "vclip_b_fente",
+    "nom": "clip_b_fente",
+    "formule": "max({vclip_s} + 0,3; {vclip_R} + 0,4)",
+    "unite": "mm",
+    "aide": "Profondeur de la fente derrière le bras (bossage de butée d'au moins 0,3)."
+   },
+   {
+    "id": "vclip_h_boss",
+    "nom": "clip_h_boss",
+    "formule": "{vclip_b_fente} - {vclip_s}",
+    "unite": "mm",
+    "aide": "Hauteur du bossage de butée."
+   },
+   {
+    "id": "vclip_l_boss",
+    "nom": "clip_l_boss",
+    "formule": "max({vclip_T}; 2)",
+    "unite": "mm",
+    "aide": "Longueur du bossage de butée."
+   },
+   {
+    "id": "vclip_t_cadre",
+    "nom": "clip_t_cadre",
+    "formule": "2,2 * {vclip_T}",
+    "unite": "mm",
+    "aide": "Épaisseur du cadre du mâle."
+   },
+   {
+    "id": "vclip_t_f",
+    "nom": "clip_t_f",
+    "formule": "2,2 * {vclip_T}",
+    "unite": "mm",
+    "aide": "Épaisseur de la paroi de la femelle (appui rigide à moins de L)."
+   }
+  ]
+ }
+}

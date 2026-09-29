@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>F4 — Les archives imbriquées</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/cyberdefis/style.css">
+</head>
+<body>
+
+  <div class="defis">
+    <div class="defis-page">
+
+      <div class="fil-ariane">
+        <a href="/index.html">Accueil</a> &gt; <a href="/cyberdefis/">Cyber-défis</a> &gt;
+        <a href="/cyberdefis/fichiers/">Manipulation de fichiers</a> &gt; F4
+      </div>
+
+      <div class="bandeau"><h1>F4 — Les archives imbriquées</h1></div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Énoncé</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p>
+              Télécharge l'archive <span class="monospace">archive.zip</span> et décompresse-la. À
+              l'intérieur se trouve une autre archive, qui en contient une autre. Continue jusqu'au
+              fichier texte final : il porte le flag.
+            </p>
+            <p><a href="archive.zip" download>⬇ Télécharger archive.zip</a></p>
+            <p class="discret">Format attendu : <span class="monospace">FLAG{…}</span></p>
+          </div>
+
+          <div class="note">
+            <strong>Méthode.</strong>
+            Pour décompresser une archive, un clic droit puis « Extraire tout ». Chaque extraction
+            révèle l'archive suivante ; il faut répéter l'opération jusqu'au fichier
+            <span class="monospace">.txt</span>.
+          </div>
+        </div>
+      </div>
+
+      <div id="panneau"></div>
+
+    </div>
+  </div>
+
+  <script src="/cyberdefis/defis.js"></script>
+  <script>Defis.panneau({ defi: "f4" });</script>
+  <script src="/cyberdefis/site-nav.js"></script>
+</body>
+</html>

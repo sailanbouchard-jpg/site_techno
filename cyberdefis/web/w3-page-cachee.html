@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>W3 — La page cachée</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/cyberdefis/style.css">
+</head>
+<body>
+
+  <div class="defis">
+    <div class="defis-page">
+
+      <div class="fil-ariane">
+        <a href="/index.html">Accueil</a> &gt; <a href="/cyberdefis/">Cyber-défis</a> &gt;
+        <a href="/cyberdefis/web/">Sous le capot du Web</a> &gt; W3
+      </div>
+
+      <div class="bandeau"><h1 id="titre">W3 — La page cachée</h1></div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span><span id="t-enonce">Énoncé</span></div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p id="enonce">
+              Le professeur a écrit deux versions de cette page web : une en français
+              (<span class="monospace">fr</span>) et une en anglais
+              (<span class="monospace">en</span>).
+            </p>
+            <p class="discret"><span id="t-format">Format attendu</span> :
+              <span class="monospace">FLAG{…}</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span><span id="t-zone">Zone d'affichage</span></div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p id="zone" style="text-align:center; margin:16px 0;">Le flag n'est pas écrit ici.</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="panneau"></div>
+
+    </div>
+  </div>
+
+  <script src="/cyberdefis/defis.js"></script>
+  <script>
+    // La page a deux versions : le paramètre « lgue » de l'URL choisit laquelle.
+    (function () {
+      var langue = new URLSearchParams(location.search).get("lgue");
+      var textes = {
+        fr: {
+          lang:    "fr",
+          titre:   "W3 — La page cachée",
+          tEnonce: "Énoncé",
+          enonce:  "Le professeur a écrit deux versions de cette page web : une en français (fr) et une en anglais (en).",
+          tFormat: "Format attendu",
+          tZone:   "Zone d'affichage",
+          zone:    "Le flag n'est pas écrit ici.",
+        },
+        en: {
+          lang:    "en",
+          titre:   "W3 — The hidden page",
+          tEnonce: "Statement",
+          enonce:  "The teacher wrote two versions of this web page: one in French (fr) and one in English (en).",
+          tFormat: "Expected format",
+          tZone:   "Display area",
+          zone:    "You found the FLAG{IN_ENGLISH_PLEASE} !",
+        },
+      };
+      var t = langue === "en" ? textes.en : textes.fr;
+      document.documentElement.lang = t.lang;
+      document.getElementById("titre").textContent    = t.titre;
+      document.getElementById("t-enonce").textContent  = t.tEnonce;
+      document.getElementById("enonce").textContent    = t.enonce;
+      document.getElementById("t-format").textContent  = t.tFormat;
+      document.getElementById("t-zone").textContent    = t.tZone;
+      document.getElementById("zone").textContent      = t.zone;
+    })();
+
+    Defis.panneau({ defi: "w3" });
+  </script>
+  <script src="/cyberdefis/site-nav.js"></script>
+</body>
+</html>

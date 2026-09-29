@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>W2 — Fouiller les dossiers d'un site web</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/cyberdefis/style.css">
+</head>
+<body>
+
+  <div class="defis">
+    <div class="defis-page">
+
+      <div class="fil-ariane">
+        <a href="/index.html">Accueil</a> &gt; <a href="/cyberdefis/">Cyber-défis</a> &gt;
+        <a href="/cyberdefis/web/">Sous le capot du Web</a> &gt; W2
+      </div>
+
+      <div class="bandeau"><h1>W2 — Fouiller les dossiers d'un site web</h1></div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Énoncé</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p>
+              Le prof de Technologie a mal rangé son site web : on dirait qu'il a mis le sujet
+              corrigé de la prochaine évaluation dans le même dossier que cette page. Le fichier
+              semble s'appeler <span class="monospace">evaluation.txt</span>.
+            </p>
+            <p>Il doit y avoir plein de choses intéressantes dans ce sujet !</p>
+            <p class="discret">Format attendu : <span class="monospace">FLAG{…}</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Zone d'affichage</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p style="text-align:center; margin:16px 0;">Le flag n'est pas écrit ici.</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="panneau"></div>
+
+    </div>
+  </div>
+
+  <script src="/cyberdefis/defis.js"></script>
+  <script>Defis.panneau({ defi: "w2" });</script>
+  <script src="/cyberdefis/site-nav.js"></script>
+</body>
+</html>

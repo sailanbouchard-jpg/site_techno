@@ -5,8 +5,10 @@
 // (x croissant). Quand elle atteint le bout d'une poutre :
 //   - s'il existe une route connectée qui repart vers la droite, elle y passe
 //     (sans perdre sa vitesse) ;
-//   - sinon (fin de route, ou poutre rompue après), elle s'arrête en bout de
-//     poutre — elle ne disparaît jamais.
+//   - si ce nœud porte le DRAPEAU D'ARRIVÉE, elle s'y arrête : elle est au but ;
+//   - sinon (fin de route, ou poutre rompue après), il n'y a plus rien sous ses
+//     roues : elle TOMBE. Une route qui s'arrête dans le vide n'est pas un
+//     passage, et le niveau est perdu.
 //
 // `direction` (+1 = parcours A→B, -1 = B→A) est choisi pour que le mouvement
 // soit toujours vers la droite, quel que soit le sens dans lequel la poutre a
@@ -15,7 +17,7 @@
 // getCurrentRoadSegment() rend le segment courant (ses deux nœuds + la fraction
 // 0..1 dessus) : partagé par le poids (loads.js) et le dessin (vehicleRenderer.js).
 
-import { findBeamById, findNodeById, findSegmentById } from "../model/Structure.js";
+import { findBeamById, findNodeById, findSegmentById, estArrivee } from "../model/Structure.js";
 import { WATTS_PER_HORSEPOWER, MAX_VEHICLE_SPEED, ROLLING_RESISTANCE, GRAVITY_ACCELERATION } from "./config.js";
 
 function beamTotalLength(beam, structure) {
@@ -113,17 +115,51 @@ function enterBeam(vehicle, structure, beam, fromNodeId, overflow) {
 }
 
 function handOffOrStop(vehicle, structure, beam, exitNodeId, overflow, total) {
+  // Terminus : le drapeau d'arrivée arrête le véhicule, même s'il reste de la
+  // route derrière. C'est le but du niveau, pas une étape.
+  if (estArrivee(structure, exitNodeId)) {
+    vehicle.distanceAlongBeam = vehicle.direction > 0 ? total : 0;
+    vehicle.pathVelocity = 0;
+    vehicle.state = "arrive";
+    return;
+  }
   const next = findNextRoadBeamRightward(structure, beam, exitNodeId);
   if (next) {
     enterBeam(vehicle, structure, next, exitNodeId, overflow);
-  } else {
-    // Bout de route : on s'arrête là, on ne disparaît PAS.
-    vehicle.distanceAlongBeam = vehicle.direction > 0 ? total : 0;
-    vehicle.pathVelocity = 0;
+    return;
   }
+  commencerChute(vehicle, structure, exitNodeId, total);
+}
+
+// Plus de route : le véhicule bascule dans le vide. Il ne pèse plus sur rien
+// (physics/loads.js ne charge que les véhicules « onRoad ») et suit une simple
+// parabole : on n'a pas besoin de mieux, il ne reviendra pas.
+function commencerChute(vehicle, structure, exitNodeId, total) {
+  const bord = findNodeById(structure, exitNodeId);
+  vehicle.distanceAlongBeam = vehicle.direction > 0 ? total : 0;
+  vehicle.state = "chute";
+  vehicle.chuteX = bord ? bord.x : 0;
+  vehicle.chuteY = bord ? bord.y : 0;
+  vehicle.chuteVx = Math.max(vehicle.pathVelocity, 0.5); // il part dans son élan
+  vehicle.chuteVy = 0;
+  vehicle.pathVelocity = 0;
+}
+
+// Chute libre, une image après l'autre.
+function chuter(vehicle, dt) {
+  vehicle.chuteVy += GRAVITY_ACCELERATION * dt;
+  vehicle.chuteX += vehicle.chuteVx * dt;
+  vehicle.chuteY += vehicle.chuteVy * dt;
+}
+
+// Position monde d'un véhicule en train de tomber, ou null s'il roule encore.
+export function positionChute(vehicle) {
+  return vehicle.state === "chute" ? { x: vehicle.chuteX, y: vehicle.chuteY } : null;
 }
 
 export function advanceMobileLoad(vehicle, structure, dt) {
+  if (vehicle.state === "chute") return chuter(vehicle, dt);
+  if (vehicle.state === "arrive") return; // au but : il ne bouge plus
   const beam = findBeamById(structure, vehicle.beamId);
   if (!beam) return; // poutre disparue (supprimée en édition) : rien à faire
   ensurePlaced(vehicle, structure, beam);

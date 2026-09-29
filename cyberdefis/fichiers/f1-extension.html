@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>F1 — Changer l'extension d'un fichier</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/cyberdefis/style.css">
+</head>
+<body>
+
+  <div class="defis">
+    <div class="defis-page">
+
+      <div class="fil-ariane">
+        <a href="/index.html">Accueil</a> &gt; <a href="/cyberdefis/">Cyber-défis</a> &gt;
+        <a href="/cyberdefis/fichiers/">Manipulation de fichiers</a> &gt; F1
+      </div>
+
+      <div class="bandeau"><h1>F1 — Changer l'extension d'un fichier</h1></div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Énoncé</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p>
+              Le fichier suivant porte l'extension <span class="monospace">.jpg</span> : il sera
+              donc lu par ton ordinateur comme un « jpeg », c'est-à-dire un fichier de type
+              « image ». Pourtant, ce fichier contient-il bien une image ?
+            </p>
+            <p><a href="fichier_a_decoder.jpg" download>⬇ Télécharger fichier_a_decoder.jpg</a></p>
+            <p class="discret">Format attendu : <span class="monospace">FLAG{…}</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div id="panneau"></div>
+
+    </div>
+  </div>
+
+  <script src="/cyberdefis/defis.js"></script>
+  <script>Defis.panneau({ defi: "f1" });</script>
+  <script src="/cyberdefis/site-nav.js"></script>
+</body>
+</html>

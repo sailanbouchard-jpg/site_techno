@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>F5 — Le message ajouté</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/cyberdefis/style.css">
+</head>
+<body>
+
+  <div class="defis">
+    <div class="defis-page">
+
+      <div class="fil-ariane">
+        <a href="/index.html">Accueil</a> &gt; <a href="/cyberdefis/">Cyber-défis</a> &gt;
+        <a href="/cyberdefis/fichiers/">Manipulation de fichiers</a> &gt; F5
+      </div>
+
+      <div class="bandeau"><h1>F5 — Le message ajouté</h1></div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Énoncé</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p>
+              Télécharge <span class="monospace">image.png</span> : elle s'affiche normalement. Un
+              texte a pourtant été ajouté à la fin du fichier, après l'image. Ouvre le fichier
+              autrement pour le lire.
+            </p>
+            <p><a href="image.png" download>⬇ Télécharger image.png</a></p>
+            <p class="discret">Format attendu : <span class="monospace">FLAG{…}</span></p>
+          </div>
+
+          <div class="note">
+            <strong>Méthode.</strong>
+            Un fichier image peut aussi s'ouvrir avec un éditeur de texte : clic droit,
+            « Ouvrir avec », puis le Bloc-notes. Le début du fichier est illisible — c'est l'image ;
+            fais défiler jusqu'en bas, où un passage lisible a été ajouté.
+          </div>
+        </div>
+      </div>
+
+      <div id="panneau"></div>
+
+    </div>
+  </div>
+
+  <script src="/cyberdefis/defis.js"></script>
+  <script>Defis.panneau({ defi: "f5" });</script>
+  <script src="/cyberdefis/site-nav.js"></script>
+</body>
+</html>

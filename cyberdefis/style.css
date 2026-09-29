@@ -1,0 +1,560 @@
+/* ─────────────────────────────────────────────────────────────
+   cyberdefis/style.css
+   Habillage du module — volontairement « web des années 2000 » :
+   fenêtres à bords biseautés, barres de titre bleu marine, boutons
+   en relief, tableaux à bordures franches, liens bleus soulignés.
+   Aucun angle arrondi, aucune ombre portée, aucune animation.
+
+   Toutes les couleurs et dimensions sont déclarées une seule fois
+   dans :root ci-dessous, et nulle part ailleurs dans le module.
+   La navbar du site, elle, garde son propre habillage (style.css).
+───────────────────────────────────────────────────────────── */
+
+:root {
+    /* Fonds */
+    --d-fond-bureau:    #6c7f92;   /* le fond de page, motif compris */
+    --d-fond-motif:     #63768a;
+    --d-fond-fenetre:   #d4d0c8;   /* gris des boîtes de dialogue */
+    --d-fond-papier:    #ffffff;   /* zone de lecture */
+    --d-fond-entete:    #c0c0c0;   /* en-têtes de tableau */
+    --d-fond-note:      #ffffe1;   /* jaune « info-bulle » */
+
+    /* Reliefs (bords biseautés) */
+    --d-relief-clair:   #ffffff;
+    --d-relief-gris:    #808080;
+    --d-relief-sombre:  #404040;
+
+    /* Barres de titre */
+    --d-titre-fond:     #000080;
+    --d-titre-fond2:    #1084d0;
+    --d-titre-texte:    #ffffff;
+
+    /* Textes et liens */
+    --d-texte:          #000000;
+    --d-texte-discret:  #5a5a5a;
+    --d-lien:           #0000ee;
+    --d-lien-visite:    #551a8b;
+
+    /* États */
+    --d-ok:             #007000;
+    --d-erreur:         #b00000;
+    --d-attente:        #806000;
+
+    /* Paliers de difficulté */
+    --d-palier-1:       #2e7d32;
+    --d-palier-2:       #b26a00;
+    --d-palier-3:       #8b1a1a;
+
+    /* Typographie et mesures */
+    --d-police:         Verdana, Geneva, Tahoma, sans-serif;
+    --d-police-donnees: "Courier New", Courier, monospace;
+    --d-taille:         12px;
+    --d-taille-petite:  11px;
+    --d-interligne:     1.65;
+    --d-largeur-page:   840px;
+    --d-espace:         12px;
+}
+
+/* ── Page ─────────────────────────────────────────────────── */
+/* Ce module est un sous-site autonome : il n'inclut PAS la feuille
+   du site, donc il porte sa propre remise à zéro. */
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+/* Corps en rangée : la barre de navigation du site (injectée côté client par
+   site-nav.js) occupe la colonne de gauche, le contenu du défi remplit le reste.
+   La feuille du site (/static/style.css) est chargée AVANT celle-ci dans le
+   <head> : ces règles-ci l'emportent donc pour le fond et la mise en page. */
+body {
+    min-height:  100vh;
+    display:     flex;
+    align-items: flex-start;
+    background-color: var(--d-fond-bureau);
+    background-image: repeating-linear-gradient(
+        45deg,
+        var(--d-fond-motif) 0, var(--d-fond-motif) 1px,
+        transparent 1px, transparent 7px
+    );
+}
+
+.defis {
+    flex:        1;
+    min-width:   0;
+    padding:     18px 0 36px;
+    font-family: var(--d-police);
+    font-size:   var(--d-taille);
+    line-height: var(--d-interligne);
+    color:       var(--d-texte);
+}
+
+.defis-page {
+    width:     var(--d-largeur-page);
+    max-width: 100%;
+    margin:    0 auto;
+    padding:   0 16px;
+}
+
+/* Petits écrans : cette feuille étant chargée après celle du site, on reprend
+   ici sa bascule mobile (sinon le display:flex ci-dessus l'emporterait et la
+   navbar resterait une colonne étroite). La navbar injectée repasse alors en
+   bloc au-dessus du contenu (règles .navbar mobiles dans /static/style.css). */
+@media (max-width: 840px) {
+    body { display: block; }
+}
+
+/* ── Fenêtre : le conteneur de base de tout le module ─────── */
+
+.fenetre {
+    background:   var(--d-fond-fenetre);
+    border-top:    2px solid var(--d-relief-clair);
+    border-left:   2px solid var(--d-relief-clair);
+    border-right:  2px solid var(--d-relief-sombre);
+    border-bottom: 2px solid var(--d-relief-sombre);
+    margin-bottom: var(--d-espace);
+}
+
+.fenetre-titre {
+    background: linear-gradient(90deg, var(--d-titre-fond), var(--d-titre-fond2));
+    color:      var(--d-titre-texte);
+    font-weight: bold;
+    font-size:   var(--d-taille);
+    padding:     3px 6px;
+    margin:      2px;
+    display:     flex;
+    align-items: center;
+    gap:         6px;
+}
+
+.fenetre-titre .puce {
+    width:  9px;
+    height: 9px;
+    background: var(--d-titre-texte);
+    flex-shrink: 0;
+}
+
+.fenetre-corps {
+    padding: 10px 12px 12px;
+}
+
+/* Zone de lecture blanche, en creux */
+.papier {
+    background: var(--d-fond-papier);
+    border-top:    1px solid var(--d-relief-gris);
+    border-left:   1px solid var(--d-relief-gris);
+    border-right:  1px solid var(--d-relief-clair);
+    border-bottom: 1px solid var(--d-relief-clair);
+    padding: 10px 12px;
+}
+
+/* ── Titres et textes ─────────────────────────────────────── */
+
+.defis h1 {
+    font-size:   19px;
+    margin:      0 0 4px;
+    letter-spacing: 0.02em;
+}
+
+.defis h2 {
+    font-size: 15px;
+    margin:    16px 0 6px;
+    border-bottom: 1px solid var(--d-relief-gris);
+    padding-bottom: 3px;
+}
+
+.defis h3 {
+    font-size: 13px;
+    margin:    14px 0 5px;
+}
+
+.defis p  { margin: 0 0 9px; }
+.defis ul { margin: 0 0 9px; padding-left: 22px; list-style: square; }
+.defis li { margin-bottom: 4px; }
+
+.defis a          { color: var(--d-lien); text-decoration: underline; }
+.defis a:visited  { color: var(--d-lien-visite); }
+
+.discret  { color: var(--d-texte-discret); font-size: var(--d-taille-petite); }
+.monospace { font-family: var(--d-police-donnees); }
+
+hr {
+    border: 0;
+    border-top:    1px solid var(--d-relief-gris);
+    border-bottom: 1px solid var(--d-relief-clair);
+    margin: 12px 0;
+}
+
+/* ── En-tête du module ────────────────────────────────────── */
+
+.bandeau {
+    background: var(--d-fond-papier);
+    border-top:    2px solid var(--d-relief-clair);
+    border-left:   2px solid var(--d-relief-clair);
+    border-right:  2px solid var(--d-relief-sombre);
+    border-bottom: 2px solid var(--d-relief-sombre);
+    padding: 12px 14px;
+    margin-bottom: var(--d-espace);
+}
+
+.bandeau h1 { font-size: 22px; }
+
+.fil-ariane {
+    font-size: var(--d-taille-petite);
+    color:     var(--d-titre-texte);
+    margin-bottom: 8px;
+}
+
+.fil-ariane a         { color: var(--d-titre-texte); }
+.fil-ariane a:visited { color: var(--d-titre-texte); }
+
+/* ── Tableaux ─────────────────────────────────────────────── */
+
+.defis table {
+    border-collapse: collapse;
+    width: 100%;
+    background: var(--d-fond-papier);
+    margin: 0 0 10px;
+    font-size: var(--d-taille);
+}
+
+.defis th,
+.defis td {
+    border:  1px solid var(--d-relief-gris);
+    padding: 5px 8px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.defis th {
+    background:  var(--d-fond-entete);
+    font-weight: bold;
+}
+
+.defis td.nombre,
+.defis th.nombre { text-align: right; font-family: var(--d-police-donnees); }
+
+.defis td.mono { font-family: var(--d-police-donnees); }
+
+/* ── Blocs de données brutes (trames, relevés, code) ──────── */
+
+.donnees {
+    font-family: var(--d-police-donnees);
+    font-size:   var(--d-taille);
+    line-height: 1.5;
+    background:  var(--d-fond-papier);
+    border-top:    1px solid var(--d-relief-gris);
+    border-left:   1px solid var(--d-relief-gris);
+    border-right:  1px solid var(--d-relief-clair);
+    border-bottom: 1px solid var(--d-relief-clair);
+    padding:    8px 10px;
+    margin:     0 0 10px;
+    overflow-x: auto;
+    white-space: pre;
+}
+
+/* ── Encadré « note » jaune ───────────────────────────────── */
+
+.note {
+    background: var(--d-fond-note);
+    border:     1px solid var(--d-relief-gris);
+    padding:    8px 10px;
+    margin:     0 0 10px;
+    font-size:  var(--d-taille-petite);
+}
+
+.note strong { display: block; margin-bottom: 3px; }
+
+/* ── Boutons et champs ────────────────────────────────────── */
+
+.bouton {
+    font-family: var(--d-police);
+    font-size:   var(--d-taille);
+    color:       var(--d-texte);
+    background:  var(--d-fond-fenetre);
+    border-top:    2px solid var(--d-relief-clair);
+    border-left:   2px solid var(--d-relief-clair);
+    border-right:  2px solid var(--d-relief-sombre);
+    border-bottom: 2px solid var(--d-relief-sombre);
+    padding: 4px 14px;
+    cursor:  pointer;
+}
+
+.bouton:active:not(:disabled) {
+    border-top-color:    var(--d-relief-sombre);
+    border-left-color:   var(--d-relief-sombre);
+    border-right-color:  var(--d-relief-clair);
+    border-bottom-color: var(--d-relief-clair);
+    padding: 5px 13px 3px 15px;
+}
+
+.bouton:disabled { color: var(--d-relief-gris); cursor: default; }
+
+.champ,
+.defis select {
+    font-family: var(--d-police-donnees);
+    font-size:   var(--d-taille);
+    color:       var(--d-texte);
+    background:  var(--d-fond-papier);
+    border-top:    2px solid var(--d-relief-gris);
+    border-left:   2px solid var(--d-relief-gris);
+    border-right:  2px solid var(--d-relief-clair);
+    border-bottom: 2px solid var(--d-relief-clair);
+    padding: 4px 6px;
+}
+
+.defis select { font-family: var(--d-police); }
+
+/* ── Panneau de validation (construit par defis.js) ───────── */
+
+.panneau-ligne {
+    display:     flex;
+    gap:         8px;
+    align-items: center;
+    flex-wrap:   wrap;
+    margin-bottom: 8px;
+}
+
+.panneau-ligne .champ { flex: 1; min-width: 200px; }
+
+.panneau-message { margin: 0; min-height: 1.5em; font-weight: bold; }
+.panneau-message.est-ok      { color: var(--d-ok); }
+.panneau-message.est-erreur  { color: var(--d-erreur); }
+.panneau-message.est-attente { color: var(--d-attente); }
+
+.liste-indices {
+    margin: 8px 0 0;
+    padding-left: 22px;
+    list-style: square;
+}
+
+.liste-indices li { margin-bottom: 5px; }
+
+.lecon {
+    background: var(--d-fond-papier);
+    border:     2px solid var(--d-ok);
+    padding:    10px 12px;
+    margin:     10px 0 0;
+}
+
+.lecon h3 { margin: 0 0 6px; color: var(--d-ok); }
+.lecon p  { margin: 0; }
+
+/* ── Listes de défis et de catégories ─────────────────────── */
+
+.liste-cartes { margin: 0; }
+
+.carte {
+    display: block;
+    background: var(--d-fond-papier);
+    border-top:    1px solid var(--d-relief-clair);
+    border-left:   1px solid var(--d-relief-clair);
+    border-right:  1px solid var(--d-relief-sombre);
+    border-bottom: 1px solid var(--d-relief-sombre);
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    text-decoration: none !important;
+    color: var(--d-texte) !important;
+}
+
+.carte:hover { background: var(--d-fond-note); }
+
+.carte-entete {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 3px;
+}
+
+.carte-titre {
+    font-weight: bold;
+    color: var(--d-lien);
+    text-decoration: underline;
+}
+
+.carte-resume { color: var(--d-texte-discret); }
+
+/* Badges : palier de difficulté et état de résolution */
+
+.badge {
+    display: inline-block;
+    font-size: var(--d-taille-petite);
+    font-weight: bold;
+    color: var(--d-titre-texte);
+    padding: 1px 6px;
+    white-space: nowrap;
+}
+
+.badge-decouverte { background: var(--d-palier-1); }
+.badge-confirme   { background: var(--d-palier-2); }
+.badge-expert     { background: var(--d-palier-3); }
+
+.etat-resolu {
+    margin-left: auto;
+    color: var(--d-ok);
+    font-weight: bold;
+    font-size: var(--d-taille-petite);
+}
+
+.etat-encours {
+    margin-left: auto;
+    color: var(--d-attente);
+    font-size: var(--d-taille-petite);
+}
+
+/* ── Pied de page ─────────────────────────────────────────── */
+
+.pied {
+    text-align: center;
+    color: var(--d-titre-texte);
+    font-size: var(--d-taille-petite);
+    padding: 10px 0 0;
+}
+
+.pied a, .pied a:visited { color: var(--d-titre-texte); }
+
+/* ── Visionneuse de paquets (défi R3) ─────────────────────── */
+
+.paquets {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+
+.paquets-liste {
+    flex: 1 1 340px;
+    min-width: 300px;
+    max-height: 320px;
+    overflow-y: auto;
+    background: var(--d-fond-papier);
+    border-top:    1px solid var(--d-relief-gris);
+    border-left:   1px solid var(--d-relief-gris);
+    border-right:  1px solid var(--d-relief-clair);
+    border-bottom: 1px solid var(--d-relief-clair);
+}
+
+.paquets-detail {
+    flex: 1 1 340px;
+    min-width: 300px;
+    background: var(--d-fond-papier);
+    border-top:    1px solid var(--d-relief-gris);
+    border-left:   1px solid var(--d-relief-gris);
+    border-right:  1px solid var(--d-relief-clair);
+    border-bottom: 1px solid var(--d-relief-clair);
+    padding: 8px 10px;
+    font-family: var(--d-police-donnees);
+    white-space: pre-wrap;
+    overflow-y: auto;
+    max-height: 320px;
+}
+
+.paquet {
+    display: flex;
+    gap: 8px;
+    padding: 3px 8px;
+    font-family: var(--d-police-donnees);
+    font-size: var(--d-taille-petite);
+    cursor: pointer;
+    border-bottom: 1px solid var(--d-fond-entete);
+}
+
+.paquet:hover     { background: var(--d-fond-note); }
+.paquet.selection { background: var(--d-titre-fond); color: var(--d-titre-texte); }
+
+.paquet-num  { width: 22px; text-align: right; flex-shrink: 0; }
+.paquet-sens { width: 22px; text-align: center; flex-shrink: 0; }
+.paquet-info { flex: 1; min-width: 0; }
+
+/* ── Outils intégrés (outils/outils.js) ───────────────────── */
+
+.outil {
+    background: var(--d-fond-papier);
+    border-top:    1px solid var(--d-relief-gris);
+    border-left:   1px solid var(--d-relief-gris);
+    border-right:  1px solid var(--d-relief-clair);
+    border-bottom: 1px solid var(--d-relief-clair);
+    padding: 10px 12px;
+    margin:  0 0 10px;
+}
+
+.outil-titre {
+    font-weight: bold;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--d-relief-gris);
+    padding-bottom: 4px;
+}
+
+.outil-ligne {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.outil-champ {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-bottom: 8px;
+    flex: 1;
+    min-width: 160px;
+}
+
+.outil-etiquette {
+    font-size: var(--d-taille-petite);
+    color: var(--d-texte-discret);
+}
+
+.outil-valeur { font-weight: bold; color: var(--d-texte); }
+
+.outil-zone { width: 100%; resize: vertical; }
+
+.outil-sortie {
+    margin: 8px 0 0;
+    min-height: 1.6em;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.outil-resultat { margin: 6px 0 0; font-weight: bold; min-height: 1.5em; }
+.outil-resultat.est-ok      { color: var(--d-ok); }
+.outil-resultat.est-erreur  { color: var(--d-erreur); }
+.outil-resultat.est-attente { color: var(--d-attente); }
+
+input[type="range"] { flex: 1; min-width: 160px; }
+
+/* Analyse de fréquences */
+.freq-tableau { margin: 4px 0 10px; }
+.freq-ligne { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+.freq-lettre { width: 1.4em; font-family: var(--d-police-donnees); font-weight: bold; }
+.freq-jauge { flex: 1; height: 12px; background: var(--d-fond-entete); border: 1px solid var(--d-relief-gris); }
+.freq-barre { display: block; height: 100%; background: var(--d-titre-fond2); }
+.freq-compte { width: 3em; text-align: right; font-family: var(--d-police-donnees); font-size: var(--d-taille-petite); }
+
+.sub-grille { display: flex; flex-wrap: wrap; gap: 4px; }
+.sub-cell { display: flex; flex-direction: column; align-items: center; }
+.sub-chiffre { font-family: var(--d-police-donnees); font-weight: bold; }
+.sub-input {
+    width: 1.8em; text-align: center; font-family: var(--d-police-donnees);
+    border-top: 2px solid var(--d-relief-gris); border-left: 2px solid var(--d-relief-gris);
+    border-right: 2px solid var(--d-relief-clair); border-bottom: 2px solid var(--d-relief-clair);
+}
+
+/* Dépôt de fichier (lecteur de métadonnées) */
+.depot {
+    position: relative;
+    border: 2px dashed var(--d-relief-gris);
+    background: var(--d-fond-fenetre);
+    padding: 22px 12px;
+    text-align: center;
+    color: var(--d-texte-discret);
+    cursor: pointer;
+}
+.depot.survol { background: var(--d-fond-note); border-color: var(--d-titre-fond); }
+.depot-champ {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.meta-sortie { margin-top: 10px; }
+.meta-sortie table { margin-top: 6px; }

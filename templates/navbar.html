@@ -1,17 +1,51 @@
 <!--
     navbar.html — filled by page_builder.build_navbar_html()
-    {{menu}}        → generated dropdown HTML
-    {{search_data}} → JSON array [{title, url}, ...]
+    nav_style   → CSS variables from the [navbar] palette section
+    menu        → generated tree menu HTML (<details>/<summary>)
+    search_data → JSON array [{title, url}, ...]
+    logo_url    → chemin du logo (NAVBAR_LOGO_URL)
+
+    Les noms ci-dessous sont sans accolades : écrits {{ainsi}}, ils seraient
+    eux aussi remplacés, et chaque page embarquerait un menu en double.
 -->
-<nav class="navbar">
-    <div class="logo"><a href="/index.html">Technologie</a></div>
-    <div class="menu">{{menu}}</div>
+<nav class="navbar" id="navbar-du-site" style="{{nav_style}}">
+    <div class="logo"><a href="/index.html"><img src="{{logo_url}}" alt="Technologie"></a></div>
+    <div class="nav-tree">{{menu}}</div>
     <div class="search">
-        <input type="text" id="search-input" placeholder="Rechercher…" autocomplete="off">
+        <input type="text" id="search-input" placeholder="rechercher…" autocomplete="off">
         <div id="search-results"></div>
     </div>
     <div class="auth-widget" id="auth-widget"></div>
 </nav>
+
+<script>
+(function () {
+    // Surligne la page courante dans l'arborescence et déplie ses dossiers
+    // parents pour qu'elle soit visible dès le chargement.
+    // Comparaison sur les chemins décodés : les noms de dossiers contiennent
+    // des espaces et accents, encodés en %xx dans location.pathname mais pas
+    // dans l'attribut href généré.
+    function decode(chemin) {
+        try { return decodeURIComponent(chemin); } catch (e) { return chemin; }
+    }
+
+    const cheminCourant = decode(window.location.pathname);
+    let lienActif = null;
+    document.querySelectorAll(".tree-page").forEach(function (lien) {
+        if (!lienActif && decode(lien.pathname) === cheminCourant) lienActif = lien;
+    });
+    if (!lienActif) return;
+
+    lienActif.classList.add("tree-actif");
+
+    let dossier = lienActif.closest("details");
+    while (dossier) {
+        dossier.open = true;
+        dossier = dossier.parentElement.closest("details");
+    }
+    lienActif.scrollIntoView({ block: "nearest" });
+})();
+</script>
 
 <script>
 (function () {

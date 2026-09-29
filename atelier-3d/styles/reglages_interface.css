@@ -1,0 +1,163 @@
+/*
+ * styles/reglages_interface.css
+ * ─────────────────────────────
+ * Tous les réglages visuels de l'atelier, et rien d'autre. Les couleurs de la
+ * vue 3D sont lues ici par interface/couleurs_de_la_vue.js : le JS n'en écrit
+ * aucune.
+ */
+
+:root {
+  /* ── Chrome ── */
+  --chrome-fond: #eceef0;
+  --chrome-panneau: #f4f5f7;
+  /* Sous le texte écrit sur la vue (l'arbre) : le panneau, un peu transparent. */
+  --voile-panneau: rgba(244, 245, 247, 0.8);
+  --chrome-champ: #ffffff;
+  --chrome-bordure: #c2c7cc;
+  --chrome-bordure-fine: #dadee2;
+  --chrome-survol: #e2e6ea;
+  --texte: #22272b;
+  --texte-doux: #636b72;
+  --texte-leger: #9aa1a7;
+
+  /* Une seule couleur d'accent dans toute l'interface. */
+  --accent: #0a6cb8;
+  --accent-fond: #dbe9f5;
+
+  /* ── Vue 3D ── */
+  /* La sélection est orange parce qu'elle doit contraster avec l'accent bleu. */
+  --selection-3d: #ff8c1a;
+  --survol-3d: #ffc266;
+  --trou: #e05a3a;
+  --vue-fond-haut: #f2f4f6;
+  --vue-fond-bas: #dde3e8;
+  --objet-3d: #9fb3c8;
+  --grille-grosse: #b6bec6;
+  --grille-fine: #d3d9de;
+  --axe-x: #d8453a;
+  --axe-y: #3f9b4a;
+  --axe-z: #2f6fd0;
+  --etanche: #3f9b4a;
+  --esquisse-trait: #3b4046;
+  --esquisse-aplat: #7fb0dc;
+  --esquisse-silhouette: #8a939b;
+  --esquisse-cote: #0a6cb8;
+  /* Les points de référence, qu'une esquisse prête aux suivantes. */
+  --esquisse-reference: #e8b400;
+  /* L'état d'une esquisse dans la liste : encore libre (entièrement contrainte : --etanche, en défaut : --trou). */
+  --esquisse-libre: #d98a1a;
+  --esquisse-axes: #636b72;
+  /* Le décor que reflètent les finitions brillante et métal. */
+  --reflet-haut: #eef2f6;
+  --reflet-bas: #4f555b;
+  --reflet-lumiere: #ffffff;
+  /* L'éclairage : le ciel et le sol que voit une pièce (le sol assombrit le dessous). */
+  --lumiere-ciel: #ffffff;
+  --lumiere-sol: #6f757b;
+  /* Les arêtes des pièces, en trait fin : foncées sur une pièce claire, claires sur une sombre. */
+  --arete-sur-clair: #1f2429;
+  --arete-sur-sombre: #ffffff;
+  /* Le plateau de l'imprimante (onglet Impression) : plaque texturée sombre, comme celle des P1. */
+  --plateau-3d: #3a3f44;
+  --plateau-grille: #6a737b;
+  --volume-imprimable: #0a6cb8;
+  --alerte-plateau: #e05a3a;
+  /* L'état des imprimantes du réseau : en impression, en pause, injoignable. */
+  --imprimante-active: #2e9e5b;
+  --imprimante-pause: #d9a21a;
+  --imprimante-hors-ligne: #9aa0a6;
+  /* Les types de ligne de l'aperçu du tranchage : la palette d'OrcaSlicer, que l'œil connaît déjà. */
+  --ligne-paroi-exterieure: #ff7d38;
+  --ligne-parois-interieures: #ffe64d;
+  --ligne-dessus: #f04040;
+  --ligne-dessous: #6b5fd1;
+  --ligne-plein-interieur: #9654cc;
+  --ligne-remplissage: #b0302a;
+  --ligne-jupe: #00876e;
+  --ligne-bordure: #00a07f;
+  --ligne-surplomb: #1f1fff;
+  --ligne-pont: #4d80ba;
+  --ligne-interstices: #ffffff;
+  --ligne-repassage: #7fd4c1;
+  --ligne-pont-interieur: #2f5f8f;
+  --ligne-couture: #e8e8e8;
+  --buse-3d: #c9ced3;
+  /* Le dégradé des colorations par valeur (vitesse, largeur, débit), du plus bas au plus haut. */
+  --degrade-1: #1f3fbf;
+  --degrade-2: #1fa3d9;
+  --degrade-3: #2bbf5a;
+  --degrade-4: #e6d21a;
+  --degrade-5: #e6461a;
+
+  /* ── Nuancier des objets, proposé dans l'inspecteur ── */
+  --couleur-objet-1: #9fb3c8;
+  --couleur-objet-2: #d8453a;
+  --couleur-objet-3: #f08a24;
+  --couleur-objet-4: #f2c230;
+  --couleur-objet-5: #6ab04c;
+  --couleur-objet-6: #2bb3a3;
+  --couleur-objet-7: #2f6fd0;
+  --couleur-objet-8: #8e5bc9;
+  --couleur-objet-9: #e86fa3;
+  --couleur-objet-10: #8b6a4f;
+  --couleur-objet-11: #3b4046;
+  --couleur-objet-12: #f4f4f2;
+  --couleur-objet-13: #7d858c;
+  --couleur-objet-14: #b87333;
+  --couleur-objet-15: #7cc4f0;
+  --couleur-objet-16: #2e6b3f;
+
+  /* ── Typographie ── */
+  --police: 12px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --taille-petite: 10px;
+
+  /* ── Dimensions ── */
+  --hauteur-barre-haute: 30px;
+  --hauteur-bandeau: 28px;
+  --hauteur-barre-etat: 22px;
+  --hauteur-ligne: 22px;
+  --hauteur-champ: 20px;
+  --marge-verticale: 4px;
+  --marge-horizontale: 6px;
+  --largeur-gauche: 240px;
+  --largeur-inspecteur: 268px;
+  /* Le panneau de calibration : plus large, il porte des consignes à lire. */
+  --largeur-panneau-calibration: 320px;
+  /* Sous l'arbre écrit sur la vue, la place du cartouche d'esquisse. */
+  --reserve-bas-arbre: 110px;
+  /* L'aperçu du tranchage : le curseur des couches sous le cube de vue, la légende en bas à gauche. */
+  --haut-curseur-couches: 170px;
+  --largeur-curseur-couches: 150px;
+  --largeur-resultat-tranchage: 330px;
+  --droite-resultat-tranchage: 132px;
+  --largeur-barre-parcours: 560px;
+  /* La hauteur du ruban suit son contenu : icône, un libellé sur deux lignes,
+     et le nom de la famille dessous. Trop courte, elle tronquait les titres. */
+  --hauteur-ruban: 68px;
+  --largeur-min-bouton-ruban: 42px;
+  --largeur-max-bouton-ruban: 76px;
+  --taille-icone-ruban: 20px;
+  --taille-nom-ruban: 11px;
+  /* Serré dans une famille, large entre deux familles. */
+  --ecart-dans-groupe: 0px;
+  --ecart-entre-groupes: 14px;
+  --largeur-fenetre-operation: 272px;
+  --largeur-max-bulle-aide: 260px;
+  --taille-cube-de-vue: 96px;
+  --largeur-libelle: 104px;
+  --largeur-poignee: 4px;
+  --largeur-bascule-navbar: 14px;
+  --taille-chevron: 7px;
+  --taille-icone: 16px;
+  --largeur-fleches: 11px;
+  --demi-fleche: 3px;
+  --rayon-champ: 2px;
+
+  /* Les menus et les fenêtres flottantes ont une ombre ; le reste est à plat. */
+  --ombre-menu: 0 2px 6px rgba(0, 0, 0, 0.18);
+  --ombre-fenetre: 0 4px 16px rgba(0, 0, 0, 0.22);
+  --fond-bulle: rgba(34, 39, 43, 0.88);
+  --texte-bulle: #ffffff;
+  --opacite-en-retrait: 0.45;
+  --duree-menu: 80ms;
+}

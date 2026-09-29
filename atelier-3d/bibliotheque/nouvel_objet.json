@@ -1,0 +1,1042 @@
+{
+ "format": "cao-college-modele",
+ "id": "nouvel_objet",
+ "nom": "Support_piles",
+ "description": "",
+ "modifie_le": "2026-09-22T01:55:22.307146+00:00",
+ "document": {
+  "format": "cao-college",
+  "version": 2,
+  "nom": "Support_piles",
+  "racine": {
+   "id": "n3_1t9my",
+   "type": "racine",
+   "nom": "Construction",
+   "enfants": [
+    {
+     "id": "n4_24j5z",
+     "type": "esquisse",
+     "parametres": {
+      "plan": "XY",
+      "decalage": 0,
+      "sensExterieur": 1,
+      "points": {
+       "1": [
+        0,
+        -7.1
+       ],
+       "2": [
+        6.9,
+        1.67332
+       ],
+       "3": [
+        5.580796,
+        -4.389159
+       ],
+       "4": [
+        0,
+        0
+       ],
+       "5": [
+        0,
+        4.09332
+       ],
+       "6": [
+        7.32,
+        2.09332
+       ],
+       "7": [
+        7.023015,
+        1.970305
+       ],
+       "8": [
+        7.32,
+        1.67332
+       ],
+       "9": [
+        7.52,
+        4.09332
+       ],
+       "10": [
+        7.52,
+        2.09332
+       ]
+      },
+      "courbes": [
+       {
+        "id": "1",
+        "genre": "arc",
+        "a": "1",
+        "b": "2",
+        "m": "3",
+        "c": "4",
+        "bombe": 0.4857445570712406
+       },
+       {
+        "id": "2",
+        "genre": "segment",
+        "a": "1",
+        "b": "5"
+       },
+       {
+        "id": "3",
+        "genre": "arc",
+        "a": "2",
+        "b": "6",
+        "m": "7",
+        "c": "8",
+        "bombe": -0.41421428571428665
+       },
+       {
+        "id": "4",
+        "genre": "segment",
+        "a": "2",
+        "b": "8",
+        "construction": true
+       },
+       {
+        "id": "5",
+        "genre": "segment",
+        "a": "8",
+        "b": "6",
+        "construction": true
+       },
+       {
+        "id": "7",
+        "genre": "segment",
+        "a": "9",
+        "b": "5"
+       },
+       {
+        "id": "8",
+        "genre": "segment",
+        "a": "6",
+        "b": "10"
+       },
+       {
+        "id": "9",
+        "genre": "segment",
+        "a": "10",
+        "b": "9"
+       }
+      ],
+      "contraintes": [
+       {
+        "genre": "surAxe",
+        "a": "1",
+        "axe": "vertical",
+        "id": "1"
+       },
+       {
+        "genre": "origine",
+        "a": "4",
+        "id": "2"
+       },
+       {
+        "genre": "rayon",
+        "courbe": "1",
+        "valeur": 7.1,
+        "id": "3",
+        "formule": "{vn5_1wbwl}+{vn7_1kmuh}"
+       },
+       {
+        "genre": "surAxe",
+        "a": "5",
+        "axe": "vertical",
+        "id": "4"
+       },
+       {
+        "genre": "distanceLigne",
+        "a": "2",
+        "courbe": "2",
+        "valeur": 6.8999999999999995,
+        "sens": -1,
+        "id": "5",
+        "decalage": [
+         -1.0973416499054354,
+         -0.48321239550588224
+        ],
+        "formule": "{vn5_1wbwl}+{vn7_1kmuh}-{vna_9mnb6}"
+       },
+       {
+        "genre": "distanceLigne",
+        "a": "8",
+        "courbe": "2",
+        "valeur": 7.319999999999999,
+        "sens": -1,
+        "id": "6",
+        "formule": "{vn5_1wbwl}+{vn7_1kmuh}-{vna_9mnb6}+{vn9_5zjtr}"
+       },
+       {
+        "genre": "horizontal",
+        "courbe": "4",
+        "id": "7"
+       },
+       {
+        "genre": "vertical",
+        "courbe": "5",
+        "id": "8"
+       },
+       {
+        "genre": "horizontal",
+        "courbe": "7",
+        "id": "11"
+       },
+       {
+        "genre": "horizontal",
+        "courbe": "8",
+        "id": "12"
+       },
+       {
+        "genre": "vertical",
+        "courbe": "9",
+        "id": "13"
+       },
+       {
+        "genre": "longueur",
+        "courbe": "9",
+        "valeur": 2,
+        "id": "14"
+       },
+       {
+        "genre": "longueur",
+        "courbe": "7",
+        "valeur": 7.52,
+        "id": "15",
+        "decalage": [
+         0.1503927910645615,
+         1.1163785183236898
+        ],
+        "formule": "{vn5_1wbwl}+{vn7_1kmuh}+{vnb_540sd}*{vn9_5zjtr}"
+       }
+      ]
+     },
+     "visible": false
+    },
+    {
+     "id": "n18_3an5e",
+     "type": "repetition_ligne",
+     "parametres": {
+      "axe": "x",
+      "nombre": 2,
+      "ecart": 15.03,
+      "deuxSens": false,
+      "centreObjet": {
+       "x": 0,
+       "y": 0,
+       "z": 32.09
+      },
+      "tailleObjet": {
+       "x": 15.53,
+       "y": 12.29,
+       "z": 64.18
+      }
+     },
+     "transformation": {
+      "position": {
+       "x": 0.004999670982360982,
+       "y": -1.2055824279785154,
+       "z": -1.8400000000000003
+      }
+     },
+     "formules": {
+      "parametre.nombre": "{vn3_4qp0m}",
+      "parametre.ecart": "({vn5_1wbwl}+{vn7_1kmuh}+{vnb_540sd}*{vn9_5zjtr})*2-0.01"
+     },
+     "enfants": [
+      {
+       "id": "n17_4esn2",
+       "type": "symetrie",
+       "parametres": {
+        "plan": "YZ",
+        "position": -3.88,
+        "garder": true,
+        "centreObjet": {
+         "x": 0,
+         "y": 0,
+         "z": 32.09
+        },
+        "tailleObjet": {
+         "x": 7.77,
+         "y": 12.29,
+         "z": 64.18
+        }
+       },
+       "transformation": {
+        "position": {
+         "x": 3.8800002336502075,
+         "y": -2.384185791015625e-07,
+         "z": 0
+        }
+       },
+       "enfants": [
+        {
+         "id": "n16_8ack4",
+         "type": "symetrie",
+         "parametres": {
+          "plan": "XY",
+          "position": 32.09,
+          "garder": true,
+          "centreObjet": {
+           "x": 0,
+           "y": 0,
+           "z": 16.05
+          },
+          "tailleObjet": {
+           "x": 7.77,
+           "y": 12.29,
+           "z": 32.09
+          }
+         },
+         "transformation": {
+          "position": {
+           "x": 0,
+           "y": 2.384185791015625e-07,
+           "z": 0
+          }
+         },
+         "enfants": [
+          {
+           "id": "n15_5q210",
+           "type": "groupe",
+           "parametres": {
+            "assemblage": "reunir"
+           },
+           "transformation": {
+            "position": {
+             "x": 0,
+             "y": -2.384185791015625e-07,
+             "z": 0
+            }
+           },
+           "enfants": [
+            {
+             "id": "nd_2w6bg",
+             "type": "groupe",
+             "parametres": {
+              "assemblage": "reunir"
+             },
+             "transformation": {
+              "position": {
+               "x": -0.09999990463256836,
+               "y": -0.2194173336029055,
+               "z": 2.220446049250313e-16
+              }
+             },
+             "enfants": [
+              {
+               "id": "nc_6btam",
+               "type": "extrusion",
+               "parametres": {
+                "hauteur": 30.25,
+                "sens": "haut",
+                "origine": {
+                 "x": 3.785,
+                 "y": -1.614,
+                 "z": 0
+                },
+                "esquisse": "n4_24j5z"
+               },
+               "transformation": {
+                "position": {
+                 "x": 0,
+                 "y": -0.18899996948242204,
+                 "z": 1.8399999999999999
+                }
+               },
+               "formules": {
+                "parametre.hauteur": "({vn6_7i962}+{vn8_5vvod})/2"
+               }
+              },
+              {
+               "id": "nb_6nr3f",
+               "type": "extrusion",
+               "parametres": {
+                "hauteur": 0.84,
+                "sens": "bas",
+                "origine": {
+                 "x": 1.5,
+                 "y": 1,
+                 "z": 0
+                },
+                "esquisse": "na_9ok47"
+               },
+               "transformation": {
+                "position": {
+                 "x": -2.285,
+                 "y": 2.425000030517578,
+                 "z": 1.8399999999999999
+                }
+               },
+               "formules": {
+                "parametre.hauteur": "(2*{vnb_540sd}*{vn9_5zjtr})"
+               }
+              },
+              {
+               "id": "nc_7aiu4",
+               "type": "extrusion",
+               "parametres": {
+                "hauteur": 1,
+                "sens": "bas",
+                "origine": {
+                 "x": 2.75,
+                 "y": -0.25,
+                 "z": 0
+                },
+                "esquisse": "n4_3g7q1"
+               },
+               "transformation": {
+                "position": {
+                 "x": -1.0350000000000001,
+                 "y": 1.175000030517578,
+                 "z": 0.9999999999999999
+                }
+               },
+               "formules": {
+                "parametre.hauteur": "{vn7_9lk4u}"
+               }
+              }
+             ]
+            },
+            {
+             "id": "np_44gz9",
+             "type": "revolution",
+             "parametres": {
+              "axe": "vertical",
+              "angle": 90,
+              "facettes": 48,
+              "origine": {
+               "x": 0,
+               "y": 0,
+               "z": 0
+              },
+              "esquisse": "no_52mqw"
+             },
+             "transformation": {
+              "position": {
+               "x": -3.8849999046325685,
+               "y": 1.2055826663970945,
+               "z": 1.8400000000000003
+              },
+              "rotation": {
+               "x": 0,
+               "y": 0,
+               "z": -90
+              }
+             },
+             "trou": true
+            },
+            {
+             "id": "nz_4u412",
+             "type": "extrusion",
+             "parametres": {
+              "hauteur": 10,
+              "sens": "bas",
+              "origine": {
+               "x": 5.66,
+               "y": -5,
+               "z": -0.01
+              },
+              "esquisse": "no_52mqw"
+             },
+             "transformation": {
+              "position": {
+               "x": 1.7750000953674316,
+               "y": -3.7944173336029055,
+               "z": 1.8300000000000003
+              }
+             },
+             "trou": true
+            },
+            {
+             "id": "n13_97koc",
+             "type": "revolution",
+             "parametres": {
+              "axe": "vertical",
+              "angle": 90,
+              "facettes": 48,
+              "origine": {
+               "x": 0,
+               "y": 0,
+               "z": -1.83
+              },
+              "esquisse": "n12_6pt1f"
+             },
+             "transformation": {
+              "position": {
+               "x": -3.8849999046325685,
+               "y": 1.2055826663970945,
+               "z": 0.010000000000000231
+              },
+              "rotation": {
+               "x": 0,
+               "y": 0,
+               "z": -90
+              }
+             },
+             "trou": true
+            },
+            {
+             "id": "n14_9izbe",
+             "type": "extrusion",
+             "parametres": {
+              "hauteur": 10,
+              "sens": "bas",
+              "origine": {
+               "x": 4.65,
+               "y": -5,
+               "z": -1.83
+              },
+              "esquisse": "n12_6pt1f"
+             },
+             "transformation": {
+              "position": {
+               "x": 0.7650000953674319,
+               "y": -3.7944173336029055,
+               "z": 0.010000000000000231
+              }
+             },
+             "trou": true
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "n4_3g7q1",
+     "type": "esquisse",
+     "parametres": {
+      "plan": "XY",
+      "decalage": 0,
+      "sensExterieur": 1,
+      "points": {
+       "1": [
+        0,
+        -5.3
+       ],
+       "2": [
+        5.3,
+        -5.3
+       ],
+       "3": [
+        5.3,
+        5
+       ],
+       "4": [
+        0,
+        5
+       ]
+      },
+      "courbes": [
+       {
+        "id": "1",
+        "genre": "segment",
+        "a": "1",
+        "b": "2"
+       },
+       {
+        "id": "2",
+        "genre": "segment",
+        "a": "2",
+        "b": "3"
+       },
+       {
+        "id": "3",
+        "genre": "segment",
+        "a": "3",
+        "b": "4"
+       },
+       {
+        "id": "4",
+        "genre": "segment",
+        "a": "1",
+        "b": "4"
+       }
+      ],
+      "contraintes": [
+       {
+        "genre": "surAxe",
+        "a": "1",
+        "axe": "vertical",
+        "id": "1"
+       },
+       {
+        "genre": "horizontal",
+        "courbe": "1",
+        "id": "2"
+       },
+       {
+        "genre": "vertical",
+        "courbe": "2",
+        "id": "3"
+       },
+       {
+        "genre": "distanceV",
+        "a": "1",
+        "b": null,
+        "valeur": 5.3,
+        "sens": -1,
+        "id": "4",
+        "formule": "{vn6_3zdl7}/2+{vn9_34pw7}"
+       },
+       {
+        "genre": "longueur",
+        "courbe": "1",
+        "valeur": 5.3,
+        "id": "5",
+        "formule": "{vn5_44zu5}/2+{vn9_34pw7}"
+       },
+       {
+        "genre": "longueur",
+        "courbe": "2",
+        "valeur": 10.3,
+        "id": "6",
+        "formule": "{vn6_3zdl7}+{vn9_34pw7}"
+       },
+       {
+        "genre": "surAxe",
+        "a": "4",
+        "axe": "vertical",
+        "id": "7"
+       },
+       {
+        "genre": "horizontal",
+        "courbe": "3",
+        "id": "8"
+       }
+      ]
+     },
+     "visible": false
+    },
+    {
+     "id": "na_9ok47",
+     "type": "esquisse",
+     "parametres": {
+      "plan": "XY",
+      "decalage": 0,
+      "sensExterieur": 1,
+      "points": {
+       "1": [
+        0,
+        -4.5
+       ],
+       "5": [
+        4.5,
+        0
+       ],
+       "6": [
+        3.181981,
+        -3.181981
+       ],
+       "7": [
+        0,
+        0
+       ],
+       "8": [
+        4.5,
+        5
+       ],
+       "9": [
+        0,
+        5
+       ]
+      },
+      "courbes": [
+       {
+        "id": "5",
+        "genre": "arc",
+        "a": "1",
+        "b": "5",
+        "m": "6",
+        "c": "7",
+        "bombe": 0.41421377777777774
+       },
+       {
+        "id": "7",
+        "genre": "segment",
+        "a": "1",
+        "b": "7"
+       },
+       {
+        "id": "8",
+        "genre": "segment",
+        "a": "5",
+        "b": "8"
+       },
+       {
+        "id": "9",
+        "genre": "segment",
+        "a": "8",
+        "b": "9"
+       },
+       {
+        "id": "10",
+        "genre": "segment",
+        "a": "9",
+        "b": "7"
+       }
+      ],
+      "contraintes": [
+       {
+        "genre": "surAxe",
+        "a": "1",
+        "axe": "vertical",
+        "id": "1"
+       },
+       {
+        "genre": "origine",
+        "a": "7",
+        "id": "10"
+       },
+       {
+        "genre": "distanceV",
+        "a": "1",
+        "b": "7",
+        "valeur": 4.5,
+        "sens": -1,
+        "id": "11",
+        "decalage": [
+         -1.2658493328432128,
+         -0.012649426199891067
+        ],
+        "formule": "{vn6_3zdl7}/2-{vn8_2m6dz}"
+       },
+       {
+        "genre": "surAxe",
+        "a": "5",
+        "axe": "horizontal",
+        "id": "13"
+       },
+       {
+        "genre": "vertical",
+        "courbe": "8",
+        "id": "14"
+       },
+       {
+        "genre": "surAxe",
+        "a": "9",
+        "axe": "vertical",
+        "id": "15"
+       },
+       {
+        "genre": "horizontal",
+        "courbe": "9",
+        "id": "16"
+       },
+       {
+        "genre": "distanceV",
+        "a": "8",
+        "b": null,
+        "valeur": 5,
+        "sens": 1,
+        "id": "17",
+        "decalage": [
+         1.8124520815600587,
+         -0.07392254348286587
+        ],
+        "formule": "{vn6_3zdl7}/2"
+       }
+      ]
+     },
+     "visible": false
+    },
+    {
+     "id": "no_52mqw",
+     "type": "esquisse",
+     "parametres": {
+      "plan": "XZ",
+      "decalage": 0,
+      "sensExterieur": 1,
+      "points": {
+       "1": [
+        4.5,
+        -0.01
+       ],
+       "2": [
+        10,
+        1.99
+       ],
+       "3": [
+        10,
+        -0.01
+       ]
+      },
+      "courbes": [
+       {
+        "id": "1",
+        "genre": "segment",
+        "a": "1",
+        "b": "2"
+       },
+       {
+        "id": "2",
+        "genre": "segment",
+        "a": "2",
+        "b": "3"
+       },
+       {
+        "id": "3",
+        "genre": "segment",
+        "a": "3",
+        "b": "1"
+       }
+      ],
+      "contraintes": [
+       {
+        "genre": "vertical",
+        "courbe": "2",
+        "id": "3"
+       },
+       {
+        "genre": "distanceH",
+        "a": "2",
+        "b": null,
+        "valeur": 10,
+        "sens": 1,
+        "id": "4"
+       },
+       {
+        "genre": "horizontal",
+        "courbe": "3",
+        "id": "5"
+       },
+       {
+        "genre": "distanceV",
+        "a": "3",
+        "b": null,
+        "valeur": 0.01,
+        "sens": -1,
+        "id": "6",
+        "decalage": [
+         0.8969392685873201,
+         -1.0633690698620097
+        ]
+       },
+       {
+        "genre": "longueur",
+        "courbe": "2",
+        "valeur": 2,
+        "id": "7"
+       },
+       {
+        "genre": "distanceH",
+        "a": "1",
+        "b": null,
+        "valeur": 4.5,
+        "sens": 1,
+        "id": "8",
+        "decalage": [
+         1.0161230390034084,
+         -0.7038313079030396
+        ],
+        "formule": "{vn6_3zdl7}/2-{vn8_2m6dz}"
+       }
+      ]
+     },
+     "visible": false
+    },
+    {
+     "id": "n12_6pt1f",
+     "type": "esquisse",
+     "parametres": {
+      "plan": "XZ",
+      "decalage": 0,
+      "sensExterieur": 1,
+      "points": {
+       "1": [
+        4.5,
+        -0.83
+       ],
+       "2": [
+        10,
+        -3.83
+       ],
+       "3": [
+        10,
+        -0.83
+       ]
+      },
+      "courbes": [
+       {
+        "id": "1",
+        "genre": "segment",
+        "a": "1",
+        "b": "2"
+       },
+       {
+        "id": "2",
+        "genre": "segment",
+        "a": "3",
+        "b": "2"
+       },
+       {
+        "id": "3",
+        "genre": "segment",
+        "a": "3",
+        "b": "1"
+       }
+      ],
+      "contraintes": [
+       {
+        "genre": "distanceV",
+        "a": "1",
+        "b": null,
+        "valeur": 0.83,
+        "sens": -1,
+        "id": "1",
+        "formule": "{vn9_5zjtr}*{vnb_540sd}*2-0.01"
+       },
+       {
+        "genre": "distanceH",
+        "a": "3",
+        "b": null,
+        "valeur": 10,
+        "sens": 1,
+        "id": "2",
+        "decalage": [
+         -0.021811116772357142,
+         -0.31602224040947813
+        ]
+       },
+       {
+        "genre": "vertical",
+        "courbe": "2",
+        "id": "3"
+       },
+       {
+        "genre": "horizontal",
+        "courbe": "3",
+        "id": "4"
+       },
+       {
+        "genre": "distanceV",
+        "a": "2",
+        "b": "3",
+        "valeur": 3,
+        "sens": -1,
+        "id": "5",
+        "decalage": [
+         0.5597791783227759,
+         -0.6636483363947755
+        ]
+       },
+       {
+        "genre": "distanceH",
+        "a": "1",
+        "b": null,
+        "valeur": 4.5,
+        "sens": 1,
+        "id": "6",
+        "formule": "{vn6_3zdl7}/2-{vn8_2m6dz}"
+       }
+      ]
+     },
+     "visible": false
+    }
+   ]
+  },
+  "variables": [
+   {
+    "id": "vn5_1wbwl",
+    "nom": "pile_rayon",
+    "formule": "7",
+    "min": "1",
+    "max": "20"
+   },
+   {
+    "id": "vn6_7i962",
+    "nom": "pile_longueur",
+    "formule": "50.5",
+    "min": "1",
+    "max": "200"
+   },
+   {
+    "id": "vn7_1kmuh",
+    "nom": "tolerance_pile_rayon",
+    "formule": "0.1",
+    "min": "0",
+    "max": "10"
+   },
+   {
+    "id": "vn8_5vvod",
+    "nom": "tolerance_pile_longueur",
+    "formule": "10",
+    "min": "0",
+    "max": "100"
+   },
+   {
+    "id": "vn9_5zjtr",
+    "nom": "epaisseur_de_ligne",
+    "formule": "0.42",
+    "min": "0.2",
+    "max": "1"
+   },
+   {
+    "id": "vna_9mnb6",
+    "nom": "pile_maintien",
+    "formule": "0.2"
+   },
+   {
+    "id": "vnb_540sd",
+    "nom": "n_parois",
+    "formule": "1",
+    "min": "1",
+    "max": "10",
+    "unite": "-"
+   },
+   {
+    "id": "vn2_1b916",
+    "nom": "nx_piles",
+    "formule": "1",
+    "min": "1",
+    "max": "10",
+    "unite": "-"
+   },
+   {
+    "id": "vn3_4qp0m",
+    "nom": "ny_piles",
+    "formule": "2",
+    "min": "1",
+    "max": "10",
+    "unite": "-"
+   },
+   {
+    "id": "vn5_44zu5",
+    "nom": "contacteur_largeur",
+    "formule": "10",
+    "min": "1",
+    "max": "100"
+   },
+   {
+    "id": "vn6_3zdl7",
+    "nom": "contacteur_hauteur",
+    "formule": "10",
+    "min": "1",
+    "max": "100"
+   },
+   {
+    "id": "vn7_9lk4u",
+    "nom": "contacteur_epaisseur",
+    "formule": "1",
+    "min": "0.1",
+    "max": "3"
+   },
+   {
+    "id": "vn8_2m6dz",
+    "nom": "contacteur_maintien",
+    "formule": "0.5"
+   },
+   {
+    "id": "vn9_34pw7",
+    "nom": "contacteur_tolerance",
+    "formule": "0.3",
+    "min": "0",
+    "max": "10"
+   }
+  ]
+ }
+}

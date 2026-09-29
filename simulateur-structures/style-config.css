@@ -2,110 +2,183 @@
   style-config.css
   ─────────────────
   Rôle : regrouper TOUTES les valeurs visuelles de l'interface du simulateur
-  (couleurs, tailles, marges, polices...) sous forme de variables CSS.
-  C'est le SEUL fichier à modifier pour changer l'apparence de l'interface
-  (panneaux, boutons, disposition) sans toucher à style.css ni au JS.
+  (couleurs, tailles, marges, polices) sous forme de variables CSS. C'est le
+  SEUL fichier à modifier pour changer l'apparence de l'interface sans toucher
+  à style.css ni au JS. Les couleurs du canvas vivent dans js/render/styleConfig.js.
 
-  THÈME « ARDOISE » : le canvas (ciel clair) occupe tout l'écran, l'interface
-  flotte dessus en panneaux gris-bleu foncé semi-transparents — contraste fort,
-  lisible au vidéoprojecteur, sans écraser le dessin.
+  THÈME « LOGICIEL D'INGÉNIERIE » : le chrome gris clair d'une application de
+  bureau Windows (menus, barres d'outils à boutons plats révélés au survol,
+  fenêtres d'outils à barre de titre, barre d'état), angles droits partout,
+  filets nets d'un pixel. Un accent bleu UNIQUE pour la sélection et l'état
+  actif ; un seul bouton plein : « Lancer l'essai ».
 
-  Ne doit PAS contenir : de règle de mise en page (sélecteurs, flex, grid...).
-  Ça vit dans style.css, qui ne fait que CONSOMMER ces variables via var(--...).
-
+  Ne doit PAS contenir de règle de mise en page : ça vit dans style.css.
   Dépendances : aucune.
 */
 
 :root {
-  /* ── Panneaux flottants (HUD) ── */
-  --hud-bg: rgba(28, 36, 46, 0.92);
-  --hud-bg-soft: rgba(38, 48, 60, 0.85);
-  --hud-border: rgba(255, 255, 255, 0.09);
-  --hud-radius: 12px;
-  --hud-shadow: 0 8px 24px rgba(8, 16, 26, 0.38);
-  --hud-blur: 7px;
-  --hud-gap: 10px;
-  --hud-margin: 12px;
-
-  /* ── Texte sur panneaux sombres ── */
-  --color-text: #e8edf2;
-  --color-text-muted: #9db0c0;
-  --color-text-faint: #6b7c8c;
-
-  /* ── Couleurs d'action ── */
-  --color-accent: #58a6d6;         /* sélection / actif */
-  --color-accent-soft: rgba(88, 166, 214, 0.16);
-  --color-accent-ring: rgba(88, 166, 214, 0.45);
-  --color-play: #4cae6d;           /* bouton Tester (lancer) */
-  --color-play-hover: #57c07c;
-  --color-danger: #e8697d;
-
-  /* ── Boutons / contrôles ── */
-  --ctrl-bg: rgba(255, 255, 255, 0.055);
-  --ctrl-bg-hover: rgba(255, 255, 255, 0.12);
-  --ctrl-border: rgba(255, 255, 255, 0.10);
-  --ctrl-radius: 8px;
-  --ctrl-active-bg: var(--color-accent);
-  --ctrl-active-text: #0e1720;
-  --sep-color: rgba(255, 255, 255, 0.10);
-  --color-disabled-text: #66788a;
-
-  /* ── Champs de saisie (sur fond sombre) ── */
-  --input-bg: rgba(12, 18, 25, 0.55);
-  --input-border: rgba(255, 255, 255, 0.14);
-  --input-text: #eef3f7;
-
   /* ── Typographie ── */
-  --font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-  --font-size-base: 13px;
-  --font-size-title: 14px;
+  --font-ui: "Segoe UI", Tahoma, system-ui, sans-serif;
+  --font-size: 12px;
   --font-size-small: 11px;
-  --font-size-tiny: 10px;
+  --font-size-title: 12px;
 
-  /* ── Espacements ── */
-  --spacing-small: 6px;
-  --spacing-medium: 12px;
-  --spacing-large: 20px;
+  /* ── Texte ── */
+  --text: #1e2429;
+  --text-muted: #56616b;
+  --text-faint: #8a939b;
+  --text-disabled: #a4acb3;
 
-  /* ── Dimensions des panneaux ── */
-  --inspector-width: 272px;
-  --library-width: 232px;
-  --field-input-width: 96px;
-  --top-offset: 62px;      /* haut des panneaux latéraux (sous la barre du haut) */
-  --bottom-offset: 86px;   /* bas des bandeaux contextuels (au-dessus de la barre du bas) */
+  /* ── Fond de l'application et filets ── */
+  --app-bg: #eef0f2;
+  --line: #c3cad1;
+  --line-strong: #98a2ac;
+  --sep-dark: #c6ccd2;
+  --sep-light: #ffffff;
 
-  /* ── Palette de matériaux ── */
-  --mat-chip-width: 44px;
-  --mat-bar-width: 30px;
-  --swatch-size: 14px;     /* pastille de l'inspecteur */
+  /* ── Barre de menus ── */
+  --menubar-bg: linear-gradient(180deg, #fdfdfe 0%, #f1f3f6 100%);
+  --menubar-border: #d3d9df;
+  --menu-title-hover-bg: #e3eefa;
+  --menu-title-hover-border: #a9c8ec;
+  --menu-title-open-bg: #d3e4f7;
 
-  /* ── Icônes ── */
-  --icon-size: 17px;
-  --tool-icon-size: 20px;
+  /* ── Menus déroulants ── */
+  --menu-bg: #f8f9fa;
+  --menu-border: #979fa7;
+  --menu-gutter: #eef0f2;
+  --menu-gutter-line: #e0e3e6;
+  --menu-item-hover-bg: #dde9f7;
+  --menu-item-hover-border: #a7c6ea;
+  --menu-shadow: 2px 3px 7px rgba(20, 28, 36, 0.28);
+  --menu-kbd: #707a83;
 
-  /* ── Éditeur de forces (hérité) ── */
-  --force-color-swatch-size: 12px;
-  --force-field-input-width: 70px;
-  --force-slider-value-width: 70px;
+  /* ── Barres d'outils ── */
+  --toolbar-bg: linear-gradient(180deg, #fcfcfd 0%, #eef1f4 55%, #e4e8ec 100%);
+  --toolbar-border: #bcc3cb;
+  --toolbar-highlight: rgba(255, 255, 255, 0.9);
 
-  /* ── Canvas (plein écran, sous le HUD) ── */
-  --canvas-fallback-bg: #bfe3f2;
+  /* ── Boutons de barre : plats, révélés au survol ── */
+  --btn-hover-bg: linear-gradient(180deg, #f8fbff 0%, #e4effb 100%);
+  --btn-hover-border: #8db2dc;
+  --btn-pressed-bg: linear-gradient(180deg, #d6e4f4 0%, #c9dbef 100%);
+  --btn-pressed-border: #6993c4;
+  --btn-pressed-inset: inset 0 1px 2px rgba(20, 45, 80, 0.22);
 
-  /* ── Aperçu du vent ── */
-  --wind-preview-height: 88px;
+  /* ── Bouton principal (Lancer l'essai) : le seul bouton plein ── */
+  --primary-bg: linear-gradient(180deg, #5aae62 0%, #3d8f46 55%, #2f7d38 100%);
+  --primary-bg-hover: linear-gradient(180deg, #66bb6e 0%, #469a4f 55%, #368641 100%);
+  --primary-bg-pressed: linear-gradient(180deg, #2f7d38 0%, #3d8f46 100%);
+  --primary-border: #245d2a;
+  --primary-text: #ffffff;
+  --primary-gloss: inset 0 1px 0 rgba(255, 255, 255, 0.35);
 
-  /* ── Compatibilité (anciens noms encore consommés) ── */
-  --color-background: #10161d;
-  --color-panel-background: var(--hud-bg-soft);
-  --color-border: var(--ctrl-border);
-  --border-radius: var(--ctrl-radius);
-  --button-radius: var(--ctrl-radius);
-  --elevation-1: 0 2px 8px rgba(8, 16, 26, 0.35);
+  /* ── Boutons de commande (dialogues, fenêtres, options) ── */
+  --cmd-bg: linear-gradient(180deg, #fcfcfc 0%, #ececec 50%, #dfdfdf 51%, #d8d8d8 100%);
+  --cmd-border: #8b9096;
+  --cmd-hover-bg: linear-gradient(180deg, #f4f9fe 0%, #dfeefb 50%, #cde4f8 51%, #c2def7 100%);
+  --cmd-hover-border: #3c7fb1;
+  --cmd-pressed-bg: linear-gradient(180deg, #c6dcf2 0%, #b6d2ee 100%);
+  --cmd-default-ring: inset 0 0 0 1px #6fb0ea;
 
-  /* Menu du clic droit (si réactivé un jour) */
-  --menu-bg: var(--hud-bg);
-  --menu-radius: 10px;
-  --menu-shadow: var(--hud-shadow);
-  --menu-hover: rgba(255, 255, 255, 0.08);
-  --menu-danger-hover: rgba(232, 105, 125, 0.16);
+  /* ── Accent unique : sélection, état actif, focus ──
+     Même valeur que ACCENT_COLOR dans js/render/styleConfig.js. */
+  --accent: #1a73d9;
+  --accent-soft: #d4e6fa;
+  --accent-soft-border: #8ebbeb;
+
+  /* ── Champs de saisie et afficheurs ── */
+  --field-bg: #ffffff;
+  --field-border: #a4acb4;
+  --field-inset: inset 0 1px 1px rgba(20, 28, 36, 0.08);
+  --readout-bg: #ffffff;
+  --readout-border: #aab2ba;
+
+  /* ── Fenêtres d'outils (propriétés, rapport, palette d'essai, vent) ── */
+  --window-bg: #f5f7f9;
+  --window-border: #8b97a3;
+  --window-title-bg: linear-gradient(180deg, #edf2f7 0%, #d6dfe9 100%);
+  --window-title-border: #aab6c2;
+  --window-title-text: #1d3552;
+  --window-shadow: 0 3px 10px rgba(20, 30, 40, 0.26);
+
+  /* ── Dialogues ── */
+  --overlay: rgba(24, 32, 40, 0.42);
+  --dialog-bg: #f0f0f0;
+  --dialog-title-bg: linear-gradient(180deg, #f3f6fa 0%, #dde5ee 100%);
+  --dialog-shadow: 0 10px 30px rgba(15, 22, 30, 0.35);
+
+  /* ── Grille de propriétés ── */
+  --prop-line: #e2e6ea;
+  --prop-category-bg: #e6ebf0;
+  --prop-category-text: #3d4c5c;
+  --prop-name: #4f5a64;
+  --prop-value: #1e2429;
+
+  /* ── Liste des niveaux ── */
+  --list-bg: #ffffff;
+  --list-border: #9aa3ac;
+  --list-header-bg: linear-gradient(180deg, #ffffff 0%, #f0f2f5 100%);
+  --list-header-border: #d5dade;
+  --list-line: #eef0f2;
+  --list-group-text: #1f4f8a;
+  --list-group-line: #b8cfea;
+  --list-hover-bg: #eaf3fd;
+  --list-selected-bg: #cce3fa;
+  --list-selected-border: #84b6ea;
+
+  /* ── Étoiles et verdicts ── */
+  --gold: #dca000;
+  --gold-line: #a87800;
+  --star-empty: #c3cad1;
+  --ok: #2e7d32;
+  --danger: #c62828;
+  --running: #1a73d9;
+  --idle: #8a939b;
+
+  /* ── Icônes des barres (16 × 16) ── */
+  --icon-line: #3d4751;
+  --icon-fill: #ffffff;
+  --icon-blue: #2d6cb4;
+  --icon-blue-light: #d3e5f8;
+  --icon-red: #c8372d;
+  --icon-folder-back: #dcae45;
+  --icon-folder-front: #f3d27a;
+  --icon-folder-line: #9b721b;
+  --icon-earth: #9c8566;
+  --icon-green-dark: #4f7a31;
+  --icon-grey: #8c959d;
+  --icon-disabled-opacity: 0.4;
+
+  /* ── Dimensions ── */
+  --radius: 0;
+  --menubar-height: 22px;
+  --toolbar-height: 32px;
+  --statusbar-height: 22px;
+  --button-height: 24px;
+  --icon-size: 16px;
+  --element-swatch-width: 30px;
+  --element-swatch-height: 12px;
+  --window-width: 292px;
+  --window-gap: 6px;
+  --window-margin: 8px;
+  --window-title-height: 21px;
+  --ruler-size: 18px;              /* = RULER_SIZE_PX (canvas) */
+  --prop-name-width: 54%;
+  --field-width: 92px;
+  --slider-width: 96px;
+  --dialog-width: 760px;
+  --dialog-help-width: 460px;
+  --list-height: 300px;
+  --list-row-height: 22px;
+  --spacing-xs: 3px;
+  --spacing-s: 6px;
+  --spacing-m: 10px;
+
+  /* ── Curseurs (vitesse) ── */
+  --slider-track: #ffffff;
+  --slider-track-border: #9aa3ac;
+  --slider-thumb-bg: linear-gradient(180deg, #ffffff 0%, #d9dfe5 100%);
+  --slider-thumb-border: #7d8791;
+  --slider-thumb-hover-bg: linear-gradient(180deg, #ffffff 0%, #bdd6f1 100%);
 }

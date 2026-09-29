@@ -18,14 +18,16 @@
 //   vehicle : voir model/MobileLoad.js
 
 import { createNode } from "./Node.js";
-import { getMaterialById, getBeamTypeById } from "./materials.js";
+import { getMaterialById, getBeamTypeById, BEAM_TYPES } from "./materials.js";
 import {
   gridToWorld, isInBounds, beamsOverlapOnPath, MIN_BEAM_LENGTH,
   MESH, BASE_ORIGIN_X, BASE_COLS, MESH_MIN_COLS, MESH_MAX_COLS,
-  applyMeshWidthResize, getMeshWorld,
+  BASE_ORIGIN_Y, BASE_ROWS, MESH_MIN_ROWS, MESH_MAX_ROWS,
+  applyMeshWidthResize, applyMeshHeightResize, getMeshWorld,
 } from "./mesh.js";
 import { buildBeamGeometry, computeAxialStiffness } from "./Beam.js";
-import { createTerrainPart } from "./terrain.js";
+import { createTerrainPart, isInsideTerrain } from "./terrain.js";
+import { segmentCoupeBateau, pointDansBateau } from "./bateau.js";
 
 let nextNumericId = 1;
 function generateId(prefix) {
@@ -41,7 +43,10 @@ export function createStructure() {
   // resizeWorldWidth) — un plan neuf part des dimensions de base.
   return {
     nodes: [], beams: [], segments: [], loads: [], mobileLoads: [], terrain: [],
-    world: { originX: BASE_ORIGIN_X, cols: BASE_COLS },
+    // bateaux : décor STATIQUE posé sur l'eau, qui interdit de construire dans
+    // son gabarit (voir model/bateau.js).
+    bateaux: [],
+    world: { originX: BASE_ORIGIN_X, cols: BASE_COLS, originY: BASE_ORIGIN_Y, rows: BASE_ROWS },
   };
 }
 
@@ -104,9 +109,9 @@ export function ensureIndex(structure) {
 export function invalidateIndex(structure) {
   structure._index = null;
   structure._forces = null;
-  structure._massByNode = null;
   structure._massToken = null;
   structure._bendCache = null;
+  structure._solveur = null; // pas de temps et masses d'inertie (physics/solveur.js)
   structure._totalWeight = null;
   structure._totalWeightToken = null;
   structure._asleep = false;
@@ -176,6 +181,11 @@ export function canAddBeam(structure, a, b, beamTypeId) {
   if (!isInBounds(a.i, a.j) || !isInBounds(b.i, b.j)) return { ok: false, reason: "hors maillage" };
   // Longueur minimale 1 m (le maillage à 50 cm ne change PAS la portée minimale).
   const wa = gridToWorld(a.i, a.j), wb = gridToWorld(b.i, b.j);
+  // On ne construit pas DANS la roche (un point sur le dessus ou sur une paroi
+  // reste permis : une poutre peut s'appuyer contre le sol).
+  if (isInsideTerrain(structure, wa.x, wa.y) || isInsideTerrain(structure, wb.x, wb.y)) {
+    return { ok: false, reason: "extrémité dans le sol" };
+  }
   const length = Math.hypot(wb.x - wa.x, wb.y - wa.y);
   if (length < MIN_BEAM_LENGTH - 1e-9) {
     return { ok: false, reason: "poutre trop courte (1 m minimum)" };
@@ -188,6 +198,10 @@ export function canAddBeam(structure, a, b, beamTypeId) {
     if (beamsOverlapOnPath(a, b, beam.gridA, beam.gridB)) {
       return { ok: false, reason: "une poutre occupe déjà ce chemin" };
     }
+  }
+  // Le gabarit des bateaux doit rester libre : c'est le tirant d'air du pont.
+  if (segmentCoupeBateau(structure, wa.x, wa.y, wb.x, wb.y)) {
+    return { ok: false, reason: "un bateau doit pouvoir passer ici" };
   }
   return { ok: true };
 }
@@ -294,6 +308,130 @@ export function addBeam(structure, a, b, beamTypeId, cablePretension = 0) {
   return beam;
 }
 
+// ── Déplacer un POINT (glisser-déposer en édition) ───────────────────────────
+// On promène un joint sur le maillage : toutes les poutres qui s'y rattachent
+// suivent et sont RECONSTRUITES à leur nouvelle longueur (nœuds internes et
+// segments refaits, car leur nombre dépend de la longueur). Les identifiants de
+// POUTRE ne changent pas : les véhicules et les poids posés dessus restent
+// accrochés.
+//
+// Le déplacement est REFUSÉ (rien ne bouge) si une seule poutre y perdrait sa
+// validité : trop longue pour son type, trop courte (1 m minimum), sortie du
+// maillage, ou venant recouvrir une autre poutre.
+
+// Le type catalogue d'une poutre, retrouvé par son couple matériau + section :
+// c'est lui qui porte la longueur maximale.
+function beamTypeOf(beam) {
+  return BEAM_TYPES.find((t) => t.materialId === beam.materialId && t.thickness === beam.sectionArea) || null;
+}
+
+export function beamsAtJoint(structure, jointId) {
+  return structure.beams.filter((b) => b.jointAId === jointId || b.jointBId === jointId);
+}
+
+// Le joint peut-il aller sur `grid` ? Renvoie { ok } ou { ok:false, reason }.
+export function canMoveJoint(structure, jointId, grid) {
+  const node = findNodeById(structure, jointId);
+  if (!node || node.kind !== "joint") return { ok: false, reason: "pas un point" };
+  if (!isInBounds(grid.i, grid.j)) return { ok: false, reason: "hors maillage" };
+  if (grid.i === node.gridI && grid.j === node.gridJ) return { ok: true };
+
+  const occupant = findJointAtGrid(structure, grid.i, grid.j);
+  if (occupant) return { ok: false, reason: "un point occupe déjà cette place" };
+
+  const cible = gridToWorld(grid.i, grid.j);
+  if (isInsideTerrain(structure, cible.x, cible.y)) return { ok: false, reason: "dans le sol" };
+  if (pointDansBateau(structure, cible.x, cible.y)) {
+    return { ok: false, reason: "un bateau occupe cette place" };
+  }
+  const attachees = beamsAtJoint(structure, jointId);
+
+  for (const beam of attachees) {
+    const autreId = beam.jointAId === jointId ? beam.jointBId : beam.jointAId;
+    const autre = findNodeById(structure, autreId);
+    if (!autre) continue;
+    const longueur = Math.hypot(autre.restX - cible.x, autre.restY - cible.y);
+    if (longueur < MIN_BEAM_LENGTH - 1e-9) return { ok: false, reason: "poutre trop courte" };
+    const type = beamTypeOf(beam);
+    if (type && type.maxLength && longueur > type.maxLength + 1e-9) {
+      return { ok: false, reason: "poutre trop longue" };
+    }
+  }
+
+  // Chevauchement : chaque poutre déplacée est testée contre toutes les autres
+  // (les poutres qui bougent ensemble partagent ce point, elles ne peuvent pas
+  // se recouvrir sans être déjà colinéaires — le test les couvre quand même).
+  const bouge = new Set(attachees.map((b) => b.id));
+  for (const beam of attachees) {
+    const a = beam.jointAId === jointId ? grid : beam.gridA;
+    const b = beam.jointBId === jointId ? grid : beam.gridB;
+    for (const autre of structure.beams) {
+      if (autre.id === beam.id) continue;
+      const oa = bouge.has(autre.id) && autre.jointAId === jointId ? grid : autre.gridA;
+      const ob = bouge.has(autre.id) && autre.jointBId === jointId ? grid : autre.gridB;
+      if (beamsOverlapOnPath(a, b, oa, ob)) return { ok: false, reason: "deux poutres se recouvriraient" };
+    }
+    const wa = gridToWorld(a.i, a.j);
+    const wb = gridToWorld(b.i, b.j);
+    if (segmentCoupeBateau(structure, wa.x, wa.y, wb.x, wb.y)) {
+      return { ok: false, reason: "une poutre traverserait un bateau" };
+    }
+  }
+  return { ok: true };
+}
+
+// Refait les nœuds internes et les segments d'une poutre à partir de la
+// position de ses deux joints. Garde l'id de la poutre et ceux de ses joints.
+function rebuildBeam(structure, beam) {
+  const jointA = findNodeById(structure, beam.jointAId);
+  const jointB = findNodeById(structure, beam.jointBId);
+  if (!jointA || !jointB) return;
+
+  // Les anciens nœuds internes et segments disparaissent (les poids accrochés à
+  // la POUTRE survivent : ils la repèrent par beamId + fraction, pas par nœud).
+  const internes = new Set(beam.nodeIds.slice(1, -1));
+  structure.nodes = structure.nodes.filter((n) => !internes.has(n.id));
+  const anciens = new Set(beam.segIds);
+  structure.segments = structure.segments.filter((seg) => !anciens.has(seg.id));
+
+  const geom = buildBeamGeometry(jointA.restX, jointA.restY, jointB.restX, jointB.restY,
+                                 beam.materialId, beam.sectionArea);
+  const nodeIds = [jointA.id];
+  for (const pos of geom.innerPositions) nodeIds.push(addInnerNode(structure, pos.x, pos.y).id);
+  nodeIds.push(jointB.id);
+
+  const segIds = [];
+  for (let k = 0; k < nodeIds.length - 1; k++) {
+    segIds.push(addSegment(structure, beam.id, nodeIds[k], nodeIds[k + 1],
+                           geom.segRestLength, geom.segStiffness).id);
+  }
+  beam.nodeIds = nodeIds;
+  beam.segIds = segIds;
+}
+
+// Déplace le joint et reconstruit ses poutres. Renvoie false si c'était refusé.
+export function moveJoint(structure, jointId, grid) {
+  if (!canMoveJoint(structure, jointId, grid).ok) return false;
+  const node = findNodeById(structure, jointId);
+  if (grid.i === node.gridI && grid.j === node.gridJ) return true;
+
+  const cible = gridToWorld(grid.i, grid.j);
+  node.gridI = grid.i;
+  node.gridJ = grid.j;
+  node.x = node.restX = cible.x;
+  node.y = node.restY = cible.y;
+  node.vx = 0;
+  node.vy = 0;
+
+  for (const beam of beamsAtJoint(structure, jointId)) {
+    if (beam.jointAId === jointId) beam.gridA = { i: grid.i, j: grid.j };
+    if (beam.jointBId === jointId) beam.gridB = { i: grid.i, j: grid.j };
+    rebuildBeam(structure, beam);
+  }
+  invalidateIndex(structure);
+  return true;
+}
+
 // ── Suppression ──
 function removeNodeById(structure, nodeId) {
   structure.nodes = structure.nodes.filter((n) => n.id !== nodeId);
@@ -343,6 +481,37 @@ export function toggleAnchor(structure, jointId) {
   invalidateIndex(structure);
 }
 
+// ── Point d'ARRIVÉE ──────────────────────────────────────────────────────────
+// Le drapeau que tous les véhicules doivent atteindre pour valider le niveau.
+// C'est un NŒUD de route, pas une abscisse : le joueur peut faire passer sa
+// route où il veut, l'arrivée reste là où l'auteur du niveau l'a plantée.
+// Un seul par niveau — en poser un nouveau déplace l'ancien.
+
+export function noeudArrivee(structure) {
+  return structure.nodes.find((node) => node.arrivee) || null;
+}
+
+export function estArrivee(structure, nodeId) {
+  const node = findNodeById(structure, nodeId);
+  return Boolean(node && node.arrivee);
+}
+
+// Vrai si ce nœud tient au moins une poutre de ROUTE : ailleurs, une arrivée
+// n'aurait aucun sens, aucun véhicule ne pourrait y parvenir.
+export function estNoeudDeRoute(structure, jointId) {
+  return structure.beams.some((beam) => beam.isRoad && (beam.jointAId === jointId || beam.jointBId === jointId));
+}
+
+// Pose l'arrivée sur ce nœud, ou la retire si elle y était déjà.
+export function basculerArrivee(structure, jointId) {
+  const node = findNodeById(structure, jointId);
+  if (!node || node.kind !== "joint") return false;
+  const etait = Boolean(node.arrivee);
+  for (const autre of structure.nodes) delete autre.arrivee;
+  if (!etait) node.arrivee = true;
+  return !etait;
+}
+
 // ── Points ANCRÉS (appuis) posés directement sur le maillage ──────────────────
 // Nouveau modèle : on ne (dés)ancre plus un point de poutre existant. On POSE
 // des points ancrés ; relier une poutre à un tel point l'ancre à son extrémité
@@ -353,6 +522,7 @@ export function toggleAnchor(structure, jointId) {
 export function addAnchorPoint(structure, grid) {
   if (findJointAtGrid(structure, grid.i, grid.j)) return null;
   const world = gridToWorld(grid.i, grid.j);
+  if (pointDansBateau(structure, world.x, world.y)) return null;
   const node = createNode({ id: generateId("node"), x: world.x, y: world.y, fixed: true, kind: "joint", gridI: grid.i, gridJ: grid.j });
   structure.nodes.push(node);
   invalidateIndex(structure);
@@ -425,11 +595,12 @@ export function removeLoad(structure, loadId) {
 }
 
 // ── Charges mobiles (véhicules) ──
-export function addMobileLoad(structure, { presetId, mass, powerHp, referenceSpeed, beamId, startFraction = 0.5 }) {
+export function addMobileLoad(structure, { presetId, mass, masseAffichee, powerHp, referenceSpeed, beamId, startFraction = 0.5 }) {
   const vehicle = {
     id: generateId("vehicle"),
     presetId,
-    mass,
+    mass, // ce que la structure encaisse
+    masseAffichee: masseAffichee || mass, // ce qu'on annonce (voir vehiclePresets.js)
     powerHp,
     referenceSpeed,
     beamId,
@@ -450,10 +621,10 @@ export function removeMobileLoad(structure, vehicleId) {
 // ── Sol (terrain) ──
 // Le sol n'entre pas dans l'index des recherches (il n'a ni id ni voisinage) :
 // ces fonctions ne touchent donc qu'au tableau structure.terrain.
-export function addTerrainPart(structure, points) {
+export function addTerrainPart(structure, points, nature) {
   if (!structure.terrain) structure.terrain = [];
   if (!points || points.length < 2) return null;
-  const part = createTerrainPart(points);
+  const part = createTerrainPart(points, nature);
   structure.terrain.push(part);
   bumpTerrainVersion(structure);
   return part;
@@ -473,7 +644,9 @@ export function clearTerrain(structure) {
 // Compteur de version du relief : le rendu met le SOL en cache dans un canvas
 // hors écran (render/backgroundCache.js) et ne le redessine que si cette
 // version (ou la vue) a changé.
-function bumpTerrainVersion(structure) {
+// Le décor statique (sol, bateaux) a changé : le cache d'arrière-plan doit se
+// redessiner (voir render/backgroundCache.js).
+export function bumpTerrainVersion(structure) {
   structure._terrainVersion = (structure._terrainVersion || 0) + 1;
 }
 
@@ -499,6 +672,57 @@ export function resizeWorldWidth(structure, deltaPerSide) {
   shiftStructureGridI(structure, deltaPerSide);
   structure.world = getMeshWorld();
   return true;
+}
+
+// ── Hauteur du MONDE ─────────────────────────────────────────────────────────
+// Monte (delta>0) ou abaisse (delta<0) le PLAFOND de la grille de `delta` lignes.
+// Le BAS du monde ne bouge pas : le fond du ravin, l'eau et les altitudes lues
+// sur la règle restent les mêmes, et ce qu'on gagne est du CIEL. Les positions
+// MONDE des éléments existants sont conservées — seuls leurs indices j glissent.
+// Abaisser le plafond est refusé si quelque chose occupe les lignes retirées.
+export function resizeWorldHeight(structure, delta) {
+  if (!delta) return false;
+  const newRows = MESH.rows + delta;
+  if (newRows < MESH_MIN_ROWS || newRows > MESH_MAX_ROWS) return false;
+  // Abaisser : on retire `-delta` lignes EN HAUT, donc tout doit être au-dessous.
+  if (delta < 0 && !gridJWithin(structure, -delta)) return false;
+
+  applyMeshHeightResize(delta);
+  shiftStructureGridJ(structure, delta);
+  structure.world = getMeshWorld();
+  return true;
+}
+
+// Vrai si TOUS les indices de ligne (j) de la structure (points et sol) sont au
+// moins à `minJ` — garde-fou avant d'abaisser le plafond.
+function gridJWithin(structure, minJ) {
+  for (const n of structure.nodes) {
+    if (n.gridJ != null && n.gridJ < minJ) return false;
+  }
+  if (structure.terrain) {
+    for (const part of structure.terrain) {
+      for (const p of part.points) if (p.j < minJ) return false;
+    }
+  }
+  return true;
+}
+
+// Décale de `dj` lignes tous les indices de maillage (j) de la structure. Les
+// positions MONDE restent inchangées. Voir resizeWorldHeight.
+export function shiftStructureGridJ(structure, dj) {
+  if (!dj) return;
+  for (const n of structure.nodes) if (n.gridJ != null) n.gridJ += dj;
+  for (const b of structure.beams) {
+    if (b.gridA) b.gridA.j += dj;
+    if (b.gridB) b.gridB.j += dj;
+  }
+  if (structure.terrain) {
+    for (const part of structure.terrain) {
+      for (const p of part.points) p.j += dj;
+    }
+  }
+  invalidateIndex(structure);
+  bumpTerrainVersion(structure); // le décor (grille + sol) est à redessiner
 }
 
 // Vrai si TOUS les indices de colonne (i) de la structure (points et sol)
@@ -635,9 +859,9 @@ export function exportStructure(structure) {
   const copy = structuredClone(structure);
   delete copy._index;
   delete copy._forces;
-  delete copy._massByNode;
   delete copy._massToken;
   delete copy._bendCache;
+  delete copy._solveur;
   delete copy._totalWeight;
   delete copy._totalWeightToken;
   delete copy._anyOverload;
@@ -646,6 +870,8 @@ export function exportStructure(structure) {
     node.y = node.restY;
     node.vx = 0;
     node.vy = 0;
+    delete node._masse; // recalculées au chargement (physics/mass.js)
+    delete node._masseInertie;
   }
   for (const beam of copy.beams) {
     beam.broken = false;

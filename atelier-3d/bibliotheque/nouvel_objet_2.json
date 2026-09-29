@@ -1,0 +1,372 @@
+{
+ "format": "cao-college-modele",
+ "id": "nouvel_objet_2",
+ "nom": "Nouvel objet",
+ "description": "",
+ "modifie_le": "2026-09-24T00:38:36.581444+00:00",
+ "document": {
+  "format": "cao-college",
+  "version": 2,
+  "nom": "Nouvel objet",
+  "racine": {
+   "id": "n3_3xbgj",
+   "type": "racine",
+   "nom": "Construction",
+   "enfants": [
+    {
+     "id": "n2_8m6mv",
+     "type": "esquisse",
+     "parametres": {
+      "plan": "YZ",
+      "decalage": 0,
+      "inclinaison": 0,
+      "pivot": "horizontal",
+      "copieDe": null,
+      "deplacementU": 0,
+      "deplacementV": 0,
+      "deplacementW": 0,
+      "repere": null,
+      "passePar": null,
+      "sensExterieur": 1,
+      "points": {
+       "1": [
+        200,
+        0
+       ],
+       "2": [
+        2.1,
+        0
+       ],
+       "3": [
+        0,
+        2.1
+       ],
+       "4": [
+        0,
+        200
+       ],
+       "5": [
+        0.615076,
+        0.615076
+       ],
+       "6": [
+        2.1,
+        2.1
+       ],
+       "7": [
+        11.666667,
+        200
+       ],
+       "8": [
+        11.666667,
+        78.333333
+       ],
+       "9": [
+        200,
+        11.666667
+       ],
+       "10": [
+        78.333333,
+        11.666667
+       ],
+       "11": [
+        31.192881,
+        31.192881
+       ],
+       "12": [
+        78.333333,
+        78.333333
+       ]
+      },
+      "courbes": [
+       {
+        "id": "1",
+        "genre": "segment",
+        "a": "1",
+        "b": "2"
+       },
+       {
+        "id": "2",
+        "genre": "segment",
+        "a": "3",
+        "b": "4"
+       },
+       {
+        "id": "3",
+        "genre": "arc",
+        "a": "2",
+        "b": "3",
+        "m": "5",
+        "c": "6",
+        "bombe": -0.41421333333333343
+       },
+       {
+        "id": "4",
+        "genre": "segment",
+        "a": "2",
+        "b": "6",
+        "construction": true
+       },
+       {
+        "id": "5",
+        "genre": "segment",
+        "a": "6",
+        "b": "3",
+        "construction": true
+       },
+       {
+        "id": "6",
+        "genre": "segment",
+        "a": "4",
+        "b": "7"
+       },
+       {
+        "id": "7",
+        "genre": "segment",
+        "a": "7",
+        "b": "8"
+       },
+       {
+        "id": "8",
+        "genre": "segment",
+        "a": "1",
+        "b": "9"
+       },
+       {
+        "id": "9",
+        "genre": "segment",
+        "a": "9",
+        "b": "10"
+       },
+       {
+        "id": "10",
+        "genre": "arc",
+        "a": "10",
+        "b": "8",
+        "m": "11",
+        "c": "12",
+        "bombe": -0.4142135741421356
+       },
+       {
+        "id": "11",
+        "genre": "segment",
+        "a": "10",
+        "b": "12",
+        "construction": true
+       },
+       {
+        "id": "12",
+        "genre": "segment",
+        "a": "8",
+        "b": "12",
+        "construction": true
+       }
+      ],
+      "contraintes": [
+       {
+        "genre": "surAxe",
+        "a": "1",
+        "axe": "horizontal",
+        "id": "1"
+       },
+       {
+        "genre": "surAxe",
+        "a": "2",
+        "axe": "horizontal",
+        "id": "2"
+       },
+       {
+        "genre": "surAxe",
+        "a": "3",
+        "axe": "vertical",
+        "id": "3"
+       },
+       {
+        "genre": "surAxe",
+        "a": "4",
+        "axe": "vertical",
+        "id": "4"
+       },
+       {
+        "genre": "rayon",
+        "courbe": "3",
+        "valeur": 2.1,
+        "id": "5",
+        "formule": "{vn9_8rvy0}*5"
+       },
+       {
+        "genre": "horizontal",
+        "courbe": "5",
+        "id": "6"
+       },
+       {
+        "genre": "vertical",
+        "courbe": "4",
+        "id": "7"
+       },
+       {
+        "genre": "horizontal",
+        "courbe": "6",
+        "id": "8"
+       },
+       {
+        "genre": "vertical",
+        "courbe": "7",
+        "id": "9"
+       },
+       {
+        "genre": "vertical",
+        "courbe": "8",
+        "id": "10"
+       },
+       {
+        "genre": "horizontal",
+        "courbe": "9",
+        "id": "11"
+       },
+       {
+        "genre": "vertical",
+        "courbe": "11",
+        "id": "12"
+       },
+       {
+        "genre": "horizontal",
+        "courbe": "12",
+        "id": "13"
+       },
+       {
+        "genre": "distanceH",
+        "a": "1",
+        "b": null,
+        "valeur": 200,
+        "sens": 1,
+        "id": "14",
+        "decalage": [
+         -0.4784435029331533,
+         -4.22308898985806
+        ],
+        "formule": "{vn4_7yhr2}"
+       },
+       {
+        "genre": "distanceV",
+        "a": "4",
+        "b": null,
+        "valeur": 200,
+        "sens": 1,
+        "id": "15",
+        "decalage": [
+         -9.092776724234518,
+         -4.590805747880722
+        ],
+        "formule": "{vn3_mqv5}*{vn4_7yhr2}"
+       },
+       {
+        "genre": "longueur",
+        "courbe": "6",
+        "valeur": 11.666666666666668,
+        "id": "16",
+        "decalage": [
+         7.994848039144003,
+         -16.398193407649003
+        ],
+        "formule": "5+{vn4_7yhr2}/30"
+       },
+       {
+        "genre": "egal",
+        "courbes": [
+         "6",
+         "8"
+        ],
+        "id": "17"
+       },
+       {
+        "genre": "rayon",
+        "courbe": "10",
+        "valeur": 66.66666666666667,
+        "id": "18",
+        "formule": "{vn4_7yhr2}/3"
+       }
+      ]
+     },
+     "visible": false
+    },
+    {
+     "id": "n4_9vxpy",
+     "type": "extrusion",
+     "parametres": {
+      "hauteur": 10,
+      "jusqua": null,
+      "sens": "symetrique",
+      "torsion": 0,
+      "echelleHaut": 100,
+      "bordDepart": "aucun",
+      "tailleDepart": 1,
+      "bordArrivee": "aucun",
+      "tailleArrivee": 1,
+      "coque": 0,
+      "faceOuverte": "arrivee",
+      "origine": {
+       "x": 5,
+       "y": 100,
+       "z": 0
+      },
+      "esquisse": "n2_8m6mv"
+     },
+     "transformation": {
+      "position": {
+       "x": 5,
+       "y": 100,
+       "z": 0
+      }
+     },
+     "formules": {
+      "parametre.hauteur": "{vn8_6hbio}"
+     }
+    }
+   ]
+  },
+  "variables": [
+   {
+    "id": "vn4_7yhr2",
+    "nom": "longueur_max",
+    "formule": "200",
+    "min": "1",
+    "max": "1000"
+   },
+   {
+    "id": "vn6_6lu46",
+    "nom": "n_vis",
+    "formule": "3",
+    "min": "1",
+    "max": "10",
+    "unite": "-"
+   },
+   {
+    "id": "vn7_2xh1h",
+    "nom": "diametre_vis",
+    "formule": "5",
+    "min": "1",
+    "max": "20"
+   },
+   {
+    "id": "vn8_6hbio",
+    "nom": "largeur",
+    "formule": "10",
+    "min": "1",
+    "max": "1000"
+   },
+   {
+    "id": "vn9_8rvy0",
+    "nom": "epaisseur_de_ligne",
+    "formule": "0.42"
+   },
+   {
+    "id": "vn3_mqv5",
+    "nom": "ratio",
+    "formule": "1",
+    "min": "0.01",
+    "max": "1"
+   }
+  ]
+ }
+}

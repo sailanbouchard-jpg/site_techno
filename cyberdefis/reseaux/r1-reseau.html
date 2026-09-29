@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>R1 — Le bon réseau</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/cyberdefis/style.css">
+</head>
+<body>
+
+  <div class="defis">
+    <div class="defis-page">
+
+      <div class="fil-ariane">
+        <a href="/index.html">Accueil</a> &gt; <a href="/cyberdefis/">Cyber-défis</a> &gt;
+        <a href="/cyberdefis/reseaux/">Réseaux informatiques</a> &gt; R1
+      </div>
+
+      <div class="bandeau"><h1>R1 — Le bon réseau</h1></div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Énoncé</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p>
+              Tu travailles sur le <span class="monospace">POSTE-A</span> du collège. Ton poste a
+              l'adresse IP <span class="monospace">172.20.4.12</span>. Cinq autres machines du
+              collège sont allumées.
+            </p>
+            <p>Quel est le nom de la machine qui est sur le même réseau local que ton poste ?</p>
+            <p class="discret">Format attendu : <span class="monospace">FLAG{NOM-DE-LA-MACHINE}</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Tableau des adresses IP</div>
+        <div class="fenetre-corps">
+          <table>
+            <tr><th>Machine</th><th>Adresse IP</th></tr>
+            <tr><td class="mono">POSTE-C3</td><td class="mono">172.20.7.12</td></tr>
+            <tr><td class="mono">SALLE-B-05</td><td class="mono">172.21.4.30</td></tr>
+            <tr><td class="mono">IMPRIMANTE-CDI</td><td class="mono">172.20.40.8</td></tr>
+            <tr><td class="mono">POSTE-B12</td><td class="mono">172.20.4.30</td></tr>
+            <tr><td class="mono">PORTABLE-PROF</td><td class="mono">10.20.4.12</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div id="panneau"></div>
+
+    </div>
+  </div>
+
+  <script src="/cyberdefis/defis.js"></script>
+  <script>Defis.panneau({ defi: "r1" });</script>
+  <script src="/cyberdefis/site-nav.js"></script>
+</body>
+</html>

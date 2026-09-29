@@ -9,12 +9,12 @@
      1. CSS custom properties (layout, spacing, radius)
      2. Reset
      3. Page layout (body, main)
-     4. Navbar + dropdown + search
+     4. Navbar verticale (arborescence) + search
      5. Typography base (line-height, margin — NOT colors)
      6. Structure blocks (padding, border-width — NOT colors)
      7. Media wrappers (display, aspect-ratio)
      8. Utility (separator, spacing divs)
-     9. Home page catalog
+     9. Page de garde (accueil)
     10. Theme variants (body.dark, body.centered)
 ═══════════════════════════════════════════════════════════ */
 
@@ -23,13 +23,24 @@
    1. CSS CUSTOM PROPERTIES
 ───────────────────────────────────────────────────────── */
 :root {
-    --page-max-width : 1200px;
+    --page-max-width : calc(50vw + 450px);
     --main-padding   : 16px;
     --block-radius   : 8px;
     --border-color   : #e0e0e0;
     --body-bg        : #f4f6f8;
     --main-bg        : #ffffff;
     --muted-color    : #666666;
+}
+
+
+/* Police de la navbar, auto-hébergée (licence OFL, voir static/libs/polices/).
+   Variable : une seule police pour toutes les graisses et largeurs. */
+@font-face {
+    font-family:  "Archivo";
+    src:          url("/static/libs/polices/Archivo-Variable.ttf") format("truetype");
+    font-weight:  100 900;
+    font-stretch: 62% 125%;
+    font-display: swap;
 }
 
 
@@ -42,20 +53,35 @@ img, video, iframe     { display: block; max-width: 100%; }
 
 /* ─────────────────────────────────────────────────────────
    3. PAGE LAYOUT
+   La navbar est une colonne collée au bord gauche de l'écran ;
+   le contenu occupe le reste, centré, avec une largeur maximale.
 ───────────────────────────────────────────────────────── */
 body {
-    max-width:   calc(50vw + 600px);
-    margin:      0 auto;
-    padding:     25px;
+    margin:      0;
+    padding:     0 24px 0 0;
+    display:     flex;
+    align-items: flex-start;
+    gap:         24px;
+    min-height:  100vh;
     background:  var(--body-bg);
     /* font-family, font-size, color come from page_renderer via inline style on blocks */
+}
+
+/* Zone de contenu : .activity-wrapper (pages d'activité) ou <main> direct
+   (accueil, mon espace). flex:1 + max-width + marges auto = centrée dans
+   l'espace restant à droite de la navbar. */
+.activity-wrapper,
+body > main {
+    flex:      1;
+    min-width: 0;
+    max-width: var(--page-max-width);
+    margin:    20px auto;
 }
 
 .activity-wrapper {
     display:     flex;
     align-items: flex-start;
     gap:         8px;
-    margin-top:  12px;
 }
 
 main {
@@ -67,194 +93,229 @@ main {
 }
 
 
+
 /* ─────────────────────────────────────────────────────────
-   4. NAVBAR + DROPDOWN + SEARCH
+   4. NAVBAR VERTICALE (ARBORESCENCE) + SEARCH
+   Colonne collée au bord gauche, toujours visible (sticky).
+   Couleurs et largeur : variables --nav-* émises par la palette
+   [navbar] sur l'élément <nav> (voir page_builder.py).
 ───────────────────────────────────────────────────────── */
 .navbar {
-    display:         flex;
-    align-items:     center;
-    justify-content: space-between;
-    gap:             20px;
-    background:      white;
-    padding:         10px 16px;
-    border-radius:   var(--block-radius);
-    position:        relative;
-    z-index:         100;
-}
-
-.logo a {
-    font-weight:     bold;
-    font-size:       18px;
-    text-decoration: none;
-    color:           #222;
-}
-
-.menu { display: flex; gap: 8px; }
-
-.nav-item { position: relative; }
-
-.nav-link {
-    display:         block;
-    padding:         8px 12px;
-    background:      #f1f1f1;
-    border-radius:   6px;
-    text-decoration: none;
-    color:           #222;
-    font-size:       14px;
-    transition:      background 0.15s;
-}
-.nav-link:hover { background: #dfe7ff; }
-
-.dropdown {
-    position:       absolute;
-    top:            100%;
-    left:           0;
-    background:     white;
-    border:         1px solid var(--border-color);
-    border-radius:  var(--block-radius);
-    min-width:      200px;
-    width:          max-content;
-    display:        none;
-    flex-direction: column;
-    box-shadow:     0 6px 20px rgba(0,0,0,0.1);
-    padding:        10px 6px 6px;
-    z-index:        200;
-}
-.nav-item:hover .dropdown { display: flex; }
-
-.dropdown a {
-    padding:         8px 10px;
-    text-decoration: none;
-    color:           #333;
-    border-radius:   5px;
-    font-size:       14px;
-    white-space:     nowrap;
-}
-.dropdown a:hover { background: #f0f4ff; }
-
-/* ── Séquences (2e niveau) : label + flyout activités à droite ── */
-.seq-item { position: relative; }
-
-.seq-label {
-    display:         flex;
-    align-items:     center;
-    justify-content: space-between;
-    gap:             12px;
-    padding:         8px 10px;
-    color:           #333;
-    border-radius:   5px;
-    font-size:       14px;
-    cursor:          default;
-    user-select:     none;
-    white-space:     nowrap;
-}
-.seq-label::after {
-    content: "›";
-    color:   #aaa;
-}
-.seq-item:hover > .seq-label { background: #dfe7ff; }
-
-.seq-flyout {
-    position:       absolute;
-    left:           100%;
+    position:       sticky;
     top:            0;
-    background:     white;
-    border:         1px solid var(--border-color);
-    border-radius:  var(--block-radius);
-    min-width:      220px;
-    width:          max-content;
-    display:        none;
+    height:         100vh;
+    width:          var(--nav-largeur, 224px);
+    flex-shrink:    0;
+    display:        flex;
     flex-direction: column;
-    box-shadow:     0 6px 20px rgba(0,0,0,0.1);
-    padding:        6px;
-    z-index:        300;
+    gap:            10px;
+    padding:        12px 9px 10px;
+    background:     var(--nav-fond);
+    border-right:   3px solid var(--nav-bordure);
+    font-family:    var(--nav-police);
+    z-index:        100;
 }
-.seq-item:hover .seq-flyout { display: flex; }
 
-.search { position: relative; }
-.search input {
-    padding:       7px 10px;
-    border:        1px solid var(--border-color);
-    border-radius: 6px;
-    font-size:     14px;
-    width:         200px;
-    outline:       none;
-    transition:    border-color 0.15s;
+.logo a   { display: block; }
+.logo img { width: 100%; height: auto; }
+
+/* ── Arborescence : dossiers (<details>) et pages (<a>) ── */
+.nav-tree {
+    flex:       1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display:        flex;
+    flex-direction: column;
+    gap:            2px;
+    padding:        6px 4px 6px 3px;
+    border:         2px solid var(--nav-bordure);
+    background:     var(--nav-champ-fond);
+    box-shadow:     inset 2px 2px 0 var(--nav-survol-fond);
 }
-.search input:focus { border-color: #2980b9; }
+
+/* Ligne cliquable commune aux dossiers et aux pages */
+.nav-tree summary,
+.tree-page {
+    position:      relative;
+    display:       flex;
+    align-items:   flex-start;
+    gap:           6px;
+    padding:       4px 6px;
+    font-size:     var(--nav-taille-page, 12.5px);
+    font-weight:   var(--nav-poids-page, 430);
+    line-height:   1.35;
+    color:         var(--nav-texte);
+}
+
+/* Les séquences, souvent longues : lisibles avant tout, marquées par la graisse */
+.tree-enfants > details > summary {
+    font-size:   var(--nav-taille-dossier, 12.5px);
+    font-weight: var(--nav-poids-dossier, 600);
+    letter-spacing: var(--nav-espacement-dossier, 0.025em);
+}
+
+.nav-tree summary {
+    cursor:      pointer;
+    user-select: none;
+    list-style:  none;                    /* masque le triangle natif */
+}
+.nav-tree summary::-webkit-details-marker { display: none; }
+
+.tree-page { text-decoration: none; }
+
+.nav-tree summary:hover,
+.tree-page:hover { background: var(--nav-survol-fond); }
+
+/* Dossiers de 1er niveau (classes) : un peu plus marqués */
+/* Dossiers de 1er niveau (classes) : larges, grasses et en capitales, comme le logo */
+.tree-classe > summary {
+    align-items:    center;
+    padding:        6px 6px;
+    font-weight:    var(--nav-poids-classe, 800);
+    font-stretch:   var(--nav-largeur-classe, 118%);
+    font-size:      var(--nav-taille-classe, 11px);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color:          var(--nav-classe-texte);
+}
+
+/* Page courante : même rendu que le survol, qui reste affiché */
+.tree-page.tree-actif { background: var(--nav-survol-fond); }
+
+/* Enfants d'un dossier : indentés, reliés par une ligne pleine (style ├──) */
+.tree-enfants {
+    display:        flex;
+    flex-direction: column;
+    gap:            3px;
+    margin:         2px 0 6px 13px;
+    padding-left:   8px;
+    border-left:    2px solid var(--nav-ligne);
+}
+
+/* Dossiers de séquences d'une même classe : espacés pour bien les distinguer */
+.tree-classe > .tree-enfants { gap: 10px; }
+
+/* Tiret reliant chaque ligne à la ligne verticale */
+.tree-enfants > details > summary::before,
+.tree-enfants > .tree-page::before {
+    content:    "";
+    position:   absolute;
+    left:       -8px;
+    top:        12px;
+    width:      6px;
+    border-top: 2px solid var(--nav-ligne);
+}
+
+/* Icônes : dossier fermé/ouvert selon l'état du <details>, fichier pour les pages */
+.tree-ico {
+    width:       15px;
+    height:      15px;
+    flex-shrink: 0;
+    margin-top:  1px;
+}
+.tree-classe > summary > .tree-ico { width: 17px; height: 17px; margin-top: 0; }
+.tree-ico-dossier { color: var(--nav-dossier); stroke: var(--nav-texte); stroke-width: 1.4; }
+.tree-ico-fichier { color: var(--nav-fichier); }
+
+details[open]       > summary .tree-ico-ferme  { display: none; }
+details:not([open]) > summary .tree-ico-ouvert { display: none; }
+
+/* ── Champs rétro communs : bordure pleine, coins nets, ombre décalée ── */
+.search input,
+.auth-login-form input {
+    width:       100%;
+    padding:     6px 8px;
+    font-family: var(--nav-police);
+    font-size:   var(--nav-taille-champ, 12.5px);
+    color:       var(--nav-texte);
+    background:  var(--nav-champ-fond);
+    border:      2px solid var(--nav-bordure);
+    border-radius: 0;
+    outline:     none;
+}
+.search input:focus,
+.auth-login-form input:focus { box-shadow: 3px 3px 0 var(--nav-actif-barre); }
+
+/* ── Recherche (en bas, les résultats s'ouvrent vers le haut) ── */
+.search { position: relative; flex-shrink: 0; }
 
 #search-results {
-    position:      absolute;
-    top:           calc(100% + 4px);
-    left:          0;
-    background:    white;
-    border:        1px solid var(--border-color);
-    border-radius: var(--block-radius);
-    width:         260px;
-    z-index:       200;
-    box-shadow:    0 6px 20px rgba(0,0,0,0.1);
+    position:   absolute;
+    bottom:     calc(100% + 6px);
+    left:       0;
+    right:      0;
+    max-height: 50vh;
+    overflow-y: auto;
+    background: var(--nav-champ-fond);
+    border:     2px solid var(--nav-bordure);
+    box-shadow: 4px 4px 0 var(--nav-ombre);
+    z-index:    200;
 }
 #search-results:empty { display: none; }
 #search-results a {
     display:         block;
-    padding:         8px 12px;
+    padding:         5px 8px;
     text-decoration: none;
-    color:           #222;
-    font-size:       14px;
-    border-bottom:   1px solid #f0f0f0;
+    color:           var(--nav-texte);
+    font-size:       var(--nav-taille-page, 12.5px);
+    border-bottom:   1px solid var(--nav-ligne);
 }
 #search-results a:last-child { border-bottom: none; }
-#search-results a:hover      { background: #f0f4ff; }
+#search-results a:hover      { background: var(--nav-actif-fond); color: var(--nav-actif-texte); }
 
 
-/* Auth widget — login form / user badge in the navbar */
-.auth-widget { position: relative; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-
-.auth-login-form { display: flex; gap: 6px; align-items: center; }
-.auth-login-form input {
-    padding:       5px 8px;
-    border:        1px solid var(--border-color);
-    border-radius: 5px;
-    font-size:     13px;
-    width:         110px;
-    outline:       none;
-    transition:    border-color 0.15s;
+/* Auth widget — login form / user badge en bas de la sidebar */
+.auth-widget {
+    position:       relative;
+    display:        flex;
+    flex-direction: column;
+    align-items:    stretch;
+    gap:            5px;
+    flex-shrink:    0;
+    border-top:     3px double var(--nav-bordure);
+    padding-top:    8px;
 }
-.auth-login-form input:focus { border-color: #3b82f6; }
-.auth-login-form button {
-    padding:       5px 10px;
-    background:    #3b82f6;
-    color:         white;
-    border:        none;
-    border-radius: 5px;
-    cursor:        pointer;
-    font-size:     13px;
-    white-space:   nowrap;
+
+.auth-login-form { display: flex; flex-direction: column; gap: 5px; align-items: stretch; }
+
+/* Bouton et badge : bloc plein avec ombre décalée qui "s'enfonce" au clic */
+.auth-login-form button,
+.auth-badge {
+    padding:        6px 8px;
+    font-family:    var(--nav-police);
+    font-size:      var(--nav-taille-champ, 12.5px);
+    font-weight:    var(--nav-poids-classe, 800);
+    font-stretch:   var(--nav-largeur-classe, 118%);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color:          var(--nav-bouton-texte);
+    background:     var(--nav-bouton-fond);
+    border:         2px solid var(--nav-bordure);
+    border-radius:  0;
+    box-shadow:     3px 3px 0 var(--nav-actif-barre);
+    cursor:         pointer;
+    white-space:    nowrap;
 }
-.auth-login-form button:hover { background: #2563eb; }
+.auth-login-form button:active,
+.auth-badge:active { transform: translate(3px, 3px); box-shadow: none; }
 
 .auth-badge {
-    padding:       5px 12px;
-    background:    #d1fae5;
-    color:         #065f46;
-    border:        1px solid #a7f3d0;
-    border-radius: 5px;
-    font-size:     13px;
-    font-weight:   600;
-    cursor:        pointer;
     user-select:   none;
-    white-space:   nowrap;
+    text-align:    center;
+    overflow:      hidden;
+    text-overflow: ellipsis;
 }
-.auth-badge:hover { background: #a7f3d0; }
 
+/* S'ouvre à droite de la sidebar, ancré en bas (jamais coupé par l'écran) */
 .auth-dropdown {
     position:      absolute;
-    top:           calc(100% + 8px);
-    right:         0;
+    bottom:        0;
+    left:          calc(100% + 14px);
     background:    white;
     border:        1px solid var(--border-color);
     border-radius: var(--block-radius);
-    min-width:     220px;
+    min-width:     240px;
     box-shadow:    0 6px 20px rgba(0,0,0,0.12);
     padding:       12px;
     z-index:       200;
@@ -291,7 +352,7 @@ main {
     font-size:     13px;
 }
 .auth-logout-btn:hover { background: #fecaca; }
-.auth-error { font-size: 12px; color: #991b1b; white-space: nowrap; }
+.auth-error { font-size: 12px; color: #991b1b; }
 
 .auth-mon-espace-link {
     display:         block;
@@ -305,6 +366,24 @@ main {
     text-align:      center;
 }
 .auth-mon-espace-link:hover { background: #dbeafe; }
+
+/* Petits écrans : la navbar repasse en bloc au-dessus du contenu.
+   (Placé après les règles navbar/auth : à spécificité égale, c'est
+   l'ordre dans le fichier qui décide.) */
+@media (max-width: 840px) {
+    body { display: block; padding: 0 12px; }
+    .navbar {
+        position:      static;
+        width:         auto;
+        height:        auto;
+        border-right:  none;
+        border-bottom: 1px solid var(--nav-bordure, var(--border-color));
+    }
+    .nav-tree { overflow: visible; }
+    .activity-wrapper, body > main { margin: 12px auto; }
+    /* Le dropdown auth reprend sa position "sous le badge" */
+    .auth-dropdown { bottom: auto; left: auto; top: calc(100% + 8px); right: 0; }
+}
 
 
 /* ─────────────────────────────────────────────────────────
@@ -695,6 +774,151 @@ main {
     border-radius: var(--block-radius);
 }
 
+/* Variante brute (=pdf> raw) : chaque page est un <canvas> dessiné par
+   pdf.js (voir static/libs/pdf_raw_viewer.js) — aucune bordure, aucun
+   bouton, aucune barre d'outils. Le bloc défile comme une image tout en
+   hauteur si le PDF a plusieurs pages. */
+.pdf-raw-page {
+    position:     relative;
+    margin:       0 auto 4px auto;
+}
+
+.pdf-raw-page canvas {
+    display: block;
+    width:   100%;
+    height:  100%;
+}
+
+/* Variante horizontale (=pdf> horizontal) : pages côte à côte, chacune de la
+   largeur du bloc, défilement vers la droite avec calage page par page. */
+.pdf-horizontal {
+    display:           flex;
+    align-items:       flex-start;
+    gap:               8px;
+    overflow-x:        auto;
+    scroll-snap-type:  x mandatory;
+}
+
+.pdf-horizontal .pdf-raw-page {
+    flex-shrink:       0;
+    margin:            0;
+    scroll-snap-align: start;
+}
+
+/* Barres de défilement du mode horizontal (haut + bas), toujours visibles :
+   styler ::-webkit-scrollbar désactive les barres "fantômes" qui n'apparaissent
+   qu'au survol (Chrome/Edge sous Windows 11). */
+.pdf-horizontal { overflow-x: scroll; }
+
+/* Firefox seulement : dans Chrome, scrollbar-color écraserait ::-webkit-scrollbar */
+@supports (-moz-appearance: none) {
+    .pdf-horizontal {
+        scrollbar-color: var(--pdf-barre-curseur) var(--pdf-barre-fond);
+    }
+}
+
+.pdf-horizontal::-webkit-scrollbar             { height: var(--pdf-barre-epaisseur); }
+.pdf-horizontal::-webkit-scrollbar-track       { background: var(--pdf-barre-fond); }
+.pdf-horizontal::-webkit-scrollbar-thumb       { background: var(--pdf-barre-curseur); }
+.pdf-horizontal::-webkit-scrollbar-thumb:hover { background: var(--pdf-barre-curseur-survol); }
+
+/* Barre du haut : piste + curseur dessinés, positionnés par pdf_raw_viewer.js */
+.pdf-scroll-top {
+    position:     relative;
+    height:       var(--pdf-barre-epaisseur);
+    background:   var(--pdf-barre-fond);
+    touch-action: none;
+}
+
+.pdf-scroll-top-thumb {
+    position:   absolute;
+    top:        0;
+    left:       0;
+    height:     100%;
+    background: var(--pdf-barre-curseur);
+}
+
+.pdf-scroll-top-thumb:hover { background: var(--pdf-barre-curseur-survol); }
+
+/* Option "fleches" : bandes verticales cliquables sur les bords des pages */
+.pdf-nav-zone { position: relative; }
+
+.pdf-nav {
+    position:    absolute;
+    top:         0;
+    bottom:      var(--pdf-barre-epaisseur);   /* ne recouvre pas la barre du bas */
+    width:       var(--pdf-fleche-largeur);
+    padding:     0;
+    border:      none;
+    background:  var(--pdf-fleche-fond);
+    color:       var(--pdf-fleche-texte);
+    font-size:   30px;
+    font-weight: 700;
+    line-height: 1;
+    cursor:      pointer;
+    display:     flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.pdf-nav[hidden] { display: none; }   /* sinon display: flex ci-dessus annule l'attribut hidden */
+.pdf-nav:hover { background: var(--pdf-fleche-fond-survol); }
+/* À l'extérieur du document : la bande démarre pile sur le bord des pages */
+.pdf-nav-prev  { right: 100%; }
+.pdf-nav-next  { left: 100%; }
+
+/* Le symbole reste au milieu de l'écran même si la page est plus haute que la fenêtre */
+.pdf-nav span {
+    position: sticky;
+    top:      50vh;
+    margin:   24px 0;
+}
+
+/* Compteur "page n/N" + flèche, en haut à droite du mode horizontal. */
+.pdf-pager {
+    display:         flex;
+    justify-content: flex-end;
+    margin-bottom:   6px;
+}
+
+.pdf-pager-box {
+    display:       inline-flex;
+    align-items:   center;
+    gap:           10px;
+    padding:       2px 8px;
+    border:        1px solid var(--pdf-compteur-bordure);
+    border-radius: 0;
+    background:    var(--pdf-compteur-fond);
+    color:         var(--pdf-compteur-texte);
+    font-family:   monospace;
+    font-size:     13px;
+}
+
+.pdf-pager-arrow {
+    min-width:  2ch;
+    text-align: center;
+}
+
+/* Couche de texte invisible superposée au canvas (positionnement standard
+   pdf.js) — permet de sélectionner/copier le texte du PDF affiché. */
+.textLayer {
+    position:            absolute;
+    inset:               0;
+    overflow:            hidden;
+    line-height:         1;
+    text-align:          initial;
+    transform-origin:    0 0;
+}
+
+.textLayer span,
+.textLayer br {
+    color:             transparent;
+    position:          absolute;
+    white-space:       pre;
+    cursor:            text;
+    transform-origin:  0% 0%;
+}
+
 .pdf-actions {
     display:       flex;
     gap:           8px;
@@ -948,31 +1172,54 @@ main {
 
 
 /* ─────────────────────────────────────────────────────────
-   9. PAGE D'ACCUEIL — sens de l'école et de la technologie
+   9. PAGE DE GARDE (templates/accueil.html)
+   Page nue : aucun cadre, aucun trait. Couleurs, police et tailles
+   arrivent par les variables --acc-* émises depuis la section
+   [accueil] de la palette (voir page_builder.build_home_page_html()).
 ───────────────────────────────────────────────────────── */
-.home-hero {
-    padding-bottom: 12px;
-    border-bottom:  2px solid var(--border-color);
-    margin-bottom:  8px;
+body.accueil,
+body.accueil > main {
+    background: var(--acc-fond);
 }
-.home-lead {
-    font-size:   1.1em;
-    line-height: 1.7;
-    color:       var(--muted-color);
+body.accueil > main {
+    display:        flex;
+    flex-direction: column;
+    min-height:     calc(100vh - 40px);
+    border:         none;
+    box-shadow:     none;
+    padding:        26px 28px 24px;
+    font-family:    var(--acc-police);
+    color:          var(--acc-texte);
 }
-.home-block { margin: 28px 0; }
-.home-block:last-child { margin-bottom: 8px; }
-.home-cta-btn {
-    display:         inline-block;
-    margin-top:      8px;
-    padding:         10px 18px;
-    background:      #3b82f6;
-    color:           white;
-    border-radius:   6px;
-    text-decoration: none;
-    font-weight:     600;
+
+/* ── Titre ── */
+.acc-hero-titre {
+    margin:      0;
+    font-size:   var(--acc-titre-taille, 2.05em);
+    font-weight: 700;
+    line-height: 1.2;
+    color:       var(--acc-titre);
 }
-.home-cta-btn:hover { background: #2563eb; }
+.acc-hero-ligne {
+    margin: 10px 0 0;
+    color:  var(--acc-muet);
+}
+
+/* ── Note technique, en bas à droite et discrète ── */
+.acc-technique {
+    margin-top:  auto;
+    margin-left: auto;
+    padding-top: 22px;
+    max-width:   46em;
+    text-align:  right;
+    font-size:   var(--acc-technique-taille, 0.78em);
+    line-height: 1.5;
+    color:       var(--acc-technique);
+}
+.acc-technique p            { margin: 0 0 6px; }
+.acc-technique p:last-child { margin-bottom: 0; }
+.acc-technique-titre        { font-weight: 700; }
+.acc-technique code         { font-family: ui-monospace, Consolas, monospace; }
 
 
 /* ─────────────────────────────────────────────────────────
@@ -985,9 +1232,9 @@ body.dark {
     --muted-color:  #aaaaaa;
 }
 body.dark .navbar,
-body.dark .dropdown,
-body.dark #search-results { background: #1e1e1e; }
-body.dark .nav-link        { background: #2a2a2a; color: #eee; }
+body.dark #search-results  { background: #1e1e1e; }
+body.dark .nav-tree summary,
+body.dark .tree-page       { color: #eee; }
 body.dark .logo a          { color: #eee; }
 
 body.centered main { max-width: 800px; margin: 0 auto; }

@@ -1,0 +1,330 @@
+/*
+ * styles/disposition_generale.css
+ * ───────────────────────────────
+ * L'atelier occupe exactement la fenêtre. La page ne défile jamais : chaque
+ * panneau défile à l'intérieur de lui-même. Des bandes bord à bord en haut et
+ * en bas ; entre elles, la vue 3D sur toute la largeur. L'arbre de
+ * construction s'écrit par-dessus, à gauche, et l'inspecteur est une fenêtre
+ * flottante qui n'apparaît qu'avec une sélection (comme dans Fusion).
+ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Un élément caché l'est vraiment, même si sa classe lui donne un affichage. */
+[hidden] { display: none !important; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* La navbar du site à gauche, sa languette, puis l'atelier dans le reste.
+   Les règles du site pour body et main sont neutralisées ici. */
+body {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  min-height: 0;
+  font: var(--police);
+  color: var(--texte);
+  background: var(--chrome-fond);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Le ruban en haut, la vue dessous ; l'arbre et l'inspecteur flottent sur la vue. */
+.atelier {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  height: 100%;
+  grid-template-rows: var(--hauteur-barre-haute) var(--hauteur-ruban) var(--hauteur-bandeau) minmax(0, 1fr) var(--hauteur-barre-etat);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "haut"
+    "ruban"
+    "bandeau"
+    "vue"
+    "etat";
+}
+
+.barre-haute { grid-area: haut; border-bottom: 1px solid var(--chrome-bordure); }
+.ruban { grid-area: ruban; border-bottom: 1px solid var(--chrome-bordure); }
+.bandeau-outil { grid-area: bandeau; border-bottom: 1px solid var(--chrome-bordure); }
+.barre-etat { grid-area: etat; border-top: 1px solid var(--chrome-bordure); }
+
+/* L'arbre, écrit sur la vue : un voile clair sous le texte le rend lisible, et
+   il ne couvre que la hauteur de sa liste — dessous, la vue reste à la souris.
+   Il laisse en bas la place du cartouche d'esquisse. */
+.colonne-gauche {
+  grid-area: vue;
+  position: relative;
+  z-index: 5;
+  align-self: start;
+  justify-self: start;
+  width: var(--largeur-gauche);
+  max-height: calc(100% - var(--reserve-bas-arbre));
+  display: flex;
+  min-height: 0;
+  pointer-events: none;
+}
+
+.colonne-gauche .arbre {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  pointer-events: auto;
+  background: var(--voile-panneau);
+  backdrop-filter: blur(6px);
+  border-right: 1px solid var(--chrome-bordure-fine);
+  border-bottom: 1px solid var(--chrome-bordure-fine);
+  border-bottom-right-radius: 4px;
+}
+.colonne-gauche .poignee-colonne { pointer-events: auto; }
+.colonne-gauche .titre-panneau { background: transparent; cursor: pointer; }
+.colonne-gauche.repliee .liste-arbre { display: none; }
+
+/* L'inspecteur : une fenêtre qu'on déplace par son titre, placée par
+   interface/fenetre_flottante.js dans la zone de la vue. */
+.colonne-droite {
+  grid-area: vue;
+  position: absolute;
+  z-index: 12;
+  width: var(--largeur-inspecteur);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--chrome-panneau);
+  border: 1px solid var(--chrome-bordure);
+  border-radius: 4px;
+  box-shadow: var(--ombre-fenetre);
+}
+.colonne-droite .inspecteur { flex: 1 1 auto; min-height: 0; overflow-y: auto; border-radius: 4px; }
+.colonne-droite .titre-panneau { cursor: move; }
+.colonne-droite.en-deplacement { opacity: 0.85; }
+
+/* Le panneau de calibration n'est pas une fenêtre qu'on déplace : c'est l'outil
+   principal de son onglet. Il prend sa propre colonne et la vue se rétrécit
+   d'autant ; posé par-dessus, il couvrait le résultat du tranchage et le cube. */
+body.espace-calibration .atelier {
+  grid-template-columns: minmax(0, 1fr) var(--largeur-panneau-calibration);
+  grid-template-areas:
+    "haut haut"
+    "ruban ruban"
+    "bandeau bandeau"
+    "vue calibration"
+    "etat etat";
+}
+.colonne-calibration {
+  grid-area: calibration;
+  position: relative;
+  z-index: auto;
+  inset: auto;
+  width: auto;
+  margin: var(--marge-verticale) var(--marge-horizontale) var(--marge-verticale) 0;
+  box-shadow: none;
+}
+.colonne-calibration .titre-panneau { cursor: default; }
+
+/* Pendant une opération, tout ce qui n'est pas sa fenêtre passe en retrait :
+   l'élève voit qu'il a quelque chose à terminer. */
+.operation-en-cours .ruban,
+.operation-en-cours .colonne-gauche,
+.operation-en-cours .colonne-droite,
+.operation-en-cours .bandeau-outil {
+  opacity: var(--opacite-en-retrait);
+  pointer-events: none;
+}
+
+/* ── Navbar du site ── */
+/* Sur petit écran, le site met sa navbar au-dessus du contenu : ici elle
+   reste une colonne, l'atelier ne sait pas vivre sous une barre. */
+.avec-navbar .navbar {
+  position: relative;
+  width: var(--nav-largeur, 224px);
+  height: 100%;
+}
+
+.avec-navbar .nav-tree { overflow-y: auto; }
+
+.navbar-repliee .navbar { display: none; }
+
+/* La languette : une bande sur toute la hauteur, flèche vers la gauche pour
+   replier, vers la droite pour rouvrir. */
+.bascule-navbar {
+  flex: 0 0 var(--largeur-bascule-navbar);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--texte-doux);
+  background: var(--chrome-panneau);
+  border: 0;
+  border-right: 1px solid var(--chrome-bordure);
+  cursor: pointer;
+}
+
+.bascule-navbar:hover { color: var(--accent); background: var(--chrome-survol); }
+
+.bascule-navbar::before {
+  content: "";
+  width: var(--taille-chevron);
+  height: var(--taille-chevron);
+  margin-left: calc(var(--taille-chevron) / 2);
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.navbar-repliee .bascule-navbar::before {
+  margin-left: calc(var(--taille-chevron) / -2);
+  transform: rotate(-135deg);
+}
+
+/* ── Vue 3D ── */
+.vue {
+  grid-area: vue;
+  position: relative;
+  padding: 0;
+  border-radius: 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: linear-gradient(var(--vue-fond-haut), var(--vue-fond-bas));
+}
+
+/* Le curseur dépend du mode de déplacement actif. */
+.vue canvas[data-curseur="move"] { cursor: move; }
+.vue canvas[data-curseur="crosshair"] { cursor: crosshair; }
+
+.vue canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+  touch-action: none;
+}
+
+/* Le coin de la vue : le cube d'orientation et, dessous, Iso et Cadrer. */
+.coin-de-vue {
+  position: absolute;
+  top: var(--marge-verticale);
+  right: var(--marge-horizontale);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Plus précis que « .vue canvas », qui étire la vue 3D sur toute la zone. */
+.vue canvas.cube-de-vue {
+  width: var(--taille-cube-de-vue);
+  height: var(--taille-cube-de-vue);
+}
+
+.boutons-de-vue { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 2px; }
+
+/* Les vues en coupe, en colonne sous les boutons de vue. */
+.vues-en-coupe,
+.liste-des-coupes { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.vues-en-coupe { margin-top: 4px; align-self: stretch; }
+.coupe-active { display: flex; align-items: center; gap: 1px; }
+.bouton.vue-en-coupe { font-variant-numeric: tabular-nums; }
+.operation-en-cours .boutons-de-vue { opacity: 1; }
+
+.depot-fichier {
+  position: absolute;
+  inset: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--accent);
+  background: var(--accent-fond);
+  color: var(--accent);
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.depot-fichier[hidden] { display: none; }
+
+/* ── Poignées de redimensionnement des colonnes ── */
+.poignee-colonne {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--largeur-poignee);
+  cursor: col-resize;
+  z-index: 2;
+}
+
+.poignee-colonne.a-droite { right: calc(var(--largeur-poignee) / -2); }
+.poignee-colonne.a-gauche { left: calc(var(--largeur-poignee) / -2); }
+.poignee-colonne:hover,
+.poignee-colonne.en-cours { background: var(--accent); }
+
+/* ── Navigateur trop ancien ── */
+.navigateur-trop-ancien {
+  position: fixed;
+  inset: 0;
+  padding: 24px;
+  background: var(--chrome-panneau);
+}
+
+/* Onglet Impression : la liste et les réglages descendent jusqu'en bas de la vue. */
+.espace-impression { --reserve-bas-arbre: 8px; }
+
+/* L'interrupteur 2D / 3D d'une esquisse ouverte : bien visible près du cube. */
+/* Sur sa propre ligne, au-dessus de « 3D » et « Cadrer » : l'inspecteur flottant ne le couvre pas. */
+.interrupteur-vue {
+  flex-basis: 100%;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 2px;
+  user-select: none;
+  /* Seule la pastille se clique : le reste de la ligne laisse passer vers la vue. */
+  pointer-events: none;
+}
+.interrupteur-vue .pilule {
+  pointer-events: auto;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--chrome-champ);
+  color: var(--texte);
+  font-weight: 600;
+}
+.interrupteur-vue[hidden] { display: none; }
+.interrupteur-vue input { position: absolute; opacity: 0; width: 0; height: 0; }
+.interrupteur-vue .glissiere {
+  position: relative;
+  width: 30px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--chrome-bordure);
+  transition: background 0.15s;
+}
+.interrupteur-vue .glissiere::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--chrome-champ);
+  transition: transform 0.15s;
+}
+.interrupteur-vue input:checked + .glissiere { background: var(--accent); }
+.interrupteur-vue input:checked + .glissiere::after { transform: translateX(14px); }
+.interrupteur-vue input:focus-visible + .glissiere { outline: 2px solid var(--accent); outline-offset: 2px; }
+.interrupteur-vue .libelle-interrupteur { color: var(--texte-doux); }
+.interrupteur-vue:has(input:not(:checked)) .libelle-interrupteur:first-child,
+.interrupteur-vue:has(input:checked) .libelle-interrupteur:last-child { color: var(--accent); }

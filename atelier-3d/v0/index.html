@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atelier 3D — jalon V0</title>
+  <link rel="stylesheet" href="v0_provisoire.css">
+  <!--
+    Jalon V0 : page de vérification, jetable.
+    But unique : mesurer ce que ça donne sur les postes du collège, et vérifier
+    qu'un STL exporté s'imprime. L'interface n'est pas travaillée, c'est voulu.
+
+    Pas d'importmap : les modules sont importés par chemin relatif, ce qui
+    marche sur tout navigateur qui connaît les modules ES — les importmap, non.
+  -->
+</head>
+<body>
+
+  <header class="barre-haute">
+    <span class="titre">Atelier 3D</span>
+    <span class="jalon">jalon V0 — page de vérification</span>
+
+    <button id="bouton-pave">Pavé</button>
+    <button id="bouton-cylindre">Cylindre</button>
+    <button id="bouton-supprimer">Supprimer</button>
+    <label><input type="checkbox" id="case-trou"> Trou</label>
+    <button id="bouton-grouper">Grouper</button>
+    <button id="bouton-annuler">Annuler</button>
+    <button id="bouton-refaire">Refaire</button>
+    <button id="bouton-exporter">Exporter STL</button>
+  </header>
+
+  <aside class="panneau panneau-gauche">
+    <h2>Construction</h2>
+    <ul class="arbre" id="arbre"></ul>
+    <p class="note" id="aide-selection">Clique un objet dans la vue ou dans cette liste.</p>
+  </aside>
+
+  <main class="vue">
+    <canvas id="vue-3d"></canvas>
+    <div class="vues-normalisees">
+      <button data-vue="iso">Iso</button>
+      <button data-vue="dessus">Dessus</button>
+      <button data-vue="face">Face</button>
+      <button data-vue="droite">Droite</button>
+      <button id="bouton-cadrer">Cadrer</button>
+    </div>
+  </main>
+
+  <aside class="panneau panneau-droit">
+    <h2>Mesures</h2>
+    <table class="mesures"><tbody id="tableau-mesures"></tbody></table>
+    <p class="note">
+      Scène d'essai : trois objets et un trou. Clique « Grouper » pour lancer un
+      booléen, puis « Exporter STL » et ouvre le fichier dans Orca Slicer.
+    </p>
+    <button id="bouton-scene-lourde">Charger une scène lourde (40 objets)</button>
+    <button id="bouton-chargement-froid">Mesurer un chargement à froid</button>
+    <button id="bouton-copier-rapport">Copier le rapport</button>
+    <p class="note">
+      « À froid » retélécharge tout en ignorant le cache : c'est le chiffre qui
+      compte pour quinze postes qui ouvrent la page en même temps.
+    </p>
+  </aside>
+
+  <footer class="barre-etat">
+    <span id="etat-message">Démarrage du moteur de géométrie…</span>
+    <span id="etat-selection"></span>
+    <span id="etat-objets"></span>
+    <span id="etat-etancheite"></span>
+    <span id="etat-images"></span>
+  </footer>
+
+  <script type="module" src="application_v0.js"></script>
+</body>
+</html>

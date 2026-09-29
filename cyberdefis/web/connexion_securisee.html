@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Connexion sécurisée</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/cyberdefis/style.css">
+</head>
+<body>
+
+  <div class="defis">
+    <div class="defis-page">
+
+      <div class="fil-ariane">
+        <a href="/index.html">Accueil</a> &gt; <a href="/cyberdefis/">Cyber-défis</a> &gt;
+        <a href="/cyberdefis/web/">Sous le capot du Web</a> &gt;
+        <a href="w4-bouton-grise.html">W4</a> &gt; Connexion sécurisée
+      </div>
+
+      <div class="bandeau"><h1>Espace sécurisé — connexion</h1></div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Choisir un profil</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <form id="cnx">
+              <div class="panneau-ligne">
+                <label for="profil"><strong>Profil :</strong></label>
+                <select id="profil" name="profil">
+                  <option value="visiteur">Visiteur — accès en lecture seule</option>
+                  <option value="administrateur" disabled>Administrateur — accès avec modification autorisée</option>
+                </select>
+                <button class="bouton" type="submit">Se connecter</button>
+              </div>
+            </form>
+          </div>
+
+          <div id="resultat"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("cnx").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var profil = document.getElementById("profil").value;
+      var r = document.getElementById("resultat");
+      if (profil === "administrateur") {
+        r.innerHTML =
+          '<div class="papier">' +
+          '<p>Vous êtes connecté en tant que <span class="monospace">FLAG{ADMIN}</span>.</p>' +
+          '<p>Vous avez les accès pour modifier le site web : ajouter des pages ou modifier le contenu.</p>' +
+          '</div>';
+      } else {
+        r.innerHTML =
+          '<div class="papier">' +
+          '<p>Puisque vous êtes un simple visiteur du site, vous n\'avez pas accès à cette page.</p>' +
+          '</div>';
+      }
+    });
+  </script>
+  <script src="/cyberdefis/site-nav.js"></script>
+</body>
+</html>

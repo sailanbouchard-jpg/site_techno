@@ -1,0 +1,7 @@
+Polices de l'Atelier 3D, copiées depuis le dépôt google/fonts.
+Toutes sont sous licence SIL Open Font License 1.1 (texte dans OFL.txt) :
+  Lato-Bold.ttf             Łukasz Dziedzic
+  VarelaRound-Regular.ttf   Joe Prince
+  Pacifico-Regular.ttf      Vernon Adams, Jacques Le Bailly, Botjo Nikoltchev, Ani Petrova
+  ZillaSlab-Bold.ttf        Mozilla Foundation, Typotheque
+Chacune a été vérifiée sur é è ê ë ç à â ù û ô î ï œ Œ É È Ç À.

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>C1 — Le chiffrement de César</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/cyberdefis/style.css">
+</head>
+<body>
+
+  <div class="defis">
+    <div class="defis-page">
+
+      <div class="fil-ariane">
+        <a href="/index.html">Accueil</a> &gt; <a href="/cyberdefis/">Cyber-défis</a> &gt;
+        <a href="/cyberdefis/crypto/">Codes secrets</a> &gt; C1
+      </div>
+
+      <div class="bandeau"><h1>C1 — Le chiffrement de César</h1></div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Énoncé</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p>
+              Nous parlons bien de Jules César. Ce chiffrement lui permettait de rédiger des textes
+              codés dont le contenu ne pouvait être compris que par les personnes connaissant la
+              méthode utilisée. Il pouvait ainsi transmettre des informations sans risquer qu'elles
+              soient lues par un messager ou par une personne qui les intercepterait en chemin.
+            </p>
+            <p>Décode le message suivant.</p>
+            <p class="discret">Format attendu : <span class="monospace">FLAG{…}</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Message chiffré</div>
+        <div class="fenetre-corps">
+          <p class="donnees">Qt acnnqb lm lékitmz tma tmbbzma xwcz tqzm tm umaaiom. NTIO{LMKITIOM}</p>
+        </div>
+      </div>
+
+      <div id="panneau"></div>
+
+    </div>
+  </div>
+
+  <script src="/cyberdefis/defis.js"></script>
+  <script>Defis.panneau({ defi: "c1" });</script>
+  <script src="/cyberdefis/site-nav.js"></script>
+</body>
+</html>

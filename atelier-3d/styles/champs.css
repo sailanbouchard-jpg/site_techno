@@ -1,0 +1,304 @@
+/*
+ * styles/champs.css
+ * ─────────────────
+ * Boutons et champs. Arrondi de 2 px, et c'est tout ce qui est arrondi.
+ * Aucune transition : un survol change de couleur, il ne s'anime pas.
+ */
+
+svg.icone {
+  width: var(--taille-icone);
+  height: var(--taille-icone);
+  flex: 0 0 var(--taille-icone);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── Boutons ── */
+.bouton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 6px;
+  font: inherit;
+  color: var(--texte);
+  background: var(--chrome-champ);
+  border: 1px solid var(--chrome-bordure);
+  border-radius: var(--rayon-champ);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bouton:hover:not(:disabled) { background: var(--chrome-survol); }
+.bouton:active:not(:disabled) { background: var(--accent-fond); }
+.bouton:disabled { color: var(--texte-leger); cursor: default; }
+.bouton:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+
+.bouton.plat { background: transparent; border-color: transparent; }
+
+/* Les deux boutons qui terminent une opération : grands, faciles à viser. */
+.bouton.grand { height: 30px; padding: 0 14px; font-weight: 600; }
+.bouton.plat:hover:not(:disabled) { background: var(--chrome-survol); }
+.bouton.seul { padding: 0 3px; }
+.bouton.actif { background: var(--accent-fond); border-color: var(--accent); color: var(--accent); }
+.bouton.danger { color: var(--trou); }
+.bouton.principal { background: var(--accent); border-color: var(--accent); color: var(--chrome-champ); }
+.bouton.principal:hover:not(:disabled) { background: var(--accent); color: var(--chrome-champ); }
+.bouton.principal:disabled { opacity: var(--opacite-en-retrait); }
+
+/* Deux lignes dans 24 px, à côté de l'icône : le nom de l'outil, et dessous
+   le terme du programme. */
+.bouton.double { height: 24px; padding: 0 6px 0 4px; }
+.bouton.double .libelles { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.05; }
+.bouton.double .terme { font-size: 9px; }
+
+.segments { display: inline-flex; }
+.segments .bouton { border-radius: 0; margin-left: -1px; }
+.segments .bouton:first-child { border-radius: var(--rayon-champ) 0 0 var(--rayon-champ); margin-left: 0; }
+.segments .bouton:last-child { border-radius: 0 var(--rayon-champ) var(--rayon-champ) 0; }
+.segments .bouton.actif { position: relative; z-index: 1; }
+
+/* ── Champs de texte ── */
+.champ-texte,
+.champ-choix {
+  width: 100%;
+  min-width: 0;
+  height: var(--hauteur-champ);
+  padding: 0 4px;
+  font: inherit;
+  color: var(--texte);
+  background: var(--chrome-champ);
+  border: 1px solid var(--chrome-bordure);
+  border-radius: var(--rayon-champ);
+}
+
+.champ-texte:focus,
+.champ-choix:focus { outline: none; border-color: var(--accent); }
+.champ-choix { padding: 0 2px; }
+
+.nom-projet {
+  width: 170px;
+  font-weight: 600;
+  border-color: transparent;
+  background: transparent;
+}
+
+.nom-projet:hover { border-color: var(--chrome-bordure); }
+.nom-projet:focus { background: var(--chrome-champ); }
+
+/* ── Champ numérique ── */
+.champ-numerique {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  height: var(--hauteur-champ);
+  background: var(--chrome-champ);
+  border: 1px solid var(--chrome-bordure);
+  border-radius: var(--rayon-champ);
+}
+
+.champ-numerique:focus-within { border-color: var(--accent); }
+.champ-numerique.erreur { border-color: var(--trou); }
+.champ-numerique.desactive { background: var(--chrome-panneau); color: var(--texte-leger); }
+
+/* L'étiquette est un curseur de réglage : on la fait glisser. */
+.champ-numerique .etiquette {
+  display: flex;
+  align-items: center;
+  padding: 0 3px;
+  color: var(--texte-doux);
+  cursor: ew-resize;
+  user-select: none;
+}
+
+.champ-numerique .etiquette:hover { color: var(--accent); }
+
+.champ-numerique input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  padding: 0 2px;
+  font: inherit;
+  color: inherit;
+  text-align: right;
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+
+.champ-numerique .unite {
+  display: flex;
+  align-items: center;
+  padding: 0 3px 0 1px;
+  color: var(--texte-leger);
+  user-select: none;
+}
+
+/* Les deux flèches, empilées au bout du champ. Le triangle est dessiné par
+   des bordures, dans la couleur du texte. */
+.champ-numerique .unite[hidden],
+.champ-numerique .bouton-usuelles[hidden] { display: none; }
+/* Le menu des valeurs usuelles : un petit ▾ gris, juste avant les flèches. */
+.champ-numerique .bouton-usuelles {
+  flex: 0 0 auto;
+  align-self: stretch;
+  padding: 0 3px;
+  font-size: 9px;
+  color: var(--texte-leger);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.champ-numerique .bouton-usuelles:hover:not(:disabled) { color: var(--accent); }
+.menu-usuelles .choix-completion { justify-content: flex-end; }
+.menu-usuelles .hors-bornes { color: var(--texte-leger); text-decoration: line-through; cursor: default; }
+.champ-numerique .fleches {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 var(--largeur-fleches);
+  border-left: 1px solid var(--chrome-bordure-fine);
+}
+
+.champ-numerique .fleche {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 0;
+  color: var(--texte-doux);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.champ-numerique .fleche::before {
+  content: "";
+  border-left: var(--demi-fleche) solid transparent;
+  border-right: var(--demi-fleche) solid transparent;
+}
+.champ-numerique .fleche.plus::before { border-bottom: var(--demi-fleche) solid currentColor; }
+.champ-numerique .fleche.moins::before { border-top: var(--demi-fleche) solid currentColor; }
+.champ-numerique .fleche:hover:not(:disabled) { color: var(--accent); background: var(--chrome-survol); }
+.champ-numerique .fleche:active:not(:disabled) { background: var(--accent-fond); }
+.champ-numerique .fleche:disabled { color: var(--texte-leger); cursor: default; }
+.champ-numerique .fleche.plus { border-bottom: 1px solid var(--chrome-bordure-fine); }
+
+/* Dans le bandeau, l'étiquette est un mot entier : le champ prend sa largeur. */
+.champ-numerique.large { flex: 0 0 auto; width: auto; }
+.champ-numerique.large input { flex: 0 0 44px; width: 44px; }
+
+/* ── Cases à cocher ── */
+.case {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.case input { margin: 0; accent-color: var(--accent); }
+
+/* ── Nuancier ── */
+.nuancier {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.nuance {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--chrome-bordure);
+  border-radius: var(--rayon-champ);
+  cursor: pointer;
+}
+
+.nuance.choisie { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.nuance[data-rang="1"] { background: var(--couleur-objet-1); }
+.nuance[data-rang="2"] { background: var(--couleur-objet-2); }
+.nuance[data-rang="3"] { background: var(--couleur-objet-3); }
+.nuance[data-rang="4"] { background: var(--couleur-objet-4); }
+.nuance[data-rang="5"] { background: var(--couleur-objet-5); }
+.nuance[data-rang="6"] { background: var(--couleur-objet-6); }
+.nuance[data-rang="7"] { background: var(--couleur-objet-7); }
+.nuance[data-rang="8"] { background: var(--couleur-objet-8); }
+.nuance[data-rang="9"] { background: var(--couleur-objet-9); }
+.nuance[data-rang="10"] { background: var(--couleur-objet-10); }
+.nuance[data-rang="11"] { background: var(--couleur-objet-11); }
+.nuance[data-rang="12"] { background: var(--couleur-objet-12); }
+.nuance[data-rang="13"] { background: var(--couleur-objet-13); }
+.nuance[data-rang="14"] { background: var(--couleur-objet-14); }
+.nuance[data-rang="15"] { background: var(--couleur-objet-15); }
+.nuance[data-rang="16"] { background: var(--couleur-objet-16); }
+
+/* ── Finitions : boutons côte à côte ── */
+.finitions { display: flex; flex-wrap: wrap; gap: 2px; }
+
+/* ── Champ piloté par une variable ── */
+/* Le fond teinté et le ƒ disent « ce nombre vient d'une formule » ; la formule
+   revient au clic dans le champ, et sa bulle la donne au survol. */
+.champ-numerique.a-formule { background: var(--accent-fond); }
+.champ-numerique.a-formule input { color: var(--accent); font-style: italic; }
+.champ-numerique.a-formule::before {
+  content: "ƒ";
+  display: flex;
+  align-items: center;
+  order: -1;
+  padding-left: 3px;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* ── Liste des variables sous un champ, et message d'erreur ── */
+.cadre-completion {
+  position: fixed;
+  z-index: 60;
+  max-width: 320px;
+  padding: 2px 0;
+  background: var(--chrome-champ);
+  border: 1px solid var(--chrome-bordure);
+  border-radius: var(--rayon-champ);
+  box-shadow: var(--ombre-menu);
+}
+.cadre-completion[hidden] { display: none; }
+.cadre-completion.erreur { border-color: var(--trou); }
+.choix-completion {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.choix-completion:hover { background: var(--chrome-survol); }
+.choix-completion.actif { background: var(--accent-fond); color: var(--accent); }
+.nom-completion { font-weight: 600; }
+.valeur-completion { color: var(--texte-doux); }
+.message-completion { padding: 3px 8px; color: var(--trou); white-space: normal; }
+
+/* ── Aspect : un bouton palette, et le panneau qu'il déroule ── */
+.ancre-aspect { display: flex; min-width: 0; }
+.bouton-aspect { flex: 1 1 auto; justify-content: flex-start; gap: 6px; min-width: 0; }
+.bouton-aspect.actif { background: var(--accent-fond); }
+.bouton-aspect .texte-aspect { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--texte-doux); }
+.nuance.temoin { flex: 0 0 auto; cursor: inherit; }
+.nuance.temoin.melee { background: repeating-linear-gradient(45deg, var(--chrome-bordure) 0 3px, var(--chrome-champ) 3px 6px); }
+.choix-aspect {
+  position: fixed;
+  z-index: 50;
+  width: 214px;
+  padding: 6px 8px 8px;
+  background: var(--chrome-panneau);
+  border: 1px solid var(--chrome-bordure);
+  border-radius: 4px;
+  box-shadow: var(--ombre-fenetre);
+}
+.choix-aspect .titre-bloc { margin: 2px 0 4px; }
+.choix-aspect .nuancier { gap: 4px; margin-bottom: 6px; }
+.choix-aspect .nuance { width: 20px; height: 20px; }

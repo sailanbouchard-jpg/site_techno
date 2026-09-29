@@ -32,27 +32,19 @@
 // les portées et charges de ruine diminuent d'autant, les rapports entre
 // matériaux (donc leurs personnalités) restent identiques.
 
-// color / colorEdge / colorHi : teinte de base + son ombre (bord) + son reflet
-// (filet clair) pour donner aux poutres un rendu de "vraie" barre, pas un trait
-// plat. Palette choisie DISTINCTE même pour un daltonien (deutéran/protan) :
-// bois = ORANGE chaud, acier = BLEU franc, béton = GRIS clair froid — trois
-// teintes bien séparées en teinte ET en luminosité.
+// L'ASPECT des matériaux (couleurs, texture, détails) n'est pas ici : il vit
+// dans render/styleConfig.js (MEMBER_LOOKS), avec le reste du rendu.
 export const MATERIALS = [
-  { id: "wood", name: "Bois", youngModulus: 11e9, density: 500, tensileStrength: 7e6, compressiveStrength: 4e6,
-    color: "#e0962f", colorEdge: "#9a601c", colorHi: "#f6cb80" },
-  { id: "steel", name: "Acier", youngModulus: 150e9, density: 7850, tensileStrength: 170e6, compressiveStrength: 100e6,
-    color: "#4a86c8", colorEdge: "#2a5793", colorHi: "#a3c6ee" },
-  { id: "concrete", name: "Béton", youngModulus: 20e9, density: 2500, tensileStrength: 20e6, compressiveStrength: 200e6,
-    color: "#b7bcc4", colorEdge: "#7c828c", colorHi: "#e4e7eb" },
+  { id: "wood", name: "Bois", youngModulus: 11e9, density: 500, tensileStrength: 7e6, compressiveStrength: 4e6 },
+  { id: "steel", name: "Acier", youngModulus: 150e9, density: 7850, tensileStrength: 170e6, compressiveStrength: 100e6 },
+  { id: "concrete", name: "Béton", youngModulus: 20e9, density: 2500, tensileStrength: 20e6, compressiveStrength: 200e6 },
   // ROUTE : tablier bitume, résistance type BÉTON ARMÉ (fort en compression ET
   // correct en traction grâce aux armatures). Sombre, reflet faible (asphalte).
-  { id: "road", name: "Route", youngModulus: 32e9, density: 4000, tensileStrength: 30e6, compressiveStrength: 60e6,
-    color: "#34383d", colorEdge: "#1b1e22", colorHi: "#5b636c" },
+  { id: "road", name: "Route", youngModulus: 32e9, density: 4000, tensileStrength: 30e6, compressiveStrength: 60e6 },
   // CÂBLE : acier toronné. NE TRAVAILLE QU'EN TRACTION (voir springForces +
   // bending) : très résistant tendu, AUCUNE rigidité de flexion → part en vrille
   // sous compression sans jamais casser. Noir, reflets métalliques des torons.
-  { id: "cable", name: "Câble", youngModulus: 120e9, density: 7850, tensileStrength: 30e6, compressiveStrength: 1e6,
-    color: "#1b1b1d", colorEdge: "#000000", colorHi: "#7a7d82" },
+  { id: "cable", name: "Câble", youngModulus: 120e9, density: 7850, tensileStrength: 30e6, compressiveStrength: 1e6 },
 ];
 
 export function getMaterialById(materialId) {
@@ -65,21 +57,33 @@ export function getMaterialById(materialId) {
 // Champs optionnels road/cable : une poutre posée avec ce type est d'office une
 // ROUTE (charges mobiles) ou un CÂBLE (traction seule) — voir Structure.addBeam.
 //
-// maxLength (m) : longueur MAXIMALE d'un élément de ce type. Pédagogiquement,
-// c'est la longueur d'un élément « livrable » : le béton se pose en éléments
-// courts, l'acier permet de grandes portées, un câble est presque libre. Un
-// tracé plus long est automatiquement DÉCOUPÉ : chaque clic au-delà pose un
+// maxLength (m) : longueur MAXIMALE d'un élément de ce type. Ce n'est pas une
+// limite de résistance (la physique s'en charge) mais une limite de FABRICATION
+// et de TRANSPORT : la longueur d'un élément livrable d'une seule pièce sur un
+// chantier. D'où les ordres de grandeur retenus :
+//   • ACIER 10 m — un profilé laminé se livre couramment en 10 à 12 m, la
+//     longueur d'un semi-remorque standard ;
+//   • BÉTON 10 m pour une poutre épaisse (poutre préfabriquée précontrainte),
+//     6 m pour une poutre mince, qui casserait à la manutention ;
+//   • BOIS 10 m pour le lamellé-collé large, 8 m pour une section fine ;
+//   • ROUTE 4 m — la dalle de tablier reste un élément court, posé en série ;
+//   • CÂBLE 40 m — un câble se déroule d'une bobine : il n'a presque pas de
+//     limite de longueur, seulement de poids.
+// Les sections FINES sont plus courtes que les larges du même matériau : longue
+// et mince, la pièce flamberait ou se voilerait avant même d'être posée.
+//
+// Un tracé plus long est automatiquement DÉCOUPÉ : chaque clic au-delà pose un
 // élément de longueur max dans la direction visée (pose en série, voir
 // structureEditor.js::handleAddBeam et Structure.js::clampBeamEnd).
 export const BEAM_TYPES = [
-  { id: "wood-thin", materialId: "wood", label: "Bois fin", thickness: 0.06, maxLength: 6 },
-  { id: "wood-large", materialId: "wood", label: "Bois large", thickness: 0.16, maxLength: 6 },
-  { id: "steel-thin", materialId: "steel", label: "Acier fin", thickness: 0.03, maxLength: 6 },
-  { id: "steel-large", materialId: "steel", label: "Acier large", thickness: 0.08, maxLength: 6 },
-  { id: "concrete-thin", materialId: "concrete", label: "Béton fin", thickness: 0.12, maxLength: 5 },
-  { id: "concrete-large", materialId: "concrete", label: "Béton large", thickness: 0.40, maxLength: 5 },
+  { id: "wood-thin", materialId: "wood", label: "Bois fin", thickness: 0.06, maxLength: 8 },
+  { id: "wood-large", materialId: "wood", label: "Bois large", thickness: 0.16, maxLength: 10 },
+  { id: "steel-thin", materialId: "steel", label: "Acier fin", thickness: 0.03, maxLength: 10 },
+  { id: "steel-large", materialId: "steel", label: "Acier large", thickness: 0.08, maxLength: 10 },
+  { id: "concrete-thin", materialId: "concrete", label: "Béton fin", thickness: 0.12, maxLength: 6 },
+  { id: "concrete-large", materialId: "concrete", label: "Béton large", thickness: 0.40, maxLength: 10 },
   { id: "road", materialId: "road", label: "Route", thickness: 0.20, road: true, maxLength: 4 },
-  { id: "cable", materialId: "cable", label: "Câble", thickness: 0.015, cable: true, maxLength: 25 },
+  { id: "cable", materialId: "cable", label: "Câble", thickness: 0.015, cable: true, maxLength: 40 },
 ];
 
 export function getBeamTypeById(beamTypeId) {

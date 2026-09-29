@@ -14,11 +14,18 @@
 // Ne doit PAS contenir : de formule physique, de logique d'état.
 // Dépendances : model/materials.js.
 
-import { BEAM_TYPES } from "../model/materials.js";
+import { typesPoutreProposes } from "../state.js";
+import { getBeamTypeById } from "../model/materials.js";
 
-export function populateBeamTypeSelect(select) {
+// `idCourant` : type de la poutre qu'on est en train de regarder. On l'ajoute
+// toujours à la liste, même si le niveau l'interdit — sinon l'inspecteur d'une
+// poutre de l'énoncé (la route, par exemple) afficherait un autre type que le sien.
+export function populateBeamTypeSelect(select, idCourant = null) {
   select.innerHTML = "";
-  for (const beamType of BEAM_TYPES) {
+  const proposes = typesPoutreProposes();
+  const courant = getBeamTypeById(idCourant);
+  if (courant && !proposes.includes(courant)) proposes.push(courant);
+  for (const beamType of proposes) {
     const option = document.createElement("option");
     option.value = beamType.id;
     option.textContent = beamType.label;

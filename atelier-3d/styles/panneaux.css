@@ -1,0 +1,1406 @@
+/*
+ * styles/panneaux.css
+ * ───────────────────
+ * Barre haute, bandeau d'outil, colonnes, arbre, inspecteur, menus, barre
+ * d'état. Densité de logiciel : lignes de 22 px, marges de 4 et 6 px.
+ */
+
+/* ── Barres ── */
+.barre-haute,
+.bandeau-outil,
+.barre-etat {
+  display: flex;
+  align-items: center;
+  gap: var(--marge-verticale);
+  padding: 0 var(--marge-horizontale);
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  background: var(--chrome-panneau);
+}
+
+.separateur {
+  flex: 0 0 1px;
+  align-self: stretch;
+  margin: 5px 2px;
+  background: var(--chrome-bordure-fine);
+}
+
+.pousse { flex: 1 1 auto; }
+
+.indicateur-enregistrement { color: var(--texte-doux); }
+.indicateur-enregistrement.erreur { color: var(--trou); }
+
+/* ── Titres de panneau ── */
+.titre-panneau {
+  display: flex;
+  align-items: center;
+  gap: var(--marge-verticale);
+  height: var(--hauteur-ligne);
+  padding: 0 var(--marge-horizontale);
+  font-weight: 600;
+  color: var(--texte-doux);
+  border-bottom: 1px solid var(--chrome-bordure-fine);
+  background: var(--chrome-panneau);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+/* Un titre long (« Répétition en ligne ») reste sur une ligne : le terme du
+   programme se raccourcit le premier. */
+.titre-panneau > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 0 auto; }
+.titre-panneau > .terme { display: inline; flex: 0 1 auto; min-width: 0; }
+
+/* ── Ruban ── */
+.ruban {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 0 var(--marge-horizontale);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  background: var(--chrome-panneau);
+}
+
+.groupe-ruban {
+  display: flex;
+  flex-direction: column;
+  padding: 2px calc(var(--ecart-entre-groupes) / 2) 0;
+  border-right: 1px solid var(--chrome-bordure);
+}
+
+/* Sur un écran étroit, le ruban se resserre avant de se mettre à défiler :
+   un outil qu'il faut aller chercher hors de l'écran n'existe pas. */
+@media (max-width: 1440px) {
+  :root { --ecart-entre-groupes: 9px; --largeur-max-bouton-ruban: 68px; --taille-nom-ruban: 10px; }
+}
+@media (max-width: 1180px) {
+  :root { --ecart-entre-groupes: 5px; --largeur-max-bouton-ruban: 58px; --taille-icone-ruban: 17px; }
+  .titre-groupe-ruban { font-size: 9px; }
+}
+
+.groupe-ruban:first-child { padding-left: 0; }
+.groupe-ruban:last-child { border-right: 0; }
+.boutons-ruban { display: flex; flex: 1 1 auto; gap: var(--ecart-dans-groupe); }
+
+/* Le nom de la famille, sous ses boutons, marqué d'un filet : il délimite le groupe. */
+.titre-groupe-ruban {
+  margin-top: 1px;
+  text-align: center;
+  font-size: var(--taille-petite);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--texte-doux);
+  border-top: 1px solid var(--chrome-bordure-fine);
+}
+
+.bouton-ruban {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  min-width: var(--largeur-min-bouton-ruban);
+  max-width: var(--largeur-max-bouton-ruban);
+  padding: 3px 3px 2px;
+  font: inherit;
+  font-size: var(--taille-nom-ruban);
+  line-height: 1.1;
+  text-align: center;
+  color: var(--texte);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--rayon-champ);
+  cursor: pointer;
+  /* Un libellé long (« Répéter en ligne ») passe sur deux lignes : le ruban reste compact. */
+  white-space: normal;
+}
+
+.bouton-ruban svg.icone {
+  width: var(--taille-icone-ruban);
+  height: var(--taille-icone-ruban);
+  flex-basis: var(--taille-icone-ruban);
+}
+
+.bouton-ruban:hover:not([aria-disabled="true"]) { background: var(--chrome-survol); border-color: var(--chrome-bordure-fine); }
+.bouton-ruban:active:not([aria-disabled="true"]) { background: var(--accent-fond); }
+.bouton-ruban.actif { background: var(--accent-fond); border-color: var(--accent); color: var(--accent); }
+.bouton-ruban[aria-disabled="true"] { color: var(--texte-leger); cursor: default; }
+.bouton-ruban[draggable="true"] { cursor: grab; }
+
+.ancre-menu { position: relative; display: flex; }
+
+.menu-ruban {
+  position: fixed;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 1px;
+  margin-top: var(--hauteur-ruban);
+  padding: 4px;
+  background: var(--chrome-panneau);
+  border: 1px solid var(--chrome-bordure);
+  box-shadow: var(--ombre-menu);
+}
+
+.bouton-ruban.dans-menu { min-width: 62px; }
+
+/* Le nom ordinaire, puis dessous, en petit et en gris, le terme du programme. */
+.terme {
+  display: block;
+  font-size: var(--taille-petite);
+  line-height: 1.2;
+  color: var(--texte-leger);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Bandeau d'outil ── */
+.bandeau-outil { container-type: inline-size; }
+.etiquette-bandeau { color: var(--texte-doux); }
+
+/* Vue étroite : on retire d'abord ce qui aide sans être nécessaire. Les
+   navigateurs anciens ignorent la règle et gardent tout. */
+@container (max-width: 720px) {
+  .etiquette-bandeau,
+  .bandeau-outil .bouton.double .terme,
+  .options-outil .aide { display: none; }
+}
+
+@container (max-width: 600px) {
+  .options-outil .case { max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
+  .options-outil .champ-numerique .etiquette { max-width: 58px; }
+}
+
+/* En esquisse, dix outils : chacun garde son nom écrit. Sur une vue étroite
+   seulement, les outils non choisis se réduisent à leur icône. */
+/* En esquisse, les outils sont nombreux : seul l'outil actif garde son nom,
+   les autres se reconnaissent à leur icône et à leur bulle. */
+.bandeau-outil.en-esquisse .segments .bouton:not(.actif) .libelles,
+.bandeau-outil.en-esquisse .segments .bouton:not(.actif) > span { display: none; }
+.bandeau-outil.en-esquisse .segments .bouton:not(.actif) { padding: 0 2px; }
+/* En esquisse, le nom de la famille est déjà dans le cartouche : la place
+   revient aux outils, qui sont nombreux. */
+.bandeau-outil.en-esquisse > .etiquette-bandeau { display: none; }
+.bandeau-outil.en-esquisse .segments .etiquette-bandeau { margin: 0 1px 0 3px; font-size: var(--taille-petite); }
+.bandeau-outil.en-esquisse .separateur { margin: 0 2px; }
+.bandeau-outil .segments { display: flex; align-items: center; }
+.bandeau-outil .segments .etiquette-bandeau { margin: 0 2px 0 4px; }
+
+.option-choix { display: inline-flex; align-items: center; gap: 4px; color: var(--texte-doux); }
+.choix-bandeau {
+  height: var(--hauteur-champ);
+  font: inherit;
+  color: var(--texte);
+  background: var(--chrome-champ);
+  border: 1px solid var(--chrome-bordure);
+  border-radius: var(--rayon-champ);
+}
+
+/* ── Étiquettes des contraintes, sur l'esquisse ouverte ── */
+.etiquettes-contraintes {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.etiquette-contrainte {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 3px;
+  font-size: var(--taille-petite);
+  line-height: 15px;
+  white-space: nowrap;
+  color: var(--texte-doux);
+  background: var(--chrome-champ);
+  border: 1px solid var(--chrome-bordure);
+  border-radius: var(--rayon-champ);
+  pointer-events: auto;
+}
+
+.etiquette-contrainte.cote { font-weight: 600; color: var(--esquisse-cote); border-color: var(--esquisse-cote); }
+.etiquette-contrainte.cote .texte-contrainte { cursor: text; }
+.etiquette-contrainte.conflit { color: var(--trou); border-color: var(--trou); }
+
+.retirer-contrainte {
+  display: none;
+  padding: 0 1px;
+  font: inherit;
+  line-height: 1;
+  color: var(--texte-doux);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.retirer-contrainte:hover { color: var(--trou); }
+.etiquette-contrainte:hover .retirer-contrainte { display: inline; }
+
+.saisie-contrainte {
+  /* Assez large pour une formule : « pile_rayon * 2 + 0,3 ». */
+  width: 120px;
+  height: 18px;
+  padding: 0 3px;
+  font: inherit;
+  color: var(--texte);
+  border: 0;
+  outline: none;
+  background: transparent;
+}
+
+.etiquette-contrainte.en-saisie { border-color: var(--accent); box-shadow: var(--ombre-menu); }
+
+/* L'état de l'esquisse, dans le cartouche : combien de mouvements restent libres. */
+.liberte-esquisse { margin: 0; padding: 0 8px 4px; font-size: var(--taille-petite); color: var(--texte-doux); }
+.liberte-esquisse.complete { color: var(--etanche); font-weight: 600; }
+.bandeau-outil.en-esquisse { background: var(--accent-fond); }
+
+.options-outil {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.options-outil .aide { color: var(--texte-doux); overflow: hidden; text-overflow: ellipsis; }
+.options-outil .champ-numerique .etiquette { max-width: 110px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+/* ── Arbre de construction ── */
+.liste-arbre {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ligne-arbre {
+  --retrait-arbre: 14px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: var(--hauteur-ligne);
+  padding-right: 2px;
+  cursor: default;
+  user-select: none;
+}
+
+/* Le titre d'une section de la liste : les objets, puis les esquisses. */
+.section-arbre {
+  margin-top: 6px;
+  padding: 2px 6px;
+  font-size: var(--taille-petite);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--texte-doux);
+  border-bottom: 1px solid var(--chrome-bordure-fine);
+}
+
+.section-arbre:first-child { margin-top: 0; }
+
+.ligne-arbre:hover { background: var(--chrome-survol); }
+.ligne-arbre.choisie { background: var(--accent-fond); color: var(--accent); }
+.ligne-arbre.masquee .nom { color: var(--texte-leger); }
+.ligne-arbre .nom { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ligne-arbre .depli { flex: 0 0 14px; display: flex; justify-content: center; color: var(--texte-doux); }
+.ligne-arbre .depli.plie svg { transform: rotate(-90deg); }
+.ligne-arbre { padding-left: calc(2px + var(--profondeur, 0) * var(--retrait-arbre)); }
+.ligne-arbre .pastille-trou { color: var(--trou); display: flex; }
+
+/* Un objet de la scène se lit en grand ; les pièces qui le composent passent
+   au second plan, plus petites et plus pâles : l'œil trouve d'abord les objets. */
+.ligne-arbre.racine { font-weight: 600; }
+.ligne-arbre.racine svg.icone { width: 15px; height: 15px; }
+.ligne-arbre.enfant {
+  height: 18px;
+  font-size: var(--taille-petite);
+  color: var(--texte-doux);
+}
+.ligne-arbre.enfant svg.icone { width: 12px; height: 12px; }
+.ligne-arbre.enfant .bouton { opacity: 0.55; }
+.ligne-arbre.enfant:hover .bouton,
+.ligne-arbre.enfant.choisie .bouton { opacity: 1; }
+.compte-enfants { flex: 0 0 auto; color: var(--texte-leger); font-size: var(--taille-petite); font-weight: 400; }
+
+/* Une forme que le logiciel n'a pas pu calculer : elle n'est nulle part dans
+   la vue, elle doit donc se voir dans la liste. */
+.pastille-erreur {
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  line-height: 13px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--chrome-champ);
+  background: var(--trou);
+  border-radius: 50%;
+}
+.ligne-arbre.en-erreur .nom { color: var(--trou); }
+
+/* Le message d'une forme qui n'a pas pu être calculée, en tête de l'inspecteur. */
+.note-erreur {
+  margin: 0 0 6px;
+  padding: 5px 7px;
+  color: var(--trou);
+  background: var(--chrome-survol);
+  border-left: 3px solid var(--trou);
+  border-radius: var(--rayon-champ);
+}
+.note-erreur[hidden] { display: none; }
+
+/* ── Inspecteur ── */
+.inspecteur-corps { padding: var(--marge-verticale) var(--marge-horizontale); }
+
+.inspecteur-vide {
+  padding: 8px var(--marge-horizontale);
+  color: var(--texte-doux);
+}
+
+.rangee {
+  display: grid;
+  grid-template-columns: var(--largeur-libelle) minmax(0, 1fr);
+  align-items: center;
+  min-height: var(--hauteur-ligne);
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.rangee > .libelle {
+  color: var(--texte-doux);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Les cotes d'une forme de base : un encadré à part, en tête du panneau. */
+/* ── Blocs de l'inspecteur : Réglages (mis en valeur), Place, Apparence ── */
+.bloc-inspecteur { margin-bottom: 8px; }
+
+.titre-bloc {
+  margin: 2px 0 3px;
+  font-weight: 600;
+  color: var(--texte-doux);
+  border-bottom: 1px solid var(--chrome-bordure-fine);
+}
+
+.bloc-cotes {
+  padding: 3px var(--marge-horizontale) 4px;
+  background: var(--accent-fond);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--rayon-champ);
+}
+.bloc-cotes > .titre-bloc { color: var(--accent); border-bottom: 0; }
+.bloc-cotes .rangee > .libelle { color: var(--texte); font-weight: 600; }
+
+/* Trois champs côte à côte ont besoin de toute la largeur : le libellé passe
+   au-dessus. */
+.rangee.empilee { grid-template-columns: minmax(0, 1fr); gap: 1px; margin-bottom: 4px; }
+
+.trio {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.trio.avec-cadenas { grid-template-columns: repeat(3, minmax(0, 1fr)) 20px; }
+
+.ligne-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.avances > summary {
+  cursor: pointer;
+  color: var(--texte-doux);
+  padding: 3px 0;
+  user-select: none;
+}
+
+.info-lecture {
+  color: var(--texte-doux);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Barre d'état ── */
+.barre-etat { color: var(--texte-doux); gap: 14px; }
+.barre-etat .message {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 55%;
+  white-space: nowrap;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Les derniers messages, dépliés au-dessus de la barre d'état. */
+.journal-messages {
+  /* Fixe, et non absolu : la barre d'état coupe ce qui dépasse. */
+  position: fixed;
+  bottom: var(--hauteur-barre-etat);
+  left: var(--marge-horizontale);
+  z-index: 20;
+  max-width: 520px;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--chrome-panneau);
+  border: 1px solid var(--chrome-bordure);
+  border-radius: var(--rayon-champ);
+  box-shadow: var(--ombre-flottante, 0 4px 14px rgba(0, 0, 0, 0.18));
+}
+.journal-messages[hidden] { display: none; }
+.journal-messages li { padding: 2px 8px; white-space: normal; }
+.journal-messages li.erreur { color: var(--trou); }
+
+/* ── Fiche des raccourcis ── */
+.fiche-raccourcis {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 30;
+  transform: translate(-50%, -50%);
+  max-width: min(760px, 92vw);
+  max-height: 80vh;
+  overflow: auto;
+  padding: 10px 14px 14px;
+  background: var(--chrome-panneau);
+  border: 1px solid var(--chrome-bordure);
+  border-radius: var(--rayon-panneau, 6px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+}
+.fiche-raccourcis[hidden] { display: none; }
+.titre-fiche { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.colonnes-raccourcis { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 4px 18px; }
+.bloc-raccourcis h3 { margin: 6px 0 2px; font-size: var(--taille-petite); text-transform: uppercase; letter-spacing: 0.03em; color: var(--texte-doux); }
+.bloc-raccourcis dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 8px; margin: 0; }
+.bloc-raccourcis dt { font-weight: 600; white-space: nowrap; }
+.bloc-raccourcis dd { margin: 0; color: var(--texte-doux); }
+.barre-etat .message.erreur { color: var(--trou); }
+.barre-etat .mesure { color: var(--texte); }
+.barre-etat .hors-site { color: var(--trou); }
+
+.voyant { display: inline-flex; align-items: center; gap: 4px; }
+
+.voyant::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  background: var(--texte-leger);
+}
+
+.voyant.ok::before { background: var(--etanche); }
+.voyant.alerte { color: var(--trou); }
+.voyant.alerte::before { background: var(--trou); }
+
+/* La seule animation continue de l'atelier : un calcul long. */
+.progression {
+  position: relative;
+  width: 60px;
+  height: 4px;
+  overflow: hidden;
+  background: var(--accent-fond);
+}
+
+.progression::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 20px;
+  height: 100%;
+  background: var(--accent);
+  animation: progression 900ms linear infinite;
+}
+
+.progression[hidden] { display: none; }
+
+@keyframes progression {
+  from { transform: translateX(-20px); }
+  to { transform: translateX(60px); }
+}
+
+/* ── Menus déroulants ── */
+.menu {
+  position: fixed;
+  z-index: 20;
+  min-width: 220px;
+  max-width: 320px;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--chrome-champ);
+  border: 1px solid var(--chrome-bordure);
+  box-shadow: var(--ombre-menu);
+  animation: ouverture-menu var(--duree-menu) ease-out;
+}
+
+@keyframes ouverture-menu {
+  from { opacity: 0; transform: translateY(-2px); }
+}
+
+.menu-titre {
+  padding: 5px 8px;
+  color: var(--texte-doux);
+  border-bottom: 1px solid var(--chrome-bordure-fine);
+}
+
+.menu-entree {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.menu-entree:hover { background: var(--chrome-survol); }
+.menu-entree.courante { background: var(--accent-fond); }
+.menu-entree .vignette {
+  flex: 0 0 64px;
+  height: 48px;
+  object-fit: contain;
+  background: var(--vue-fond-bas);
+  border: 1px solid var(--chrome-bordure-fine);
+}
+.menu-entree .details { flex: 1 1 auto; min-width: 0; }
+.menu-entree .details .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.menu-vide { padding: 8px; color: var(--texte-doux); }
+
+/* ── Fenêtre d'opération ── */
+/* En bas à gauche de l'atelier, par-dessus l'arbre (en retrait pendant
+   l'opération) : la vue garde toute sa place. */
+.fenetre-operation {
+  position: absolute;
+  bottom: calc(var(--hauteur-barre-etat) + var(--marge-horizontale));
+  left: var(--marge-horizontale);
+  z-index: 10;
+  width: var(--largeur-fenetre-operation);
+  max-height: calc(100% - var(--hauteur-barre-haute) - var(--hauteur-ruban) - var(--hauteur-barre-etat) - 4 * var(--marge-horizontale));
+  display: flex;
+  flex-direction: column;
+  background: var(--chrome-panneau);
+  border: 1px solid var(--accent);
+  border-top: 3px solid var(--accent);
+  border-radius: var(--rayon-champ);
+  box-shadow: var(--ombre-fenetre);
+}
+
+.tete-operation {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px 3px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.consigne-operation {
+  margin: 0;
+  padding: 0 8px 4px;
+  color: var(--texte-doux);
+}
+
+.corps-operation {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 4px 8px 2px;
+  border-top: 1px solid var(--chrome-bordure-fine);
+}
+
+.rangee-operation { margin-bottom: 6px; }
+.libelle-operation { display: block; margin-bottom: 2px; font-weight: 600; }
+.note-operation { margin: 0; color: var(--texte-doux); white-space: pre-line; max-height: 40vh; overflow-y: auto; }
+
+/* Un nombre ou un texte : libellé à gauche, champ à droite, sur une ligne. */
+.rangee-operation.en-ligne {
+  display: grid;
+  grid-template-columns: var(--largeur-libelle) minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+}
+
+.rangee-operation.en-ligne .libelle-operation { margin: 0; }
+
+.choix-illustres {
+  display: grid;
+  grid-template-columns: repeat(var(--colonnes, 3), minmax(0, 1fr));
+  gap: 2px;
+}
+
+.choix-illustre {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: var(--hauteur-ligne);
+  padding: 2px 5px;
+  line-height: 1.2;
+  font: inherit;
+  text-align: left;
+  color: var(--texte);
+  background: var(--chrome-champ);
+  border: 1px solid var(--chrome-bordure);
+  border-radius: var(--rayon-champ);
+  cursor: pointer;
+}
+
+.choix-illustre:hover { background: var(--chrome-survol); }
+.choix-illustre.actif { background: var(--accent-fond); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.choix-titre { font-weight: 600; }
+.choix-detail { font-size: var(--taille-petite); color: var(--texte-doux); }
+
+.pied-operation {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 4px 8px;
+  border-top: 1px solid var(--chrome-bordure-fine);
+}
+
+/* ── Bulle d'aide, au survol des boutons ── */
+.bulle-aide {
+  position: fixed;
+  z-index: 50;
+  max-width: var(--largeur-max-bulle-aide);
+  padding: 5px 8px;
+  color: var(--texte-bulle);
+  background: var(--fond-bulle);
+  border-radius: var(--rayon-champ);
+  box-shadow: var(--ombre-menu);
+  pointer-events: none;
+  white-space: normal;
+}
+
+.bulle-aide p { margin: 2px 0 0; }
+.tete-aide { display: flex; align-items: baseline; gap: 6px; }
+.terme-aide { font-size: var(--taille-petite); opacity: 0.7; font-style: italic; }
+.tete-aide kbd {
+  margin-left: auto;
+  padding: 0 4px;
+  font: inherit;
+  font-size: var(--taille-petite);
+  border: 1px solid currentColor;
+  border-radius: var(--rayon-champ);
+  opacity: 0.8;
+}
+.geste-aide { font-size: var(--taille-petite); opacity: 0.75; }
+.condition-aide { color: var(--survol-3d); font-weight: 600; }
+
+/* Le cartouche d'une esquisse : en bas à gauche et plus étroit, il laisse la place au dessin. */
+.cartouche-esquisse {
+  top: auto;
+  bottom: var(--marge-verticale);
+  width: auto;
+  max-width: var(--largeur-fenetre-operation);
+}
+
+/* ── Bulle des cotes, près du curseur ── */
+.bulle-mesure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 8;
+  padding: 3px 7px;
+  color: var(--texte-bulle);
+  background: var(--fond-bulle);
+  border-radius: var(--rayon-champ);
+  pointer-events: none;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.ligne-bulle.tapee { font-weight: 700; }
+.conseil-bulle { font-size: var(--taille-petite); opacity: 0.75; }
+
+/* ── Étiquette posée sur la scène, pendant un geste ── */
+.etiquette-de-vue {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 8;
+  padding: 2px 6px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--texte-bulle);
+  background: var(--fond-bulle);
+  border-radius: var(--rayon-champ);
+  pointer-events: none;
+}
+
+/* ── Barre d'actions sur la sélection ── */
+/* La commande mise en avant (Grouper) porte son nom et se sépare des autres. */
+.barre-contextuelle .bouton.mis-en-avant {
+  margin-right: 3px;
+  padding-right: 8px;
+  font-weight: 600;
+  color: var(--accent);
+  border-right: 1px solid var(--chrome-bordure-fine);
+  border-radius: 0;
+}
+.barre-contextuelle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 7;
+  display: flex;
+  gap: 1px;
+  padding: 2px;
+  background: var(--chrome-panneau);
+  border: 1px solid var(--chrome-bordure);
+  border-radius: var(--rayon-champ);
+  box-shadow: var(--ombre-menu);
+}
+
+/* ── Variables du projet ── */
+/* Au bout du bandeau, quel que soit le mode : les variables servent aussi en esquisse. */
+.bouton-variables { margin-left: auto; flex: 0 0 auto; }
+.bouton-variables.actif { background: var(--accent-fond); color: var(--accent); }
+.compte-variables:not(:empty) {
+  min-width: 14px;
+  padding: 0 4px;
+  font-size: var(--taille-petite);
+  line-height: 14px;
+  text-align: center;
+  color: var(--texte-bulle);
+  background: var(--accent);
+  border-radius: 7px;
+}
+.panneau-variables {
+  position: fixed;
+  z-index: 40;
+  width: 330px;
+  max-height: 70vh;
+  overflow: auto;
+  padding: 8px 10px 10px;
+  background: var(--chrome-panneau);
+  border: 1px solid var(--chrome-bordure);
+  border-radius: 4px;
+  box-shadow: var(--ombre-fenetre);
+}
+.panneau-variables[hidden] { display: none; }
+.panneau-variables .titre-fiche { gap: 6px; margin-bottom: 6px; }
+.panneau-variables .titre-fiche .terme { flex: 1 1 auto; }
+.liste-variables { display: flex; flex-direction: column; gap: 3px; }
+.ligne-variable {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 128px 18px 14px;
+  align-items: center;
+  gap: 4px;
+}
+.ligne-variable.brouillon { grid-template-columns: minmax(0, 1fr); margin-top: 3px; }
+.ligne-variable.en-erreur .champ-numerique { border-color: var(--trou); }
+.nom-variable { height: var(--hauteur-champ); font-weight: 600; }
+.nom-variable.erreur { border-color: var(--trou); }
+.usage-variable { font-size: var(--taille-petite); color: var(--texte-doux); text-align: center; }
+.variables-vide { margin: 2px 0 6px; color: var(--texte-doux); }
+.panneau-variables > .bouton { margin-top: 6px; }
+.exemple-variables { margin: 6px 0 0; white-space: normal; }
+
+/* Une cote d'esquisse pilotée par une variable. */
+.etiquette-contrainte.pilotee .texte-contrainte::before { content: "ƒ "; font-style: italic; }
+/* Le crochet en bout de ligne : seulement un signal, affiché quand la
+   variable est bornée. Un clic dans la ligne ouvre ses réglages. */
+.signal-bornes { display: flex; justify-content: center; color: var(--accent); visibility: hidden; }
+.signal-bornes.actif { visibility: visible; }
+.signal-bornes svg { width: 12px; height: 12px; }
+.bloc-variable.depliee > .ligne-variable .nom-variable { border-color: var(--accent); }
+.fiche-variable {
+  display: grid;
+  grid-template-columns: 1fr 1fr 52px;
+  gap: 4px;
+  margin: 2px 0 6px 10px;
+  padding-left: 6px;
+  border-left: 2px solid var(--accent);
+}
+.fiche-variable[hidden] { display: none; }
+.fiche-variable .aide-variable,
+.fiche-variable .valeurs-variable { grid-column: 1 / -1; }
+.fiche-variable .champ-texte { height: var(--hauteur-champ); min-width: 0; }
+/* Supprimer, loin des champs : seul sur sa ligne, à droite, en gris. */
+.fiche-variable .retirer-variable { grid-column: 1 / -1; justify-self: end; color: var(--texte-leger); font-size: var(--taille-petite); }
+.fiche-variable .retirer-variable svg { width: 12px; height: 12px; }
+.fiche-variable .retirer-variable:hover,
+.fiche-variable .retirer-variable.danger { color: var(--trou); }
+/* En esquisse, le bandeau est plein d'outils : le bouton se réduit à son icône
+   (son nom reste dans sa bulle), et le pas de grille se resserre. */
+.bandeau-outil.en-esquisse .bouton-variables > span { display: none; }
+.bandeau-outil.en-esquisse .bouton-variables { padding-left: 4px; padding-right: 4px; }
+.bandeau-outil.en-esquisse .options-outil { gap: 6px; }
+.bandeau-outil.en-esquisse .champ-numerique.large input { flex-basis: 28px; width: 28px; }
+
+/* Au survol de l'origine ou d'un axe, en esquisse : la contrainte à venir,
+   en pointillés — elle n'existe pas encore. Décalée du curseur, pour ne pas le cacher. */
+.etiquette-contrainte.indication-accroche {
+  margin: -30px 0 0 12px;
+  font: var(--police);
+  font-weight: 600;
+  color: var(--accent);
+  border: 1px dashed var(--accent);
+  pointer-events: none;
+}
+
+/* Une contrainte en trop : barrée et en pointillés — elle peut partir sans
+   que rien ne bouge. Sa bulle dit pourquoi. */
+.etiquette-contrainte.redondante { border-style: dashed; color: var(--texte-leger); }
+.etiquette-contrainte.redondante .texte-contrainte { text-decoration: line-through; }
+
+/* ── Signal bref près de la souris (« Dupliqué ») ── */
+.signal-curseur {
+  position: fixed;
+  z-index: 70;
+  padding: 3px 8px;
+  font-weight: 600;
+  color: var(--texte-bulle);
+  background: var(--fond-bulle);
+  border-radius: var(--rayon-champ);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 220ms ease-out, transform 220ms ease-out;
+}
+.signal-curseur.visible { opacity: 1; transform: none; transition-duration: 80ms; }
+
+/* ── Bibliothèque d'objets paramétriques ── */
+.menu-bibliotheque { max-width: 360px; }
+.menu-bibliotheque .entree-modele svg { flex: 0 0 auto; color: var(--accent); }
+.menu-bibliotheque .description-modele { white-space: normal; }
+.menu-bibliotheque .separee { border-top: 1px solid var(--chrome-bordure-fine); }
+.menu-bibliotheque .inactive { opacity: 0.5; pointer-events: none; }
+/* Modifier un modèle est rare : un petit bouton gris, visible au survol de sa ligne. */
+.menu-bibliotheque .modifier-modele {
+  width: 20px;
+  min-width: 0;
+  height: 20px;
+  padding: 0;
+  color: var(--texte-leger);
+  opacity: 0;
+}
+.menu-bibliotheque .entree-modele:hover .modifier-modele { opacity: 1; }
+.menu-bibliotheque .modifier-modele:hover { color: var(--accent); }
+
+/* L'édition d'un modèle : en bas au milieu de la vue, là où ni l'arbre, ni
+   l'inspecteur, ni le cartouche d'esquisse ne se trouvent. */
+.bandeau-modele {
+  position: absolute;
+  left: 50%;
+  bottom: var(--marge-verticale);
+  z-index: 10;
+  width: min(460px, calc(100% - 2 * var(--marge-horizontale)));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 2px;
+  background: var(--chrome-panneau);
+  border: 1px solid var(--accent);
+  border-top: 3px solid var(--accent);
+  border-radius: var(--rayon-champ);
+  box-shadow: var(--ombre-fenetre);
+}
+.bandeau-modele[hidden] { display: none; }
+.bandeau-modele .tete-operation .terme { font-weight: 400; }
+.bandeau-modele .description-modele { box-sizing: border-box; width: calc(100% - 16px); margin: 0 8px; height: var(--hauteur-champ); }
+.problemes-modele {
+  margin: 0 8px;
+  padding: 4px 8px 4px 22px;
+  color: var(--trou);
+  background: var(--chrome-champ);
+  border-radius: var(--rayon-champ);
+}
+.problemes-modele[hidden] { display: none; }
+.bandeau-modele .pied-operation { display: flex; justify-content: flex-end; gap: 6px; padding: 2px 8px 4px; }
+.bandeau-modele .retirer-modele { margin-right: auto; color: var(--texte-leger); font-size: var(--taille-petite); }
+.bandeau-modele .retirer-modele[hidden] { display: none; }
+.bandeau-modele .retirer-modele.danger { color: var(--trou); }
+/* Dans l'inspecteur d'un objet posé : les valeurs que le modèle calcule. */
+.valeurs-calculees .rangee { opacity: 0.85; }
+
+/* ── Onglets Conception / Impression ── */
+.onglets-espace {
+  flex: 0 0 auto;
+  display: flex;
+  align-self: stretch;
+  align-items: stretch;
+  gap: 0;
+  margin: 3px 0;
+  border: 1px solid var(--chrome-bordure);
+  border-radius: var(--rayon-champ);
+  overflow: hidden;
+}
+
+.onglet-espace {
+  padding: 0 12px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--texte-doux);
+  background: var(--chrome-champ);
+  border: 0;
+  cursor: pointer;
+}
+.onglet-espace + .onglet-espace { border-left: 1px solid var(--chrome-bordure); }
+.onglet-espace:hover:not(.actif) { background: var(--chrome-survol); color: var(--texte); }
+.onglet-espace.actif { color: var(--accent); background: var(--accent-fond); }
+
+/* ── Onglet Impression ── */
+/* Le bandeau des outils de la conception n'a pas d'usage sur le plateau. */
+.espace-impression .atelier { --hauteur-bandeau: 0px; }
+.espace-impression .bandeau-outil { display: none; }
+
+.bloc-machine {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 4px;
+}
+.choix-machine { height: var(--hauteur-champ); }
+.volume-machine { color: var(--texte-doux); font-size: var(--taille-petite); text-align: center; }
+
+.trio.duo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.rangee.information { display: block; color: var(--texte-doux); }
+.rangee.alerte-plateau { display: block; color: var(--trou); white-space: normal; }
+
+/* Un objet du projet pas encore posé : plus pâle, un clic l'ajoute. */
+.ligne-arbre.hors-plateau .nom { color: var(--texte-doux); }
+.ligne-arbre.hors-plateau:hover .nom { color: var(--accent); }
+
+/* ── Réglages d'impression (sous la liste du plateau) ── */
+.reglages-impression { border-top: 1px solid var(--chrome-bordure-fine); }
+/* Les cinq préréglages : chacun son nom au-dessus de sa liste, pour qu'on voie
+   l'ordre dans lequel ils se choisissent (imprimante, buse, plaque, matériau,
+   réglages) sans avoir à survoler. */
+.bloc-prereglage { padding-top: 2px; }
+.bloc-prereglage + .bloc-prereglage { border-top: 1px dotted var(--chrome-bordure-fine); }
+.libelle-prereglage {
+  display: block;
+  padding: 2px var(--marge-horizontale) 0;
+  color: var(--texte-doux);
+  font-size: var(--taille-petite);
+}
+.note-prereglage {
+  display: block;
+  padding: 0 var(--marge-horizontale) var(--marge-verticale);
+  color: var(--imprimante-pause);
+  font-size: var(--taille-petite);
+  white-space: normal;
+}
+.ligne-prereglage {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 var(--marge-horizontale) var(--marge-verticale);
+}
+.ligne-prereglage select { flex: 1 1 auto; min-width: 0; height: var(--hauteur-champ); }
+.marque-modifie { color: var(--accent); font-weight: 600; }
+.question-prereglage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0 var(--marge-horizontale) var(--marge-verticale);
+  padding: 4px 6px;
+  background: var(--accent-fond);
+  border-radius: var(--rayon-champ);
+}
+.onglets-reglages {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 0 var(--marge-horizontale);
+  border-bottom: 1px solid var(--chrome-bordure-fine);
+}
+.onglet-reglages {
+  padding: 3px 8px;
+  font: inherit;
+  color: var(--texte-doux);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.onglet-reglages.actif { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.mode-avance { margin-left: auto; display: flex; align-items: center; gap: 3px; color: var(--texte-doux); }
+.recherche-reglage {
+  display: block;
+  width: calc(100% - 2 * var(--marge-horizontale));
+  margin: var(--marge-verticale) var(--marge-horizontale);
+  height: var(--hauteur-champ);
+}
+.corps-reglages { padding: 0 var(--marge-horizontale) var(--marge-verticale); }
+.rangee-reglage { grid-template-columns: var(--largeur-libelle) minmax(0, 1fr) 20px; }
+.rangee-reglage.modifie > .libelle { color: var(--accent); font-weight: 600; }
+.rangee-reglage select { height: var(--hauteur-champ); min-width: 0; }
+
+/* ── Aperçu du tranchage : curseur des couches et légende ── */
+.curseur-couches {
+  position: absolute;
+  z-index: 6;
+  right: var(--marge-horizontale);
+  top: var(--haut-curseur-couches);
+  bottom: calc(var(--marge-verticale) * 4);
+  width: var(--largeur-curseur-couches);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.rail-couches {
+  position: relative;
+  flex: 1 1 auto;
+  width: 6px;
+  margin-right: 10px;
+  background: var(--chrome-bordure);
+  border-radius: 3px;
+}
+.plage-couches { position: absolute; left: 0; right: 0; background: var(--accent); border-radius: 3px; }
+.poignee-couche {
+  position: absolute;
+  left: 50%;
+  width: 18px;
+  height: 12px;
+  padding: 0;
+  transform: translate(-50%, 50%);
+  background: var(--chrome-champ);
+  border: 2px solid var(--accent);
+  border-radius: 3px;
+  cursor: ns-resize;
+  touch-action: none;
+}
+.etiquette-couche {
+  padding: 1px 5px;
+  font-size: var(--taille-petite);
+  white-space: nowrap;
+  background: var(--voile-panneau);
+  border: 1px solid var(--chrome-bordure-fine);
+  border-radius: var(--rayon-champ);
+}
+
+/* Le résultat du tranchage, en haut à droite, à gauche du cube de vue (comme dans OrcaSlicer). */
+.resultat-tranchage {
+  position: absolute;
+  z-index: 6;
+  top: var(--marge-verticale);
+  right: var(--droite-resultat-tranchage);
+  width: var(--largeur-resultat-tranchage);
+  max-height: calc(100% - 2 * var(--marge-verticale));
+  overflow-y: auto;
+  background: var(--voile-panneau);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--chrome-bordure);
+  border-radius: 4px;
+  box-shadow: var(--ombre-menu);
+}
+.entete-resultat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--chrome-bordure-fine);
+}
+.entete-resultat .titre { font-weight: 700; }
+.resume-tranchage { margin-left: auto; color: var(--texte-doux); display: none; }
+.resultat-tranchage.replie .resume-tranchage { display: inline; }
+.resultat-tranchage.replie .corps-resultat { display: none; }
+.replier-resultat {
+  width: 18px;
+  height: 18px;
+  margin-left: auto;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.resultat-tranchage.replie .replier-resultat { margin-left: 0; }
+.replier-resultat::before {
+  content: "";
+  display: block;
+  width: var(--taille-chevron);
+  height: var(--taille-chevron);
+  margin: 4px auto 0;
+  border-left: 2px solid var(--texte-doux);
+  border-top: 2px solid var(--texte-doux);
+  transform: rotate(45deg);
+}
+.resultat-tranchage.replie .replier-resultat::before { margin-top: 0; transform: rotate(-135deg); }
+.avancement-tranchage { padding: 4px 6px; color: var(--texte-doux); }
+.corps-resultat { padding: 4px 6px 6px; }
+.mode-affichage { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.mode-affichage span { color: var(--texte-doux); white-space: nowrap; }
+.mode-affichage select { flex: 1 1 auto; height: var(--hauteur-champ); min-width: 0; }
+
+.tableau-tranchage { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.tableau-tranchage th {
+  padding: 2px 3px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--texte-doux);
+  border-bottom: 1px solid var(--chrome-bordure-fine);
+}
+.tableau-tranchage td { padding: 1px 3px; white-space: nowrap; height: var(--hauteur-ligne); }
+.tableau-tranchage td:first-child { display: flex; align-items: center; gap: 5px; }
+.tableau-tranchage .nombre { text-align: right; }
+.tableau-tranchage .case { width: 18px; text-align: center; }
+.tableau-tranchage tr.deplacements td { color: var(--texte-doux); }
+.pastille-type { flex: 0 0 auto; width: 12px; height: 10px; border-radius: 2px; }
+.pastille-type.deplacement { background: var(--chrome-bordure); }
+
+.totaux-tranchage {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1px 10px;
+  margin: 6px 0 0;
+  padding-top: 4px;
+  border-top: 1px solid var(--chrome-bordure-fine);
+  font-variant-numeric: tabular-nums;
+}
+.totaux-tranchage dt { color: var(--texte-doux); }
+.totaux-tranchage dd { margin: 0; text-align: right; font-weight: 600; }
+.type-ligne-0 { background: var(--ligne-paroi-exterieure); }
+.type-ligne-1 { background: var(--ligne-parois-interieures); }
+.type-ligne-2 { background: var(--ligne-dessus); }
+.type-ligne-3 { background: var(--ligne-dessous); }
+.type-ligne-4 { background: var(--ligne-plein-interieur); }
+.type-ligne-5 { background: var(--ligne-remplissage); }
+.type-ligne-6 { background: var(--ligne-jupe); }
+.type-ligne-7 { background: var(--ligne-bordure); }
+.type-ligne-8 { background: var(--ligne-surplomb); }
+.type-ligne-9 { background: var(--ligne-pont); }
+.type-ligne-10 { background: var(--ligne-interstices); outline: 1px solid var(--chrome-bordure); }
+.type-ligne-11 { background: var(--ligne-repassage); }
+.type-ligne-12 { background: var(--ligne-pont-interieur); }
+.pastille-type.couture { background: var(--ligne-couture); outline: 1px solid var(--chrome-bordure); border-radius: 50%; width: 9px; height: 9px; }
+.onglets-reglages { flex-wrap: wrap; }
+#liste-plateau { overflow-x: hidden; }
+
+/* L'échelle d'une coloration par valeur, sous le mode d'affichage. */
+.echelle-coloration { margin: 2px 0 6px; }
+.barre-degrade {
+  height: 10px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--degrade-1), var(--degrade-2), var(--degrade-3), var(--degrade-4), var(--degrade-5));
+}
+.graduations { display: flex; justify-content: space-between; color: var(--texte-doux); font-variant-numeric: tabular-nums; }
+
+/* Le parcours de la buse dans la couche, en bas de la vue. */
+.barre-parcours {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: calc(var(--marge-verticale) * 2);
+  width: var(--largeur-barre-parcours);
+  max-width: calc(100% - 2 * var(--largeur-curseur-couches));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px;
+  background: var(--voile-panneau);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--chrome-bordure);
+  border-radius: 4px;
+}
+.curseur-parcours { flex: 1 1 auto; min-width: 0; accent-color: var(--accent); }
+.etiquette-parcours { flex: 0 0 auto; min-width: 190px; color: var(--texte-doux); font-variant-numeric: tabular-nums; }
+
+/* ── Imprimantes du réseau ── */
+#colonne-imprimantes .titre-panneau { display: flex; align-items: center; gap: 6px; }
+#colonne-imprimantes .fermer-panneau { margin-left: auto; }
+.carte-imprimante.injoignable .nom-imprimante { color: var(--texte-doux); }
+.entete-imprimante { display: flex; align-items: center; gap: 6px; }
+.nom-imprimante { font-weight: 600; }
+.modele-imprimante { color: var(--texte-doux); font-size: var(--taille-petite); }
+.entete-imprimante .bouton { margin-left: auto; }
+.etat-imprimante { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
+.pastille-etat { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--texte-leger); }
+.pastille-etat.running, .pastille-etat.prepare { background: var(--imprimante-active); }
+.pastille-etat.pause { background: var(--imprimante-pause); }
+.pastille-etat.hors-ligne { background: var(--imprimante-hors-ligne); }
+.barre-progression { height: 4px; border-radius: 2px; background: var(--chrome-bordure-fine); overflow: hidden; margin: 2px 0 6px; }
+.barre-progression .progression { height: 100%; background: var(--imprimante-active); }
+.temperatures-imprimante { display: flex; gap: 12px; color: var(--texte-doux); font-size: var(--taille-petite); }
+.tache-imprimante { color: var(--texte-doux); font-size: var(--taille-petite); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.carte-imprimante .ligne-actions, .fiche-imprimante .ligne-actions { margin-top: 6px; }
+.rangee-fiche { display: grid; grid-template-columns: var(--largeur-libelle) 1fr; align-items: center; gap: 6px; margin: 3px 0; }
+.rangee-fiche .champ-texte { min-width: 0; }
+.note-imprimante { color: var(--texte-doux); font-size: var(--taille-petite); white-space: normal; margin: 6px 0; }
+.camera-imprimante { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: var(--chrome-fond); border-radius: 3px; margin: 6px 0; }
+
+/* ── Calibration ──
+   Une liste d'outils dans l'ordre conseillé : un seul déplié à la fois, pour
+   qu'on voie l'ordre sans se perdre dans les paramètres de tous. */
+.panneau-calibration { width: var(--largeur-panneau-calibration); }
+.intro-calibration, .texte-etage, .pourquoi-outil, .consigne-calibration {
+  color: var(--texte-doux);
+  font-size: var(--taille-petite);
+  white-space: normal;
+  margin: 4px 0;
+}
+.etage-calibration { margin: 10px 0 4px; }
+.etage-calibration:first-of-type { margin-top: 4px; }
+
+.outil-calibration {
+  border: 1px solid var(--chrome-bordure-fine);
+  border-radius: var(--rayon-champ);
+  padding: 4px 6px 6px;
+  margin: 3px 0;
+}
+.outil-calibration.ouvert { border-color: var(--accent); background: var(--chrome-panneau); }
+
+.titre-outil {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 2px 0;
+  font: inherit;
+  text-align: left;
+  color: var(--texte);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.rang-outil {
+  flex: none;
+  min-width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--taille-petite);
+  font-weight: 600;
+  color: var(--texte-doux);
+  border: 1px solid var(--chrome-bordure-fine);
+  border-radius: 50%;
+}
+.titre-outil.ouvert .rang-outil { color: var(--accent); border-color: var(--accent); }
+.nom-outil { font-weight: 600; flex: 1 1 auto; }
+.marque-fait, .marque-en-cours { flex: none; font-size: var(--taille-petite); }
+.marque-fait { color: var(--texte-leger); }
+.marque-en-cours { color: var(--accent); }
+.but-outil { margin: 2px 0 0 22px; white-space: normal; }
+.duree-outil { color: var(--texte-leger); font-size: var(--taille-petite); margin: 2px 0; }
+
+.bloc-parametres, .depouillement { margin-top: 8px; }
+.depouillement { border-top: 1px solid var(--chrome-bordure-fine); padding-top: 6px; }
+.rangee-constat { display: flex; align-items: flex-start; gap: 6px; margin: 3px 0; white-space: normal; }
+.rangee-constat input { margin-top: 2px; }
+.bilan-calibration {
+  margin-top: 6px;
+  padding: 6px;
+  background: var(--accent-fond);
+  border-radius: var(--rayon-champ);
+}
+.bilan-calibration p, .note-calibration p { white-space: normal; margin: 0 0 4px; }
+.note-calibration { margin-top: 8px; color: var(--texte-doux); font-size: var(--taille-petite); }
+.determine-outil { color: var(--texte-doux); font-size: var(--taille-petite); white-space: normal; margin: 2px 0; }
+.bloc-combinaisons { margin-bottom: 8px; }
+.compte-essais { margin-right: auto; color: var(--texte-doux); font-size: var(--taille-petite); }
+.nom-combinaison { font-weight: 600; }
+
+/* L'état d'un essai, à droite de son nom : à faire, fait, à refaire. */
+.marque-etat { flex: none; font-size: var(--taille-petite); }
+.marque-etat.a-faire { color: var(--texte-leger); }
+.marque-etat.fait { color: var(--etanche); }
+.marque-etat.a-refaire { color: var(--imprimante-pause); }
+
+/* Les valeurs qu'un essai vient de conclure, avant de les retenir. */
+.liste-conclusion { margin: 4px 0 6px; padding-left: 18px; }
+.liste-conclusion li { white-space: normal; }
+
+/* Une lecture à faire à l'œil : un peu détachée des cotes à relever. */
+.rangee-lecture .libelle { white-space: normal; }
+
+/* ── Comparer deux combinaisons ──
+   Une colonne par combinaison, une ligne par réglage qu'un essai décide. Ce qui
+   diverge est marqué : un matériau ne change pas parce qu'on change de plaque. */
+.bloc-comparaison { margin-top: 10px; }
+.ligne-comparaison {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(auto-fit, minmax(54px, max-content));
+  gap: 4px;
+  align-items: baseline;
+  padding: 2px var(--marge-horizontale) 2px 0;
+  font-size: var(--taille-petite);
+}
+.libelle-comparaison { color: var(--texte-doux); white-space: normal; }
+.valeur-comparaison { text-align: right; font-variant-numeric: tabular-nums; }
+.entete-comparaison { color: var(--texte-leger); border-bottom: 1px solid var(--chrome-bordure-fine); }
+.entete-comparaison .valeur-comparaison { white-space: normal; }
+.ligne-comparaison.accord .valeur-comparaison { color: var(--etanche); }
+.ligne-comparaison.desaccord .valeur-comparaison { color: var(--imprimante-pause); font-weight: 600; }
+
+/* Un réglage que la combinaison ou un essai tient : sa valeur, en gris, sans champ. */
+.rangee-reglage.verrouille .libelle { color: var(--texte-doux); }
+.valeur-figee {
+  justify-self: start;
+  align-self: center;
+  color: var(--texte-doux);
+  font-size: var(--taille-petite);
+  padding: 0 4px;
+}
+.rangee-reglage[data-role="a_determiner"] .valeur-figee { color: var(--accent); }
+
+/* Les esquisses : leur numéro (l'ordre dans lequel elles peuvent se viser),
+   et leur état — entièrement contrainte, encore libre, ou en défaut. */
+.numero-esquisse {
+  flex: 0 0 auto;
+  min-width: 14px;
+  text-align: right;
+  font-size: var(--taille-petite);
+  font-weight: 600;
+  color: var(--texte-doux);
+}
+.pastille-esquisse { flex: 0 0 auto; display: flex; }
+.pastille-esquisse svg.icone { width: 13px; height: 13px; }
+.pastille-esquisse.complete { color: var(--etanche); }
+.pastille-esquisse.libre { color: var(--esquisse-libre); }
+.pastille-esquisse.probleme { color: var(--trou); }
+.fleche-ordre.haut svg { transform: rotate(180deg); }
+.avancement-tranchage .barre-progression { margin: 6px 0 2px; }
+
+/* Les liens entre esquisses et objets : ce qui dépend de la ligne montrée
+   s'allume en plein, ce dont elle dépend en pointillé. */
+.ligne-arbre.dependante { box-shadow: inset 2px 0 0 var(--esquisse-reference); }
+.ligne-arbre.source { box-shadow: inset 2px 0 0 var(--esquisse-reference); opacity: 0.85; }
+.ligne-arbre.source .nom { font-style: italic; }
+.compte-liens {
+  flex: 0 0 auto;
+  min-width: 14px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--esquisse-reference);
+  color: var(--chrome-champ);
+  font-size: var(--taille-petite);
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Le diagnostic d'impression : ce que le tranchage a repéré avant de lancer. */
+.bloc-diagnostic { margin-bottom: 6px; }
+.liste-diagnostic { display: flex; flex-direction: column; gap: 6px; padding: 6px; }
+.diagnostic-bon { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--etanche); }
+.constat { border-left: 3px solid var(--esquisse-libre); padding-left: 6px; }
+.constat.alerte { border-left-color: var(--trou); }
+.tete-constat { display: flex; align-items: center; gap: 6px; }
+.tete-constat svg.icone { width: 14px; height: 14px; color: var(--esquisse-libre); flex: 0 0 auto; }
+.constat.alerte .tete-constat svg.icone { color: var(--trou); }
+.titre-constat { flex: 1 1 auto; font-weight: 600; }
+.detail-constat { margin: 2px 0 0; color: var(--texte-doux); font-size: var(--taille-petite); }

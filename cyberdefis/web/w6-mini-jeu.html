@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>W6 — Reprenez donc des cookies !</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/cyberdefis/style.css">
+</head>
+<body>
+
+  <div class="defis">
+    <div class="defis-page">
+
+      <div class="fil-ariane">
+        <a href="/index.html">Accueil</a> &gt; <a href="/cyberdefis/">Cyber-défis</a> &gt;
+        <a href="/cyberdefis/web/">Sous le capot du Web</a> &gt; W6
+      </div>
+
+      <div class="bandeau"><h1>W6 — Reprenez donc des cookies !</h1></div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Énoncé</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p>
+              Bravo, vous avez bien progressé en réussissant tous ces challenges ! Vous méritez
+              bien un mini-jeu pour vous détendre. J'espère qu'il vous plaira ; en tout cas, j'ai
+              fait tout ce que je pouvais pour qu'il soit dynamique et intéressant.
+            </p>
+            <p>
+              <strong>Objectif :</strong> à chaque fois que vous rechargez la page, le site ajoute
+              1 point à votre score et le sauvegarde dans votre navigateur. Atteignez le score de
+              <span class="monospace">999&nbsp;999</span> pour gagner !
+            </p>
+            <p class="discret">Format attendu : <span class="monospace">FLAG{…}</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Mini-jeu</div>
+        <div class="fenetre-corps">
+          <div class="papier" style="text-align:center;">
+            <p style="margin:6px 0;">Votre score :</p>
+            <p id="score" class="monospace" style="font-size:34px; font-weight:bold; margin:6px 0;">1</p>
+            <p><button id="valider" class="bouton">Valider</button></p>
+            <p id="jeu-msg" class="panneau-message" style="text-align:center;"></p>
+          </div>
+        </div>
+      </div>
+
+      <div id="panneau"></div>
+
+    </div>
+  </div>
+
+  <script>
+    // Le score vit dans un cookie, sur la machine du joueur : +1 à chaque rechargement.
+    (function () {
+      function lireScore() {
+        var t = document.cookie.split(";").map(function (c) { return c.trim(); })
+                .find(function (c) { return c.indexOf("score=") === 0; });
+        return t ? parseInt(t.slice(6), 10) : null;
+      }
+      function ecrireScore(n) { document.cookie = "score=" + n + "; path=/cyberdefis/"; }
+
+      var s = lireScore();
+      s = (s === null || isNaN(s)) ? 1 : s + 1;
+      ecrireScore(s);
+      document.getElementById("score").textContent = s.toLocaleString("fr-FR");
+
+      document.getElementById("valider").addEventListener("click", function () {
+        var courant = lireScore();
+        var msg = document.getElementById("jeu-msg");
+        if (courant !== null && courant >= 999999) {
+          msg.textContent = "FLAG{VICTOIRE}";
+          msg.className = "panneau-message est-ok";
+        } else {
+          msg.textContent = "Presque ! Encore quelques clics…";
+          msg.className = "panneau-message est-attente";
+        }
+      });
+    })();
+  </script>
+  <script src="/cyberdefis/defis.js"></script>
+  <script>Defis.panneau({ defi: "w6" });</script>
+  <script src="/cyberdefis/site-nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>W5 — Voulez-vous des cookies ?</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/cyberdefis/style.css">
+</head>
+<body>
+
+  <div class="defis">
+    <div class="defis-page">
+
+      <div class="fil-ariane">
+        <a href="/index.html">Accueil</a> &gt; <a href="/cyberdefis/">Cyber-défis</a> &gt;
+        <a href="/cyberdefis/web/">Sous le capot du Web</a> &gt; W5
+      </div>
+
+      <div class="bandeau"><h1>W5 — Voulez-vous des cookies ?</h1></div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Énoncé</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p>
+              Lorsqu'un visiteur arrive sur un site, celui-ci peut demander au navigateur
+              d'enregistrer des informations dans un cookie. Par exemple : un identifiant, le
+              nombre de visites, la langue préférée…
+            </p>
+            <p>En arrivant sur cette page, ton navigateur a enregistré un cookie. Le flag est caché dedans.</p>
+            <p class="discret">Format attendu : <span class="monospace">FLAG{…}</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Zone d'affichage</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p style="text-align:center; margin:16px 0;">Le flag n'est pas écrit ici.</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="panneau"></div>
+
+    </div>
+  </div>
+
+  <script>
+    // Le site enregistre un cookie sur la machine du visiteur. Le nombre de visites
+    // est un vrai compteur (localStorage), pour que le cookie ne soit pas figé.
+    (function () {
+      var id, visites;
+      try {
+        id = localStorage.getItem("w5_session");
+        if (!id) { id = Math.random().toString(16).slice(2, 10); localStorage.setItem("w5_session", id); }
+        visites = parseInt(localStorage.getItem("w5_visites") || "0", 10) + 1;
+        localStorage.setItem("w5_visites", String(visites));
+      } catch (e) {
+        id = Math.random().toString(16).slice(2, 10);
+        visites = 1;
+      }
+      var valeur =
+        "identifiant_de_session=" + id +
+        "|nombre_de_visites=" + visites +
+        "|langue_preferee=Francais" +
+        "|citation=FLAG{J'<3_LES_DEFIS}";
+      document.cookie = "cookie_site_techno=" + valeur + "; path=/cyberdefis/";
+    })();
+  </script>
+  <script src="/cyberdefis/defis.js"></script>
+  <script>Defis.panneau({ defi: "w5" });</script>
+  <script src="/cyberdefis/site-nav.js"></script>
+</body>
+</html>

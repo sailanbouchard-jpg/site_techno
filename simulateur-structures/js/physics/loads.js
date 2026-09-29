@@ -11,7 +11,7 @@
 // Convention d'axes Canvas2D : Y augmente vers le BAS, la gravité est en +Y.
 
 import { GRAVITY_ACCELERATION, GRAVITY_RAMP_DURATION } from "./config.js";
-import { computeNodeEffectiveMass } from "./mass.js";
+import { preparerMasses } from "./mass.js";
 import { findLoadByJointId, findBeamById, beamSegmentAtFraction } from "../model/Structure.js";
 import { getCurrentRoadSegment } from "./vehicleMotion.js";
 
@@ -24,6 +24,7 @@ export function getGravityRampFactor(currentTime) {
 
 export function getExternalForce(structure, node, time) {
   const f = { fx: 0, fy: 0 };
+  preparerMasses(structure);
   addExternalForce(f, structure, node, time);
   return f;
 }
@@ -32,8 +33,10 @@ export function getExternalForce(structure, node, time) {
 // (réutilisé tel quel à chaque pas par le moteur, voir simulationEngine).
 export function addExternalForce(f, structure, node, time) {
   const ramp = getGravityRampFactor(time);
-  // Poids propre (masse des poutres connectées).
-  f.fy += computeNodeEffectiveMass(structure, node) * GRAVITY_ACCELERATION * ramp;
+  // Poids propre (masse des poutres connectées). node._masse est la VRAIE masse,
+  // préparée en tête de pas (mass.js) : jamais la masse d'inertie gonflée du
+  // solveur, sinon la structure porterait plus lourd qu'elle ne pèse.
+  f.fy += node._masse * GRAVITY_ACCELERATION * ramp;
   // Poids posé éventuel sur ce nœud (force, pas inertie).
   if (node.kind === "joint") {
     const load = findLoadByJointId(structure, node.id);

@@ -13,23 +13,26 @@
 
 import {
   state, MODES, TOOLS, setSelection, clearSelection, setTool,
-  setMultiSelection, deleteMultiSelection,
-  captureUndoBeforeDelete, restoreLastDeletion, clearUndo,
+  setMultiSelection, estModifiable, supprimerSelection,
+  captureUndo, restoreLastChange, clearUndo,
 } from "../state.js";
 import {
   addBeam, removeBeam, addLoad, addBeamLoad, removeLoad, findLoadByJointId,
   findNodeById, findBeamById, canAddBeam, clampBeamEnd, addMobileLoad, removeMobileLoad,
-  findJointAtGrid, jointBeamCount,
-  addAnchorPoint, removeAnchorPoint, removeJoint, toggleAnchor,
+  findJointAtGrid, jointBeamCount, moveJoint, bumpTerrainVersion,
+  addAnchorPoint, removeAnchorPoint, toggleAnchor,
+  basculerArrivee, estNoeudDeRoute,
 } from "../model/Structure.js";
+import { ajouterBateau, retirerBateau, bateauSous } from "../model/bateau.js";
 import { syncToolbar } from "./toolbar.js";
-import { worldToNearestGrid } from "../model/mesh.js";
+import { worldToNearestGrid, gridToWorld } from "../model/mesh.js";
+import { isInsideTerrain } from "../model/terrain.js";
 import { getVehiclePresetById, instantiateVehicleParams } from "../model/vehiclePresets.js";
 import {
   PIXELS_PER_METER, NODE_CLICK_RADIUS, ELEMENT_CLICK_TOLERANCE,
   WEIGHT_CLICK_TOLERANCE, VEHICLE_CLICK_TOLERANCE,
 } from "../render/styleConfig.js";
-import { worldToBasePixels, screenToWorld, screenToBasePixels } from "../render/displayTransform.js";
+import { worldToBasePixels, screenToWorld, screenToBasePixels, viewport } from "../render/displayTransform.js";
 import { resolveVehicleDisplayPosition } from "../render/vehicleRenderer.js";
 import { getLoadIconBox } from "../render/renderer.js";
 
@@ -37,7 +40,7 @@ export function initStructureEditor(canvas, { onInspect }) {
   canvas.addEventListener("click", (event) => {
     // Le "click" qui conclut un tracé de RECTANGLE de sélection n'est pas un
     // clic : on l'avale (sinon il désélectionnerait ce qu'on vient de choisir).
-    if (consumeRectSelectClick()) return;
+    if (consumeDragClick()) return;
     clearUndo(); // tout clic sur le canvas = "on bouge ailleurs" → l'annulation expire
     if (state.mode !== MODES.EDIT && state.currentTool !== TOOLS.SELECT) return;
     const world = screenToWorld(...coords(canvas, event), buildView(canvas));
@@ -56,12 +59,16 @@ export function initStructureEditor(canvas, { onInspect }) {
         return snapGrid(world) ? handleTerrain(world) : void tryInspectBeam(bx, onInspect);
       case TOOLS.ANCHOR:
         return snapGrid(world) ? handleAnchor(world) : void tryInspectBeam(bx, onInspect);
+      case TOOLS.ARRIVEE: return handleArrivee(bx);
       case TOOLS.ADD_WEIGHT:
         return handleAddWeight(bx, onInspect);
       case TOOLS.ADD_CAR:
         return findRoadBeamNear(bx) ? handleAddVehicle("car", bx) : void tryInspectBeam(bx, onInspect);
+      case TOOLS.ADD_VAN:
+        return findRoadBeamNear(bx) ? handleAddVehicle("van", bx) : void tryInspectBeam(bx, onInspect);
       case TOOLS.ADD_TRUCK:
         return findRoadBeamNear(bx) ? handleAddVehicle("truck", bx) : void tryInspectBeam(bx, onInspect);
+      case TOOLS.ADD_BOAT: return handleBoat(world);
       case TOOLS.DELETE: return handleDelete(bx);
       case TOOLS.SELECT: return handleSelect(bx, onInspect);
       default: return void tryInspectBeam(bx, onInspect);
@@ -76,20 +83,26 @@ export function initStructureEditor(canvas, { onInspect }) {
   });
 
   canvas.addEventListener("mousemove", (event) => {
+    state.pointer = screenToWorld(...coords(canvas, event), buildView(canvas)); // barre d'état, règles
     const t = state.currentTool;
     const hovering = state.mode === MODES.EDIT && (t === TOOLS.ADD_BEAM || t === TOOLS.TERRAIN || t === TOOLS.ANCHOR);
     let hg = hovering ? snapGrid(screenToWorld(...coords(canvas, event), buildView(canvas))) : null;
-    // En pose de poutre, l'aperçu montre l'accrochage sur un point existant proche.
-    if (hg && t === TOOLS.ADD_BEAM) hg = snapToExistingJoint(hg);
+    // En pose de poutre, l'aperçu montre l'accrochage sur un point existant
+    // proche ; un point DANS la roche n'accroche rien (on n'y construit pas).
+    if (hg && t === TOOLS.ADD_BEAM) {
+      hg = snapToExistingJoint(hg);
+      if (insideRock(hg)) hg = null;
+    }
     state.hoverGrid = hg;
   });
-  canvas.addEventListener("mouseleave", () => { state.hoverGrid = null; });
+  canvas.addEventListener("mouseleave", () => { state.hoverGrid = null; state.pointer = null; });
 
   // Raccourcis clavier : Échap (voir ci-dessous) ; Suppr/Retour arrière →
   // supprimer l'élément sélectionné ; Ctrl/Cmd+Z → annuler la dernière suppression.
   document.addEventListener("keydown", (event) => {
     const tag = (event.target && event.target.tagName) || "";
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return; // ne pas gêner la saisie
+    if (document.querySelector(".voile:not([hidden])")) return; // un dialogue ouvert gère ses touches
 
     if (event.key === "Escape") {
       // En POSE de poutre, si une chaîne est en cours (un point de départ est en
@@ -107,43 +120,41 @@ export function initStructureEditor(canvas, { onInspect }) {
     }
     if (event.key === "Delete" || event.key === "Backspace") {
       event.preventDefault(); // évite aussi la navigation "retour" du navigateur
-      // Sélection MULTIPLE (rectangle) : tout supprimer d'un coup — un seul
-      // instantané est pris, donc un seul Ctrl+Z restaure tout.
-      if (state.mode === MODES.EDIT && state.multiSelection.length > 0) {
-        deleteMultiSelection();
-        onInspect();
-        return;
-      }
-      if (state.mode === MODES.EDIT && state.selection.type) {
-        deleteElement(state.selection.type, state.selection.id); // capture l'annulation
-        onInspect();
-      }
+      // Simple ou multiple : un seul instantané, donc un seul Ctrl+Z restaure tout.
+      if (supprimerSelection()) onInspect();
       return;
     }
     if ((event.ctrlKey || event.metaKey) && (event.key === "z" || event.key === "Z")) {
       event.preventDefault();
-      if (restoreLastDeletion()) onInspect();
+      if (restoreLastChange()) onInspect();
       return;
     }
   });
 
   initPanDragging(canvas);
+  initBoatDrag(canvas, onInspect);
+  initJointDrag(canvas, onInspect);
   initRectSelection(canvas, onInspect);
 }
 
-function buildView(canvas) {
-  return { zoomLevel: state.zoomLevel, cameraX: state.cameraX, cameraY: state.cameraY, canvasWidth: canvas.width, canvasHeight: canvas.height };
+// Vue et coordonnées en pixels CSS (la densité de l'écran ne concerne que le dessin).
+function buildView() {
+  return { zoomLevel: state.zoomLevel, cameraX: state.cameraX, cameraY: state.cameraY, canvasWidth: viewport.width, canvasHeight: viewport.height };
 }
 function coords(canvas, event) {
   const rect = canvas.getBoundingClientRect();
-  const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
-  return [(event.clientX - rect.left) * sx, (event.clientY - rect.top) * sy];
+  return [event.clientX - rect.left, event.clientY - rect.top];
 }
 
 // Point du maillage le plus proche, seulement s'il est assez près (accrochage).
 function snapGrid(world) {
   const g = worldToNearestGrid(world.x, world.y);
   return g.distance * PIXELS_PER_METER <= NODE_CLICK_RADIUS ? { i: g.i, j: g.j } : null;
+}
+
+function insideRock(grid) {
+  const w = gridToWorld(grid.i, grid.j);
+  return isInsideTerrain(state.structure, w.x, w.y);
 }
 
 // Si la maille visée est TROP PROCHE d'un point (joint) existant — à une maille
@@ -174,6 +185,7 @@ function handleAddBeam(world) {
   let grid = snapGrid(world);
   if (!grid) return;
   grid = snapToExistingJoint(grid); // trop près d'un point existant → on s'y pose
+  if (insideRock(grid)) return; // on ne construit pas dans la roche
 
   if (!state.pendingBeamFirstGrid) {
     state.pendingBeamFirstGrid = grid;
@@ -266,13 +278,40 @@ function handleAddVehicle(presetId, bx) {
   const b = findNodeById(state.structure, beam.jointBId);
   const startFraction = projectFraction(bx, worldToBasePixels(a), worldToBasePixels(b));
   const preset = getVehiclePresetById(presetId);
-  const { mass, powerHp, referenceSpeed } = instantiateVehicleParams(preset);
+  const { mass, masseAffichee, powerHp, referenceSpeed } = instantiateVehicleParams(preset);
   addMobileLoad(state.structure, {
-    presetId, mass, powerHp, referenceSpeed, beamId: beam.id, startFraction,
+    presetId, mass, masseAffichee, powerHp, referenceSpeed, beamId: beam.id, startFraction,
   });
 }
 
+// Outil Bateau : cliquer sur l'eau pose un bateau du type choisi, cliquer un
+// bateau déjà posé le retire. Le bateau se cale au demi-mètre, comme le reste.
+function handleBoat(world) {
+  const existant = bateauSous(state.structure, world.x, world.y);
+  captureUndo();
+  if (existant) retirerBateau(state.structure, existant.id);
+  else ajouterBateau(state.structure, Math.round(world.x * 2) / 2, state.currentTypeBateau);
+  bumpTerrainVersion(state.structure); // le décor statique est à redessiner
+}
+
+// Le drapeau d'arrivée se plante sur un point de la ROUTE : ailleurs, aucun
+// véhicule ne pourrait l'atteindre. Recliquer le même point le retire.
+function handleArrivee(bx) {
+  const joint = findJointNear(bx);
+  if (!joint || !estNoeudDeRoute(state.structure, joint.id)) return;
+  captureUndo();
+  basculerArrivee(state.structure, joint.id);
+}
+
 function handleDelete(bx) {
+  const bateau = bateauSousPixels(bx);
+  if (bateau && estModifiable({ type: "bateau", id: bateau.id })) {
+    captureUndo();
+    retirerBateau(state.structure, bateau.id);
+    bumpTerrainVersion(state.structure);
+    clearSelection();
+    return;
+  }
   const v = findVehicleNear(bx);
   if (v) { removeMobileLoad(state.structure, v.id); clearSelection(); return; }
   const load = findLoadNear(bx);
@@ -299,6 +338,8 @@ function tryInspectBeam(bx, onInspect) {
 }
 
 function handleSelect(bx, onInspect) {
+  // Un bateau se sélectionne comme le reste : il est large, on le teste en
+  // dernier pour ne pas voler le clic à une poutre qui passerait devant.
   const v = findVehicleNear(bx);
   if (v) { setSelection("vehicle", v.id); onInspect(); return; }
   const load = findLoadNear(bx);
@@ -307,17 +348,16 @@ function handleSelect(bx, onInspect) {
   if (joint) { setSelection("node", joint.id); onInspect(); return; }
   const beam = findBeamNear(bx);
   if (beam) { setSelection("beam", beam.id); onInspect(); return; }
+  const bateau = bateauSousPixels(bx);
+  if (bateau) { setSelection("bateau", bateau.id); onInspect(); return; }
   clearSelection();
   onInspect();
 }
 
-function deleteElement(type, id) {
-  captureUndoBeforeDelete(); // permet le Ctrl+Z juste après
-  if (type === "vehicle") removeMobileLoad(state.structure, id);
-  else if (type === "load") removeLoad(state.structure, id);
-  else if (type === "beam") removeBeam(state.structure, id);
-  else if (type === "node") removeJoint(state.structure, id); // poutres rattachées + le point (même ancré)
-  clearSelection();
+// Le bateau sous un point donné en pixels de base (le monde s'en déduit).
+function bateauSousPixels(bx) {
+  const monde = { x: bx[0] / PIXELS_PER_METER, y: bx[1] / PIXELS_PER_METER };
+  return bateauSous(state.structure, monde.x, monde.y);
 }
 
 // ── Recherches (en "pixels de base") ──
@@ -382,6 +422,115 @@ function distSeg(px, py, ax, ay, bx2, by) {
   return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }
 
+// ── Promener un POINT : clic GAUCHE maintenu SUR un joint (outil Choisir) ──
+// Le point suit le maillage sous la souris ; toutes les poutres qui s'y
+// rattachent s'allongent ou se raccourcissent avec lui. Le déplacement n'est
+// accepté QUE s'il laisse chaque poutre valide (longueur maximale de son type,
+// 1 m minimum, pas de recouvrement) : sinon le point reste à sa dernière
+// position tenable, et on peut continuer à promener la souris pour en trouver
+// une autre. Ctrl+Z ramène tout où c'était avant le glissement.
+
+// ── Promener un BATEAU (outil Bateau) ──
+// Glisser un bateau le fait coulisser le long de l'eau, au demi-mètre. Un simple
+// clic sur un bateau le RETIRE (voir handleBoat) : le glissement avale donc le
+// clic qui le suit, sinon déplacer un bateau le supprimerait aussitôt.
+
+function initBoatDrag(canvas, onInspect) {
+  let bateau = null;
+  let deplace = false;
+
+  const bateauSousCurseur = (event) => {
+    const monde = screenToWorld(...coords(canvas, event), buildView(canvas));
+    return bateauSous(state.structure, monde.x, monde.y);
+  };
+
+  canvas.addEventListener("mousedown", (event) => {
+    if (event.button !== 0) return;
+    if (state.mode !== MODES.EDIT) return;
+    // Outil Bateau ou outil Sélection : dans les deux cas on attrape le bateau.
+    if (state.currentTool !== TOOLS.ADD_BOAT && state.currentTool !== TOOLS.SELECT) return;
+    const trouve = bateauSousCurseur(event);
+    bateau = trouve && estModifiable({ type: "bateau", id: trouve.id }) ? trouve : null;
+    deplace = false;
+    // L'attraper, c'est le choisir : ses propriétés s'ouvrent, et Suppr agira
+    // bien sur lui même après l'avoir promené.
+    if (bateau && state.currentTool === TOOLS.SELECT) {
+      setSelection("bateau", bateau.id);
+      onInspect();
+    }
+  });
+
+  window.addEventListener("mousemove", (event) => {
+    if (!bateau) return;
+    const monde = screenToWorld(...coords(canvas, event), buildView(canvas));
+    const x = Math.round(monde.x * 2) / 2;
+    if (x === bateau.x) return;
+    if (!deplace) captureUndo(); // un seul Ctrl+Z pour tout le glissement
+    bateau.x = x;
+    deplace = true;
+    bumpTerrainVersion(state.structure);
+  });
+
+  window.addEventListener("mouseup", (event) => {
+    if (event.button !== 0 || !bateau) return;
+    if (deplace) {
+      dragTermineA = performance.now(); // le clic qui suit ne doit pas supprimer
+      onInspect(); // la position affichée suit le bateau
+    }
+    bateau = null;
+    deplace = false;
+  });
+}
+
+function initJointDrag(canvas, onInspect) {
+  let jointId = null;
+  let deplace = false; // un instantané d'annulation n'est pris qu'au premier vrai mouvement
+
+  const jointSousCurseur = (event) => {
+    const bp = screenToBasePixels(...coords(canvas, event), buildView(canvas));
+    return findJointNear([bp.x, bp.y]);
+  };
+
+  canvas.addEventListener("mousedown", (event) => {
+    if (event.button !== 0) return;
+    if (state.mode !== MODES.EDIT || state.currentTool !== TOOLS.SELECT) return;
+    const joint = jointSousCurseur(event);
+    if (!joint || !estModifiable({ type: "node", id: joint.id })) return;
+    jointId = joint.id;
+    deplace = false;
+    canvas.style.cursor = "grabbing";
+  });
+
+  window.addEventListener("mousemove", (event) => {
+    if (!jointId) {
+      // Survol : on montre que le point est attrapable.
+      if (state.mode === MODES.EDIT && state.currentTool === TOOLS.SELECT) {
+        const joint = jointSousCurseur(event);
+        canvas.style.cursor = joint && estModifiable({ type: "node", id: joint.id }) ? "grab" : "";
+      }
+      return;
+    }
+    const world = screenToWorld(...coords(canvas, event), buildView(canvas));
+    const cible = worldToNearestGrid(world.x, world.y);
+    const node = findNodeById(state.structure, jointId);
+    if (!node || (cible.i === node.gridI && cible.j === node.gridJ)) return;
+    if (!deplace) captureUndo(); // un seul Ctrl+Z pour tout le glissement
+    if (moveJoint(state.structure, jointId, { i: cible.i, j: cible.j })) deplace = true;
+  });
+
+  window.addEventListener("mouseup", (event) => {
+    if (event.button !== 0 || !jointId) return;
+    if (deplace) {
+      setSelection("node", jointId);
+      onInspect();
+      dragTermineA = performance.now(); // avale le « click » qui suit
+    }
+    jointId = null;
+    deplace = false;
+    canvas.style.cursor = "";
+  });
+}
+
 // ── Sélection RECTANGLE : clic GAUCHE maintenu dans le vide (outil Sélectionner) ──
 // Cliquer-glisser dans le vide trace un rectangle élastique ; au relâchement,
 // tous les éléments ENTIÈREMENT compris dedans sont sélectionnés — poutres,
@@ -395,10 +544,10 @@ const RECT_DRAG_THRESHOLD_PX = 5; // en dessous : simple clic, pas de rectangle
 // Horodatage de fin de tracé : le "click" du navigateur qui suit immédiatement
 // le relâchement est avalé (sinon il désélectionnerait tout). Fenêtre courte :
 // si aucun click ne suit (relâchement hors canvas), rien ne reste bloqué.
-let rectSelectEndedAt = -Infinity;
-function consumeRectSelectClick() {
-  const recent = performance.now() - rectSelectEndedAt < 300;
-  rectSelectEndedAt = -Infinity;
+let dragTermineA = -Infinity;
+function consumeDragClick() {
+  const recent = performance.now() - dragTermineA < 300;
+  dragTermineA = -Infinity;
   return recent;
 }
 
@@ -413,6 +562,8 @@ function initRectSelection(canvas, onInspect) {
     const bx = [bp.x, bp.y];
     // Un élément sous le curseur → clic normal (sélection simple), pas de rectangle.
     if (findVehicleNear(bx) || findLoadNear(bx) || findJointNear(bx) || findBeamNear(bx)) return;
+    // Un bateau non plus : ce geste-là sert à le promener (initBoatDrag).
+    if (bateauSousPixels(bx)) return;
     startCanvas = coords(canvas, event);
     dragging = false;
   });
@@ -435,7 +586,7 @@ function initRectSelection(canvas, onInspect) {
     if (dragging && state.selectionRect) {
       setMultiSelection(collectElementsInRect(state.selectionRect));
       onInspect();
-      rectSelectEndedAt = performance.now(); // avale le "click" qui va suivre
+      dragTermineA = performance.now(); // avale le "click" qui va suivre
     }
     startCanvas = null;
     dragging = false;
@@ -501,6 +652,6 @@ function initPanDragging(canvas) {
   });
   window.addEventListener("mouseup", () => {
     if (!panning) return;
-    panning = false; canvas.style.cursor = "default";
+    panning = false; canvas.style.cursor = "";
   });
 }

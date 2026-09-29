@@ -12,6 +12,22 @@ taille     = 14px
 couleur    = #222222
 interligne = 1.7
 
+[navbar]
+largeur = 224px
+# Texte : classes (3eme…) larges et grasses comme le logo, séquences
+# semi-grasses, pages normales ; champs et bouton en bas de la navbar
+taille_classe = 11px    poids_classe = 800    largeur_classe = 118%
+taille_dossier = 12.5px    poids_dossier = 600    espacement_dossier = 0.025em
+taille_page = 12.5px    poids_page = 430
+taille_champ = 12.5px
+fond = #f2ead9    bordure = #111111    texte = #1c1a16    titre = #111111
+survol_fond = #e6d7b5    ligne = #8a7650
+dossier = #c8901a    fichier = #5a4e3a    classe_texte = #111111
+actif_fond = #111111    actif_texte = #e8b04a    actif_barre = #c8901a
+police = Archivo, system-ui, sans-serif
+ombre = #111111    champ_fond = #fffaf0
+bouton_fond = #111111    bouton_texte = #e8b04a
+
 [h1]
 taille  = 1.9em    couleur = #1a1a2e    poids = bold
 
@@ -87,6 +103,9 @@ fond = #f0f7ff    bordure = #3b82f6    texte = #1e3a8a
 
 [pdf]
 bouton_fond = #f8fafc    bouton_bordure = #64748b    bouton_texte = #1e293b    bouton_fond_survol = #e2e8f0
+compteur_fond = #ffffff    compteur_bordure = #1e293b    compteur_texte = #1e293b
+barre_fond = #eeeeee    barre_curseur = #888888    barre_curseur_survol = #555555    barre_epaisseur = 6px
+fleche_fond = transparent    fleche_fond_survol = rgba(30, 41, 59, 0.25)    fleche_texte = #1e293b    fleche_largeur = 20px
 
 [tbl]
 fond = #ffffff    bordure = #cccccc    entete_fond = #e8f0f8    entete_texte = #1a3a5e
@@ -140,3 +159,16 @@ padding_page        = 18px 24px
 hauteur_a4          = 1123px
 marge_pages         = 32px
 rayon_miniature     = 3px
+
+[accueil]
+# Page de garde (templates/accueil.html). Volontairement nue : un titre, une
+# ligne, et la note technique en bas a droite. Fond blanc, aucun cadre.
+# Pas de commentaire en fin de ligne : le # sert aux couleurs hexa.
+police            = Archivo, system-ui, sans-serif
+fond              = #ffffff
+texte             = #1c1a16
+titre             = #111111
+muet              = #55504a
+titre_taille      = 2.05em
+technique         = #7a6a4e
+technique_taille  = 0.78em

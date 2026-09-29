@@ -1,0 +1,205 @@
+/*
+ * v0/v0_provisoire.css
+ * ────────────────────
+ * Habillage jetable du jalon V0. Il n'y a ici aucun travail de mise en forme :
+ * V0 sert à mesurer, pas à montrer. Ce fichier disparaît en V1, remplacé par
+ * reglages_interface.css / disposition_generale.css / panneaux.css / champs.css.
+ *
+ * Les JETONS ci-dessous, eux, restent : ce sont ceux de la spécification, et
+ * la vue 3D lit ses couleurs ici plutôt que de les écrire en dur dans le JS.
+ */
+
+:root {
+  --chrome-fond: #eceef0;
+  --chrome-panneau: #f4f5f7;
+  --chrome-champ: #ffffff;
+  --chrome-bordure: #c2c7cc;
+  --chrome-bordure-fine: #dadee2;
+  --chrome-survol: #e2e6ea;
+  --texte: #22272b;
+  --texte-doux: #636b72;
+  --accent: #0a6cb8;
+  --accent-fond: #dbe9f5;
+  --selection-3d: #ff8c1a;
+  --survol-3d: #ffc266;
+  --trou: #e05a3a;
+  --vue-fond-haut: #f2f4f6;
+  --vue-fond-bas: #dde3e8;
+
+  /* Lues par interface/couleurs_de_la_vue.js et transmises à la scène. */
+  --objet-3d: #9fb3c8;
+  --grille-grosse: #b6bec6;
+  --grille-fine: #d3d9de;
+  --axe-x: #d8453a;
+  --axe-y: #3f9b4a;
+  --axe-z: #2f6fd0;
+  --esquisse-trait: #3b4046;
+  --esquisse-aplat: #7fb0dc;
+  --esquisse-silhouette: #8a939b;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;              /* la page ne défile jamais : c'est un logiciel */
+}
+
+body {
+  display: grid;
+  grid-template-rows: 30px 1fr 22px;
+  /* Les colonnes latérales cèdent de la place avant la vue : sur un écran
+     étroit, c'est la vue 3D qu'on doit garder utilisable, pas les listes. */
+  grid-template-columns: minmax(110px, 190px) minmax(240px, 1fr) minmax(150px, 300px);
+  grid-template-areas:
+    "haut haut haut"
+    "gauche vue droite"
+    "etat etat etat";
+  font: 12px system-ui, sans-serif;
+  color: var(--texte);
+  background: var(--chrome-fond);
+  font-variant-numeric: tabular-nums;
+}
+
+.barre-haute {
+  grid-area: haut;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  white-space: nowrap;           /* une barre d'outils ne passe jamais à la ligne */
+  overflow: hidden;
+  background: var(--chrome-panneau);
+  border-bottom: 1px solid var(--chrome-bordure);
+}
+
+.titre {
+  font-weight: 600;
+  margin-right: 10px;
+}
+
+.jalon {
+  color: var(--texte-doux);
+  margin-right: auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;       /* c'est le libellé qui cède, pas les boutons */
+}
+
+.barre-haute button,
+.barre-haute label {
+  flex-shrink: 0;
+}
+
+button {
+  font: inherit;
+  color: var(--texte);
+  background: var(--chrome-champ);
+  border: 1px solid var(--chrome-bordure);
+  border-radius: 2px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) { background: var(--chrome-survol); }
+button:disabled { color: var(--texte-doux); cursor: default; }
+
+.panneau {
+  min-width: 0;
+  overflow-y: auto;              /* chaque panneau défile en lui-même */
+  background: var(--chrome-panneau);
+  padding: 4px 6px;
+}
+
+.panneau-gauche { grid-area: gauche; border-right: 1px solid var(--chrome-bordure); }
+.panneau-droit { grid-area: droite; border-left: 1px solid var(--chrome-bordure); }
+
+.panneau h2 {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 8px 0 4px;
+  color: var(--texte-doux);
+}
+
+.panneau h2:first-child { margin-top: 0; }
+
+.vue {
+  grid-area: vue;
+  position: relative;
+  min-width: 0;
+  overflow: hidden;              /* rien de la vue ne déborde sur les panneaux */
+  background: linear-gradient(var(--vue-fond-haut), var(--vue-fond-bas));
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.vues-normalisees {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  left: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 2px;
+  pointer-events: none;          /* la bande vide au-dessus de la vue reste cliquable */
+}
+
+.vues-normalisees button {
+  pointer-events: auto;
+}
+
+.panneau button {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  white-space: normal;
+  text-align: left;
+}
+
+.barre-etat {
+  grid-area: etat;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  background: var(--chrome-panneau);
+  border-top: 1px solid var(--chrome-bordure);
+  color: var(--texte-doux);
+}
+
+.barre-etat .alerte { color: var(--trou); }
+.barre-etat .etanche { color: var(--accent); }
+
+.arbre { list-style: none; margin: 0; padding: 0; }
+
+.arbre li {
+  height: 22px;
+  line-height: 22px;
+  padding: 0 4px;
+  cursor: default;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.arbre li:hover { background: var(--chrome-survol); }
+.arbre li.choisi { background: var(--accent-fond); color: var(--accent); }
+.arbre li .marque-trou { color: var(--trou); }
+
+.mesures { width: 100%; border-collapse: collapse; }
+.mesures td { padding: 1px 0; vertical-align: top; }
+.mesures td:last-child { text-align: right; white-space: nowrap; }
+.mesures .separateur td { border-top: 1px solid var(--chrome-bordure-fine); padding-top: 4px; }
+
+.note {
+  color: var(--texte-doux);
+  margin: 6px 0 0;
+  line-height: 1.45;
+}

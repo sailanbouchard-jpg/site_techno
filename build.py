@@ -10,7 +10,8 @@ OUTPUT:
     index.html
     static/style.css
     medias/...        (copié depuis contenu/medias/, arborescence préservée)
-    simulateur-structures/...  (copié tel quel depuis simulateur-structures/, module autonome)
+    simulateur-structures/...  (copié tel quel, module autonome)
+    simulateur-cmd/...         (copié tel quel, module autonome)
     3eme/
       s01_systemes_automatises/
         activite_01_automatismes.html
@@ -31,6 +32,7 @@ from core.page_catalog             import build_catalog
 from core.page_renderer            import render_page
 from core.page_builder             import (
     build_navbar_html,
+    inject_navbar_into_standalone,
     build_content_page_html,
     build_home_page_html,
 )
@@ -51,6 +53,9 @@ STATIC    = ROOT / "static"          # CSS, fonts, JS
 PALETTES  = ROOT / "palettes"        # .palette files
 PAGES     = ROOT / "pages"           # standalone HTML pages copied verbatim to site/
 SIMULATEUR_STRUCTURES = ROOT / "simulateur-structures"  # module autonome (HTML/CSS/JS), copié tel quel
+SIMULATEUR_CMD        = ROOT / "simulateur-cmd"          # défis en ligne de commande, copiés tels quels
+ATELIER_3D = ROOT / "atelier-3d"     # logiciel de CAO (modules ES + WebAssembly), copié tel quel
+CYBERDEFIS = ROOT / "cyberdefis"     # défis type CTF (réseaux, web), copiés tels quels
 
 
 # ─────────────────────────────────────────────────────────────
@@ -139,7 +144,7 @@ def main():
     print(f"   ✓ Catalog: {page_count} activités, {seq_count} séquences, {len(catalog)} classes")
 
     # 9. Build shared navbar (same on every page)
-    navbar_html = build_navbar_html(catalog, navbar_template)
+    navbar_html = build_navbar_html(catalog, navbar_template, available_palettes)
 
     # 10. Render and write each content page
     print("\n   Rendering pages:")
@@ -167,7 +172,11 @@ def main():
                 print(f"     ✓ {class_name}/{seq_info['slug']}/{page_info['slug']}.html")
 
     # 11. Build and write the home page
-    home_html = build_home_page_html(navbar_html, home_template)
+    home_html = build_home_page_html(
+        navbar_html        = navbar_html,
+        home_template      = home_template,
+        available_palettes = available_palettes,
+    )
     write_file(SITE / "index.html", home_html)
     print("\n   ✓ index.html")
 
@@ -179,10 +188,29 @@ def main():
         if extra:
             print(f"   ✓ pages/ copied ({len(extra)} files)")
 
-    # 13. Copy the structure simulator (module autonome, copié tel quel, jamais régénéré)
-    if SIMULATEUR_STRUCTURES.exists():
-        shutil.copytree(SIMULATEUR_STRUCTURES, SITE / "simulateur-structures")
-        print("   ✓ simulateur-structures/ copied")
+    # 13. Copy the standalone modules (copiés tels quels, jamais régénérés).
+    #     Ce sont les cibles des sections "outils" et "contenu additionnel" de la navbar.
+    for dossier, nom in ((SIMULATEUR_STRUCTURES, "simulateur-structures"),
+                         (SIMULATEUR_CMD,        "simulateur-cmd")):
+        if dossier.exists():
+            shutil.copytree(dossier, SITE / nom)
+            print(f"   ✓ {nom}/ copied")
+
+    # 14. Copy the cyber challenges (cyberdefis/ → site/cyberdefis/).
+    #     Sous-site autonome « à l'ancienne » : de vrais fichiers .html servis tels
+    #     quels, sans navbar injectée, pour que l'URL montre le fichier et que le
+    #     code source reste lisible (c'est le sujet même de ces défis).
+    if CYBERDEFIS.exists():
+        shutil.copytree(CYBERDEFIS, SITE / "cyberdefis")
+        print("   ✓ cyberdefis/ copied (sous-site autonome, servi tel quel)")
+
+    # 15. Copy the 3D CAD workshop (atelier-3d/ → site/cao/, servi à l'URL /cao/)
+    if ATELIER_3D.exists():
+        shutil.copytree(ATELIER_3D, SITE / "cao")
+        # nginx sert site/cao/ tel quel : la navbar du site y est posée au build.
+        page_atelier = SITE / "cao" / "index.html"
+        write_file(page_atelier, inject_navbar_into_standalone(read_file(page_atelier), navbar_html))
+        print("   ✓ atelier-3d/ copied to site/cao/ (avec la navbar)")
 
     print(f"\n✔  Build complete — {page_count} pages written to site/\n")
 

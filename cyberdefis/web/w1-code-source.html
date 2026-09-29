@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>W1 — La face cachée des pages web</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/cyberdefis/style.css">
+</head>
+<body>
+
+  <div class="defis">
+    <div class="defis-page">
+
+      <div class="fil-ariane">
+        <a href="/index.html">Accueil</a> &gt; <a href="/cyberdefis/">Cyber-défis</a> &gt;
+        <a href="/cyberdefis/web/">Sous le capot du Web</a> &gt; W1
+      </div>
+
+      <div class="bandeau"><h1>W1 — La face cachée des pages web</h1></div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Énoncé</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p>Le flag est présent dans cette page web.</p>
+            <p>Où peut-il bien se cacher ?</p>
+            <p class="discret">Format attendu : <span class="monospace">FLAG{…}</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Zone d'affichage</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p style="text-align:center; margin:16px 0;">Le flag n'est pas écrit ici.</p>
+            <!--
+              Vous êtes au bon endroit :)
+
+                   FLAG{CODE_SOURCE}
+            -->
+          </div>
+        </div>
+      </div>
+
+      <div id="panneau"></div>
+
+    </div>
+  </div>
+
+  <script src="/cyberdefis/defis.js"></script>
+  <script>Defis.panneau({ defi: "w1" });</script>
+  <script src="/cyberdefis/site-nav.js"></script>
+</body>
+</html>

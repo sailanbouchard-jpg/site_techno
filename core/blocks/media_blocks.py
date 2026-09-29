@@ -57,6 +57,11 @@ _DEFAULT_MEDIA_ALIGN = "centre"
 # (préférence globale) — avec 20+ PDF sur une même page ça ouvre 20 panneaux et ça rame.
 _PDF_VIEWER_FRAGMENT = "#pagemode=none"
 
+# Variante "raw" (=pdf> raw ...) : rendu canvas via pdf.js auto-hébergé,
+# sans passer par le lecteur PDF intégré du navigateur (voir render_pdf).
+_PDFJS_SCRIPT        = "/static/libs/pdfjs/pdf.min.js"
+_PDFJS_VIEWER_SCRIPT = "/static/libs/pdf_raw_viewer.js"
+
 # Icônes SVG inline pour les boutons du bloc =pdf> (pas de CDN, couleur via currentColor)
 _ICON_OUVRIR_ONGLET = (
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
@@ -138,10 +143,23 @@ def render_pdf(token: Token, context: dict) -> str:
     et "télécharger" buttons.
     Width: from size= (same scale as images).
     Height: from height_vh attr (computed by flag_detector, always in vh).
+
+    =pdf> raw — variante brute : ni boutons, ni bordure, ni barre d'outils/
+    panneau/scrollbar. Le navigateur ignore les paramètres d'URL type
+    #toolbar=0 sur son lecteur PDF intégré (Firefox les ignore totalement),
+    donc cette variante ne passe pas par <iframe> : elle dessine chaque page
+    sur un <canvas> via pdf.js (auto-hébergé, static/libs/pdfjs/) et pose
+    une couche de texte invisible par-dessus pour garder la sélection.
+    Rendu fait côté client par static/libs/pdf_raw_viewer.js.
+
+    =pdf> horizontal — même rendu pdf.js que raw, mais les pages sont posées
+    côte à côte dans une bande qui défile vers la droite (une page = largeur
+    du bloc, calage page par page). Seule la barre de défilement du navigateur.
     """
-    src        = _resolve_media_url(token.value, context)
-    viewer_src = src + _PDF_VIEWER_FRAGMENT  # sidebar fermée par défaut (sinon le navigateur l'ouvre sur chaque PDF de la page)
-    legend     = _build_legend_html(token)
+    src    = _resolve_media_url(token.value, context)
+    legend = _build_legend_html(token)
+    raw    = token.attrs.get("raw", False)
+    horizontal = token.attrs.get("horizontal", False)
 
     size      = token.attrs.get("size", _DEFAULT_MEDIA_SIZE)
     max_width = _SIZE_TO_MAX_WIDTH.get(size, _SIZE_TO_MAX_WIDTH[_DEFAULT_MEDIA_SIZE])
@@ -150,8 +168,44 @@ def render_pdf(token: Token, context: dict) -> str:
     height_vh = token.attrs.get("height_vh", 100)
     height_css = f"{int(height_vh)}vh"
 
-    style    = f"max-width: {max_width}; width: 100%; height: {height_css}; {align_css}"
-    actions  = _build_pdf_actions_html(src, viewer_src, context)
+    style = f"max-width: {max_width}; width: 100%; height: {height_css}; {align_css}"
+
+    if raw or horizontal:
+        # Pas de hauteur forcée ici : les pages (canvas) imposent leur propre
+        # hauteur naturelle (ex. ratio A4) et la page web défile normalement,
+        # au lieu d'un ascenseur interne qui donnerait un effet "PDF incrusté".
+        raw_style = f"max-width: {max_width}; width: 100%; {align_css}"
+        inner_class = "block-pdf-raw pdf-horizontal" if horizontal else "block-pdf-raw"
+        top_bar = ""
+        if horizontal:
+            raw_style += " " + _build_pdf_horizontal_vars(context)
+            # Barre du haut : faux curseur piloté par pdf_raw_viewer.js (pas une 2e zone défilante)
+            top_bar = (
+                _build_pdf_pager_html()
+                + '<div class="pdf-scroll-top"><div class="pdf-scroll-top-thumb"></div></div>'
+            )
+        viewer = f'<div class="{inner_class}" data-pdf-src="{src}"></div>'
+        if horizontal and token.attrs.get("fleches", False):
+            # Boutons cachés au départ : pdf_raw_viewer.js les affiche selon les pages voisines
+            viewer = (
+                f'<div class="pdf-nav-zone">'
+                f'{viewer}'
+                f'<button type="button" class="pdf-nav pdf-nav-prev" aria-label="Page précédente" hidden><span>&lsaquo;</span></button>'
+                f'<button type="button" class="pdf-nav pdf-nav-next" aria-label="Page suivante" hidden><span>&rsaquo;</span></button>'
+                f'</div>'
+            )
+        return (
+            f'<div class="media media-pdf-raw" style="{raw_style}">'
+            f'{top_bar}'
+            f'{viewer}'
+            f'{legend}'
+            f'<script src="{_PDFJS_SCRIPT}" defer></script>'
+            f'<script src="{_PDFJS_VIEWER_SCRIPT}" defer></script>'
+            f'</div>'
+        )
+
+    viewer_src = src + _PDF_VIEWER_FRAGMENT  # sidebar fermée par défaut (sinon le navigateur l'ouvre sur chaque PDF de la page)
+    actions    = _build_pdf_actions_html(src, viewer_src, context)
 
     return (
         f'<div class="media media-pdf" style="{style}">'
@@ -186,6 +240,40 @@ def _build_media_wrapper_style(token: Token) -> str:
     align     = token.attrs.get("align", _DEFAULT_MEDIA_ALIGN)
     align_css = _ALIGN_TO_CSS.get(align, _ALIGN_TO_CSS[_DEFAULT_MEDIA_ALIGN])
     return f"max-width: {max_width}; width: 100%; {align_css}"
+
+
+def _build_pdf_horizontal_vars(context: dict) -> str:
+    """Variables CSS (compteur + barres de défilement) du mode =pdf> horizontal."""
+    pdf_pal = context.get("palette", {}).get("pdf", {})
+    fond          = pdf_pal.get("compteur_fond",        "#ffffff")
+    bordure       = pdf_pal.get("compteur_bordure",     "#1e293b")
+    texte         = pdf_pal.get("compteur_texte",       "#1e293b")
+    barre_fond    = pdf_pal.get("barre_fond",           "#eeeeee")
+    barre_curseur = pdf_pal.get("barre_curseur",        "#888888")
+    barre_survol  = pdf_pal.get("barre_curseur_survol", "#555555")
+    epaisseur     = pdf_pal.get("barre_epaisseur",      "6px")
+    return (
+        f"--pdf-compteur-fond: {fond}; --pdf-compteur-bordure: {bordure}; "
+        f"--pdf-compteur-texte: {texte}; --pdf-barre-fond: {barre_fond}; "
+        f"--pdf-barre-curseur: {barre_curseur}; --pdf-barre-curseur-survol: {barre_survol}; "
+        f"--pdf-barre-epaisseur: {epaisseur}; "
+        f"--pdf-fleche-fond: {pdf_pal.get('fleche_fond', 'transparent')}; "
+        f"--pdf-fleche-fond-survol: {pdf_pal.get('fleche_fond_survol', 'rgba(30, 41, 59, 0.25)')}; "
+        f"--pdf-fleche-texte: {pdf_pal.get('fleche_texte', '#1e293b')}; "
+        f"--pdf-fleche-largeur: {pdf_pal.get('fleche_largeur', '20px')};"
+    )
+
+
+def _build_pdf_pager_html() -> str:
+    """Encadré "page n/N" + flèche du mode =pdf> horizontal (rempli par pdf_raw_viewer.js)."""
+    return (
+        f'<div class="pdf-pager">'
+        f'<span class="pdf-pager-box">'
+        f'<span class="pdf-pager-text">page -/-</span>'
+        f'<span class="pdf-pager-arrow"></span>'
+        f'</span>'
+        f'</div>'
+    )
 
 
 def _build_pdf_actions_html(src: str, viewer_src: str, context: dict) -> str:

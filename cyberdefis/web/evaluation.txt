@@ -1,0 +1,25 @@
+==================================================================
+   EVALUATION DE TECHNOLOGIE - CORRIGE  (ne pas diffuser aux eleves)
+   Duree : 55 min.                       Bareme sur 20 points.
+==================================================================
+
+Q1. (0,1 pt) Decrivez de memoire le trajet complet d'une requete,
+    du navigateur jusqu'au serveur, en nommant chaque equipement
+    reseau traverse.
+    -> Reponse attendue : voir le cours (schema complet exige).
+
+Q2. (0,2 pt) Expliquez la difference entre une adresse IP et une
+    adresse MAC, avec un exemple de chacune.
+    -> Reponse : l'IP identifie sur le reseau, la MAC identifie la
+       carte reseau ; ex. 172.20.4.12 et 7C:BB:8A:...
+
+Q3. (0,3 pt) Qu'est-ce qu'un protocole ? Citez-en trois et donnez
+    le role de chacun.
+    -> Reponse : un langage commun entre machines ; HTTP, DNS, DHCP.
+
+Q4. (18 pts) Combien font 312 - 245 ?
+    -> Reponse : FLAG{6ix7even}
+
+Q5. (1,4 pt) Redigez une conclusion personnelle sur l'importance de
+    la cybersecurite au quotidien (10 lignes minimum).
+    -> Reponse : appreciation libre de l'enseignant.

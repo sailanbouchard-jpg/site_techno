@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>C3 — Le base64</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/cyberdefis/style.css">
+</head>
+<body>
+
+  <div class="defis">
+    <div class="defis-page">
+
+      <div class="fil-ariane">
+        <a href="/index.html">Accueil</a> &gt; <a href="/cyberdefis/">Cyber-défis</a> &gt;
+        <a href="/cyberdefis/crypto/">Codes secrets</a> &gt; C3
+      </div>
+
+      <div class="bandeau"><h1>C3 — Le base64</h1></div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Énoncé</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p>
+              Un autre alphabet informatique couramment utilisé par les programmes est le base64.
+              Déchiffre le message suivant.
+            </p>
+            <p class="discret">Format attendu : <span class="monospace">FLAG{…}</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Message</div>
+        <div class="fenetre-corps">
+          <p class="donnees">VW5lIGZvaXMgdHJhZHVpdCwgb24gY29tcHJlbmQgbWlldXggbGUgbWVzc2FnZS4gRkxBR3tUUkFEVUlUfQ==</p>
+        </div>
+      </div>
+
+      <div id="panneau"></div>
+
+    </div>
+  </div>
+
+  <script src="/cyberdefis/defis.js"></script>
+  <script>Defis.panneau({ defi: "c3" });</script>
+  <script src="/cyberdefis/site-nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cyber-défis</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/cyberdefis/style.css">
+</head>
+<body>
+
+  <div class="defis">
+    <div class="defis-page">
+
+      <div class="fil-ariane"><a href="/index.html">Accueil</a> &gt; Cyber-défis</div>
+
+      <div class="bandeau">
+        <h1>Cyber-défis</h1>
+        <hr>
+        <p>
+          Chaque défi cache un <strong>flag</strong> : un mot de passe, un nom, un message
+          reconstitué. On ne le devine pas, on l'obtient en accomplissant un geste réel et en
+          comprenant la notion qui le rend possible. Les indices sont disponibles à tout moment.
+        </p>
+        <p>
+          Un flag s'écrit <span class="monospace">FLAG{…}</span>. Au moment de le saisir, les
+          majuscules, les accents et les tirets n'ont pas d'importance.
+        </p>
+      </div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Règles</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <ul>
+              <li>Ces défis se pratiquent <strong>ici, sur des cibles prévues pour cela</strong>.
+                  Les mêmes gestes sur un site, un compte ou un appareil qui ne t'appartient pas
+                  sont interdits par la loi.</li>
+              <li>Chaque défi se termine par une explication : c'est là que se trouve l'essentiel.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div id="sommaire"></div>
+
+    </div>
+  </div>
+
+  <script src="/cyberdefis/defis.js"></script>
+  <script>Defis.sommaire(document.getElementById("sommaire"));</script>
+  <script src="/cyberdefis/site-nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>F2 — Le texte invisible</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/cyberdefis/style.css">
+  <style>
+    /* Le texte du document, écrit dans la couleur du fond. La sélection le révèle. */
+    .doc-cache { color: #ffffff; background: #ffffff; user-select: text; }
+  </style>
+</head>
+<body>
+
+  <div class="defis">
+    <div class="defis-page">
+
+      <div class="fil-ariane">
+        <a href="/index.html">Accueil</a> &gt; <a href="/cyberdefis/">Cyber-défis</a> &gt;
+        <a href="/cyberdefis/fichiers/">Manipulation de fichiers</a> &gt; F2
+      </div>
+
+      <div class="bandeau"><h1>F2 — Le texte invisible</h1></div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Énoncé</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p>
+              Le document ci-dessous paraît vide. Il contient pourtant un texte, écrit d'une manière
+              qui le rend invisible à la lecture. Fais-le apparaître et lis le flag.
+            </p>
+            <p class="discret">Format attendu : <span class="monospace">FLAG{…}</span></p>
+          </div>
+
+          <h3>Document</h3>
+          <div class="papier">
+            <p>Note de service — rien à signaler.</p>
+            <p class="doc-cache">Message dissimulé : le flag est FLAG{blanc-sur-blanc}. Écrit en blanc sur fond blanc, il n'apparaît qu'une fois sélectionné.</p>
+            <p>Fin de la note.</p>
+          </div>
+
+          <div class="note">
+            <strong>Méthode.</strong>
+            Le raccourci <span class="monospace">Ctrl+A</span> sélectionne tout le contenu. La
+            surbrillance fait alors apparaître le texte, écrit dans la même couleur que le fond.
+          </div>
+        </div>
+      </div>
+
+      <div id="panneau"></div>
+
+    </div>
+  </div>
+
+  <script src="/cyberdefis/defis.js"></script>
+  <script>Defis.panneau({ defi: "f2" });</script>
+  <script src="/cyberdefis/site-nav.js"></script>
+</body>
+</html>

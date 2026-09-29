@@ -16,8 +16,24 @@
 
 export const GRAVITY_ACCELERATION = 9.81; // m/s²
 
-// Pas de temps physique fixe (s). Stable aux raideurs assouplies ci-dessous.
-export const PHYSICS_DT = 0.0005; // 0,5 ms
+// ── Pas de temps ADAPTATIF ───────────────────────────────────────────────────
+// L'intégration explicite n'est stable que si le pas reste sous 2/ω, où ω est la
+// pulsation propre la plus haute de la scène (√(raideur/masse) du nœud le plus
+// « dur »). Ce plafond ne dépend PAS du nombre de poutres : il est fixé par le
+// matériau le plus raide POSÉ. Un pas figé à 0,5 ms devait donc convenir au pire
+// cas imaginable — et faisait payer à TOUT LE MONDE le prix du béton large.
+// Le pas est désormais calculé pour la scène réelle (physics/solveur.js) :
+// une scène tout en bois tourne 5× moins cher sans rien changer à sa physique.
+// PHYSICS_DT_REF n'est plus le pas de calcul : c'est le pas de RÉFÉRENCE auquel
+// les amortissements ci-dessous ont été réglés, et qui sert à les convertir en
+// taux par seconde (seule façon d'avoir le même comportement à pas variable).
+export const PHYSICS_DT_REF = 0.0005; // 0,5 ms
+export const PHYSICS_DT_MIN = 0.0002; // plancher de sécurité
+export const PHYSICS_DT_MAX = 0.004; // plafond : au-delà, le mouvement saccade
+// Fraction de la limite théorique 2/ω qu'on s'autorise. Mesuré : la divergence
+// réelle arrive vers 0,85 × 2/ω (le couplage entre nœuds est un peu plus sévère
+// que l'estimation nœud par nœud) — 0,6 laisse donc une marge confortable.
+export const MARGE_STABILITE = 0.6;
 
 // Plafond de pas "rattrapés" par image (anti "spiral of death").
 export const MAX_STEPS_PER_FRAME = 200;
@@ -36,7 +52,11 @@ export const PHYSICS_BUDGET_MS = 8;
 // de N×0,5 ms est invisible (la rupture arrive à ±4 ms près). Le résultat du
 // scan est mis en CACHE sur chaque poutre (beam._effort) et RÉUTILISÉ par le
 // rendu (couleur d'alerte, étiquette %) au lieu d'être recalculé par image.
-export const EFFORT_SCAN_EVERY_STEPS = 8; // → un scan toutes les 4 ms simulées
+// Réglé en TEMPS simulé (et non en nombre de pas) : le pas étant adaptatif, un
+// compte de pas ne voudrait plus rien dire. En scène allégée on espace encore —
+// 12 ms restent 7× plus fins que les 80 ms de surcharge exigés pour rompre.
+export const EFFORT_SCAN_PERIOD = 0.004; // s entre deux scans
+export const EFFORT_SCAN_PERIOD_ALLEGE = 0.012; // s, scène lourde
 
 // ── Mise en SOMMEIL de la structure à l'équilibre ──
 // Stabilisée, sans vent ni véhicule ni surcharge en cours, et un calme plat qui
@@ -50,7 +70,8 @@ export const SLEEP_DELAY = 0.5; // s de calme plat avant de dormir
 // facteur). Volontairement fort : RELAXATION quasi-statique qui se stabilise
 // sans trop osciller. Compromis : assez fort pour borner le sursaut sous
 // charge, assez doux pour atteindre l'équilibre (et donc rompre) en quelques
-// secondes.
+// secondes. Réglé pour PHYSICS_DT_REF, puis converti en TAUX par seconde
+// (voir plus bas) : le même amortissement réel quel que soit le pas choisi.
 export const VELOCITY_DAMPING_PER_STEP = 0.999;
 
 // Plafond de vitesse d'un nœud (m/s) : garde-fou de sécurité contre une
@@ -78,6 +99,38 @@ export const SETTLE_VELOCITY_DAMPING = 0.99; // amortissement fort pendant la st
 export const SETTLE_SPEED_THRESHOLD = 0.08; // m/s : sous ce seuil (rampe finie), on considère stabilisé
 export const SETTLE_MIN_TIME = 1.5; // s : durée minimale (≥ rampe de gravité)
 export const SETTLE_TIMEOUT = 0.75; // s : au-delà, rupture activée quoi qu'il arrive (anti-blocage)
+
+// Les deux amortissements ci-dessus, exprimés en s⁻¹ : le moteur applique
+// exp(−taux · dt) à chaque pas. À dt = PHYSICS_DT_REF c'est EXACTEMENT le
+// facteur réglé plus haut ; à tout autre pas, c'est le même amortissement par
+// seconde de simulation. Ne rien régler ici : régler les facteurs au-dessus.
+export const TAUX_AMORTISSEMENT = -Math.log(VELOCITY_DAMPING_PER_STEP) / PHYSICS_DT_REF;
+export const TAUX_AMORTISSEMENT_STABILISATION = -Math.log(SETTLE_VELOCITY_DAMPING) / PHYSICS_DT_REF;
+
+// ── Allègement des GROSSES scènes ────────────────────────────────────────────
+// Au-delà de ce nombre de sous-éléments, la scène est déclarée LOURDE et le
+// solveur s'autorise la MISE À L'ÉCHELLE DES MASSES (physics/solveur.js) : on
+// ajoute de l'inertie — et RIEN QUE de l'inertie, jamais du poids — aux nœuds
+// les plus raides pour abaisser leur pulsation propre et pouvoir allonger le
+// pas. L'ÉQUILIBRE n'en dépend pas (une position d'équilibre ne dépend d'aucune
+// masse d'inertie) : les déformations, les efforts, les % et les ruptures sont
+// les mêmes. Seul le TRANSITOIRE est ralenti pour ces nœuds — sans conséquence
+// ici, où la mise en charge est déjà une relaxation fortement amortie.
+// Le seuil correspond à peu près au pont de la capture qui faisait ramer.
+export const SEUIL_SCENE_LOURDE = 250; // sous-éléments
+// Pulsation visée en scène lourde (rad/s) : au-delà, le nœud est alourdi.
+// 470 rad/s → un pas de ~2,5 ms, soit 5× moins de pas qu'avant.
+export const OMEGA_CIBLE_ALLEGE = 470;
+// Hors scène lourde, on n'alourdit rien SAUF pour tenir un PLANCHER : le pas ne
+// doit jamais tomber sous celui d'avant (PHYSICS_DT_REF), sinon le calcul
+// coûterait plus cher qu'avant le solveur adaptatif. Le cas se produit APRÈS une
+// rupture : les débris sont des tronçons courts, donc légers et très raides
+// (ω ∝ 1/longueur²) — exactement le moment où la machine a le moins de marge.
+export const OMEGA_CIBLE_NORMALE = (2 * MARGE_STABILITE) / PHYSICS_DT_REF;
+// Garde-fou : jamais plus de ce facteur d'inertie sur un nœud. Au-delà, un débris
+// qui se détache tomberait visiblement au ralenti (son poids est vrai, son
+// inertie ne l'est pas) — on préfère alors raccourcir le pas.
+export const FACTEUR_INERTIE_MAX = 6;
 
 // ── Amplification de la déformation (diviseurs de raideur) ──
 export const AXIAL_STIFFNESS_DIVISOR = 500;
@@ -140,19 +193,13 @@ export const ROLLING_RESISTANCE = 0.15;
 
 // ── Sol (terrain) ──
 // Contact unilatéral : un nœud libre ne peut pas PÉNÉTRER le sol. À chaque pas,
-// après intégration, un nœud passé sous la surface est remonté pile dessus.
-//   GROUND_RESTITUTION      : part de la vitesse descendante renvoyée (0 = pas
-//                             de rebond, il se pose et reste).
-//   GROUND_TANGENTIAL_DAMPING : frottement au contact (le glissement horizontal
-//                             est multiplié par ce facteur tant que le nœud
-//                             touche le sol) → un morceau tombé finit par s'arrêter.
+// après intégration, un nœud entré dans la roche en ressort par la face la plus
+// proche — le dessus, ou une paroi de falaise (voir physics/ground.js).
+//   GROUND_RESTITUTION      : part de la vitesse entrante renvoyée (0 = pas de
+//                             rebond, il se pose et reste).
+//   GROUND_TANGENTIAL_DAMPING : frottement au contact (la vitesse le long de la
+//                             face est multipliée par ce facteur tant que le
+//                             nœud touche le sol) → un morceau tombé finit par
+//                             s'arrêter, un pied appuyé contre une paroi y tient.
 export const GROUND_RESTITUTION = 0;
 export const GROUND_TANGENTIAL_DAMPING = 0.82;
-// Léger RETRAIT (m) du bord du sol, UNIQUEMENT pour le contact (pas pour le
-// dessin) : le contour de collision est rentré de ce delta vers l'intérieur du
-// terrain. Sans lui, un point posé EXACTEMENT sur le bord d'une falaise (même
-// colonne du maillage) coïncide avec le sol → il est vu « dans » le terrain et
-// propulsé vers le haut (bug des poutres collées aux falaises verticales). Une
-// poutre tracée pile sur l'arête se retrouve ainsi juste à l'extérieur du solide.
-// Quelques centimètres suffisent : invisible (≈ 1 px), mais lève l'ambiguïté.
-export const GROUND_COLLISION_INSET = 0.06;

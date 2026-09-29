@@ -98,7 +98,7 @@ cle2=valeur2
 ```
 
 ### Sections disponibles dans `defaut.palette`
-`corps`, `h1`, `h2`, `h3`, `pg`, `def`, `alr`, `ques`, `rep`, `obj`, `resume`, `qcm`, `assoc`, `trier`, `repg`, `lien`, `tbl`, `pages`, couleurs nommées (`bleu`, `vert`, `orange`, `rouge`, `jaune`, `violet`, `gris`)
+`corps`, `navbar`, `h1`, `h2`, `h3`, `pg`, `def`, `alr`, `ques`, `rep`, `obj`, `resume`, `qcm`, `assoc`, `trier`, `repg`, `lien`, `tbl`, `pages`, couleurs nommées (`bleu`, `vert`, `orange`, `rouge`, `jaune`, `violet`, `gris`)
 
 ### Règles d'utilisation
 - Chaque section correspond à un type de bloc.

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atelier 3D</title>
+  <!-- La feuille du site habille sa navbar ; ouverte hors du site, elle manque et rien ne casse. -->
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="styles/reglages_interface.css">
+  <link rel="stylesheet" href="styles/disposition_generale.css">
+  <link rel="stylesheet" href="styles/panneaux.css">
+  <link rel="stylesheet" href="styles/champs.css">
+  <!--
+    Atelier 3D — logiciel de conception pour le collège.
+    Les panneaux sont construits par les modules de interface/ ; cette page
+    ne porte que les zones (barre haute, ruban, arbre, vue, inspecteur,
+    barre d'état), et la place de la navbar du site, que le serveur (ou
+    build.py) pose à gauche. Pas d'importmap : les modules sont importés par
+    chemin relatif, ce qui marche sur tout navigateur qui connaît les modules ES.
+  -->
+</head>
+<body>
+  <!-- {{navbar}} -->
+  <button class="bascule-navbar" id="bascule-navbar" type="button" aria-controls="navbar-du-site" hidden></button>
+
+  <div class="atelier" id="atelier">
+    <header class="barre-haute" id="barre-haute"></header>
+
+    <nav class="ruban" id="ruban" aria-label="Outils"></nav>
+    <nav class="ruban" id="ruban-impression" aria-label="Impression" hidden></nav>
+    <nav class="ruban" id="ruban-calibration" aria-label="Calibration" hidden></nav>
+
+    <aside class="colonne-gauche" id="colonne-gauche">
+      <section class="arbre" id="arbre" aria-label="Construction"></section>
+      <section class="arbre" id="liste-plateau" aria-label="Plateau" hidden></section>
+      <section class="arbre" id="reglages-calibration" aria-label="Réglages de la combinaison" hidden></section>
+      <div class="poignee-colonne a-droite" data-variable="--largeur-gauche" data-sens="1"
+           data-min="180" data-max="420" title="Glisser pour redimensionner le panneau"></div>
+    </aside>
+
+    <div class="bandeau-outil" id="bandeau-outil"></div>
+
+    <main class="vue" id="vue">
+      <canvas id="vue-3d" tabindex="0" aria-label="Vue 3D"></canvas>
+      <div class="coin-de-vue" id="coin-de-vue">
+        <canvas class="cube-de-vue" id="cube-de-vue" aria-label="Orientation de la vue"></canvas>
+        <div class="boutons-de-vue" id="boutons-de-vue"></div>
+        <div class="vues-en-coupe" id="vues-en-coupe"></div>
+      </div>
+      <div class="depot-fichier" id="depot-fichier" hidden>Déposer le fichier STL pour l'importer</div>
+    </main>
+
+    <aside class="colonne-droite" id="colonne-droite" hidden>
+      <section class="inspecteur" id="inspecteur" aria-label="Inspecteur"></section>
+    </aside>
+
+    <aside class="colonne-droite" id="colonne-plateau" hidden>
+      <section class="inspecteur" id="inspecteur-plateau" aria-label="Pièce du plateau"></section>
+    </aside>
+
+    <aside class="colonne-droite" id="colonne-imprimantes" hidden>
+      <section class="inspecteur" id="panneau-imprimantes" aria-label="Imprimantes"></section>
+    </aside>
+
+    <aside class="colonne-droite colonne-calibration" id="colonne-calibration" hidden>
+      <section class="inspecteur" id="panneau-calibration" aria-label="Calibration"></section>
+    </aside>
+
+    <footer class="barre-etat" id="barre-etat"></footer>
+  </div>
+
+  <script nomodule>
+    document.body.innerHTML = '<p class="navigateur-trop-ancien">Ce navigateur est trop ancien pour l\'Atelier 3D. ' +
+      'Une version récente de Firefox, Chrome ou Edge est nécessaire.</p>';
+  </script>
+  <script type="module" src="application.js"></script>
+</body>
+</html>

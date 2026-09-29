@@ -1,208 +1,397 @@
 <!--
   index.html
   ──────────
-  Page hôte du simulateur de structures 2D. Le CANVAS occupe tout l'écran ;
-  l'interface FLOTTE dessus en panneaux compacts (HUD) :
-    - en haut    : bibliothèque (démos/sauvegardes), lecture/réinitialisation,
-                   ralenti, grille, vent, pourcentages, zoom ;
-    - en bas     : palette de matériaux (petit/grand côte à côte, séparés par
-                   famille) + outils d'édition + poids total ;
-    - à droite   : inspecteur de l'élément sélectionné, panneau du vent ;
-    - au-dessus de la barre du bas : bandeaux CONTEXTUELS (Sol, Poids, Câble).
-  Aucune logique ici : tout est branché par js/main.js. Pas de style en dur
-  (-> style-config.css / style.css), pas de JS inline (-> js/).
+  Page hôte du simulateur de structures 2D, organisée comme un logiciel
+  d'ingénierie de bureau :
+    - barre de MENUS (Fichier, Édition, Affichage, Essai, ?) ;
+    - barre d'outils STANDARD : niveaux, essai, annulation, vue, affichages,
+      et les afficheurs du projet (masse du pont, objectif, état de l'essai) ;
+    - barre des ÉLÉMENTS : outil Sélection et type de poutre à poser ;
+    - la VUE (canvas) avec ses fenêtres d'outils : propriétés et rapport
+      d'essai à droite, palette « Essai de charge » flottante pendant l'essai ;
+    - la BARRE D'ÉTAT : consigne en cours, coordonnées, zoom, temps.
 
-  Interface : on choisit un MATÉRIAU dans la palette (= on construit une poutre,
-  pas besoin d'outil « Poutre » séparé). Chaque type a une LONGUEUR MAX : cliquer
-  plus loin pose un élément de longueur max vers le point visé (pose en série).
+  DEUX INTERFACES pour la même page (voir js/mode.js) : joueur par défaut, dev
+  en ajoutant ?dev à l'URL. Tout ce qui porte `data-dev` n'existe que pour le
+  dev — style.css le masque en mode joueur. Ce qui porte `data-admin` n'est
+  visible que pour l'ADMINISTRATEUR du site (session admin), qui édite les
+  niveaux depuis le dialogue « Niveaux ».
+
+  Les boutons et les entrées de menu qui portent `data-commande` exécutent une
+  commande enregistrée dans js/ui/menus.js (même action depuis le menu, la barre
+  d'outils ou le clavier). Aucune logique ici, aucun style en dur : couleurs et
+  dimensions dans style-config.css, mise en page dans style.css.
 -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Simulateur de structures 2D</title>
+  <title>Simulateur de structures</title>
   <link rel="stylesheet" href="style-config.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="app">
-    <canvas id="simulation-canvas"></canvas>
 
-    <!-- ══ Barre du HAUT ══ -->
-    <header class="hud hud-top">
-      <!-- Identité + bibliothèque -->
-      <div class="hud-card brand-card">
-        <svg class="brand-logo" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M2.5 19h19M4.5 19l3.5-8 4 8 4-8 3.5 8M8 11h8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <div class="brand-text">
-          <strong>Structures</strong>
-          <span>simulateur&nbsp;2D</span>
+    <!-- ══ Barre de menus ══ -->
+    <nav class="barre-menus" id="barre-menus">
+      <div class="menu">
+        <button type="button" class="menu-titre">Fichier</button>
+        <div class="menu-liste" role="menu" hidden>
+          <button type="button" class="menu-item" data-commande="niveaux"><span class="menu-libelle">Niveaux…</span><kbd>Ctrl+O</kbd></button>
+          <button type="button" class="menu-item" data-commande="niveau-suivant"><span class="menu-libelle">Niveau suivant</span></button>
+          <button type="button" class="menu-item" data-commande="nouveau-pont"><span class="menu-libelle">Faire un nouveau pont</span></button>
+          <div class="menu-separateur" data-dev></div>
         </div>
-        <span class="hud-sep"></span>
-        <button id="library-toggle" class="hud-btn" title="Ouvrir la bibliothèque : démonstrations et structures sauvegardées">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span>Bibliothèque</span>
-        </button>
       </div>
-
-      <!-- Lecture / temps -->
-      <div class="hud-card sim-card">
-        <button id="play-pause-button" class="hud-btn play-btn" title="Lancer le test : la structure se met en charge, les poutres colorent leur effort">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="7 4 20 12 7 20" fill="currentColor" stroke="none"/></svg>
-          <span>Tester</span>
-        </button>
-        <button id="reset-button" class="hud-btn" title="Remet le temps à zéro et la structure dans son état de conception">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="2 4 2 10 8 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.6 15a8.5 8.5 0 1 0 2-8.9L2 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span>Réinitialiser</span>
-        </button>
-        <span class="hud-sep"></span>
-        <label class="hud-slider" for="speed-slider" title="Ralenti de la simulation : ×0,1 = 10× plus lent, ×1 = temps réel">
-          <span class="hud-slider-name">Ralenti</span>
-          <input type="range" id="speed-slider" min="0.1" max="1" step="0.1" />
-          <span id="speed-value" class="hud-readout">×1.0</span>
-        </label>
-        <span class="hud-sep"></span>
-        <span id="time-display" class="hud-readout" title="Temps simulé">t = 0.00 s</span>
-      </div>
-
-      <!-- Vue / réglages -->
-      <div class="hud-card view-card">
-        <div class="hud-stepper" title="Élargir ou rétrécir la grille des deux côtés (gauche et droite). Les structures déjà posées restent au centre.">
-          <button id="grid-shrink-button" title="Rétrécir la grille des deux côtés">−</button>
-          <span class="stepper-label">Grille<b id="grid-width-value">50 m</b></span>
-          <button id="grid-widen-button" title="Élargir la grille des deux côtés">+</button>
+      <div class="menu">
+        <button type="button" class="menu-titre">Édition</button>
+        <div class="menu-liste" role="menu" hidden>
+          <button type="button" class="menu-item" data-commande="annuler"><span class="menu-libelle">Annuler</span><kbd>Ctrl+Z</kbd></button>
+          <div class="menu-separateur"></div>
+          <button type="button" class="menu-item" data-commande="supprimer"><span class="menu-libelle">Supprimer la sélection</span><kbd>Suppr</kbd></button>
+          <button type="button" class="menu-item" data-commande="deselectionner"><span class="menu-libelle">Désélectionner</span><kbd>Échap</kbd></button>
         </div>
-        <span class="hud-sep"></span>
-        <button id="wind-toggle-button" class="hud-btn" title="Activer le vent : rafales réglables, prévisualisées sur 30 s, puis particules d'air en simulation">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.6 4.6A2 2 0 1 1 11 8H2m10.6 11.4A2 2 0 1 0 14 16H2m15.7-8.3A2.5 2.5 0 1 1 19.5 12H2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span>Vent</span>
-        </button>
-        <button id="toggle-percent-button" class="hud-btn" aria-pressed="true" title="Afficher / masquer les pourcentages de charge sur les poutres">
-          <span class="hud-btn-glyph">%</span>
-        </button>
-        <span class="hud-sep"></span>
-        <label class="hud-slider" for="zoom-slider" title="Zoom de la vue (le clic droit glissé déplace la vue)">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/><line x1="21" y1="21" x2="16" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-          <input type="range" id="zoom-slider" min="0.5" max="5" step="0.1" />
-          <span id="zoom-value" class="hud-readout">×1.0</span>
-        </label>
       </div>
-    </header>
-
-    <!-- ══ Tiroir BIBLIOTHÈQUE (gauche) ══ -->
-    <aside id="library-drawer" class="hud-card library-drawer" hidden>
-      <div class="drawer-header">
-        <h3>Bibliothèque</h3>
-        <button id="library-close" class="drawer-close" title="Fermer">✕</button>
-      </div>
-      <div id="test-case-panel" class="test-case-panel"></div>
-    </aside>
-
-    <!-- ══ Panneaux de DROITE ══ -->
-    <aside class="hud-right">
-      <div id="inspector-panel" class="hud-card inspector" hidden>Aucune sélection.</div>
-
-      <!-- Réglage du VENT (visible quand le vent est activé). -->
-      <div id="wind-bar" class="hud-card wind-panel" hidden>
-        <h3>Vent</h3>
-        <div class="wind-fields">
-          <label title="Vitesse de base du vent (m/s). Négative = vent de droite à gauche.">Vitesse (m/s)
-            <input type="number" id="wind-speed" step="1" />
-          </label>
-          <label title="Amplitude des rafales autour de la vitesse de base (± m/s).">Rafales ± (m/s)
-            <input type="number" id="wind-gust-amp" min="0" step="1" />
-          </label>
-          <label title="Nervosité du vent : plus c'est haut, plus la vitesse varie souvent (≈ Hz).">Variation (Hz)
-            <input type="number" id="wind-gust-rate" min="0.02" step="0.05" />
-          </label>
-          <label title="Graine aléatoire : rejoue exactement la même courbe de vent (1 par défaut).">Graine
-            <input type="number" id="wind-seed" min="0" step="1" />
-          </label>
-          <label title="Nombre de particules d'air générées en simulation.">Particules
-            <input type="number" id="wind-count" min="0" max="2000" step="10" />
-          </label>
-          <label title="Longueur d'une particule = durée de sa traînée (secondes).">Longueur (s)
-            <input type="number" id="wind-length" min="0.2" max="6" step="0.5" />
-          </label>
+      <div class="menu">
+        <button type="button" class="menu-titre">Affichage</button>
+        <div class="menu-liste" role="menu" hidden>
+          <button type="button" class="menu-item" data-commande="zoom-avant"><span class="menu-libelle">Zoom avant</span><kbd>+</kbd></button>
+          <button type="button" class="menu-item" data-commande="zoom-arriere"><span class="menu-libelle">Zoom arrière</span><kbd>−</kbd></button>
+          <button type="button" class="menu-item" data-commande="vue-ensemble"><span class="menu-libelle">Cadrer la zone de travail</span><kbd>0</kbd></button>
+          <div class="menu-separateur"></div>
+          <button type="button" class="menu-item" data-commande="taux-travail"><span class="menu-libelle">Taux : petit</span></button>
         </div>
-        <span class="wind-preview-caption">Courbe de vent — 30 s</span>
-        <canvas id="wind-curve-canvas"></canvas>
       </div>
-    </aside>
+      <div class="menu">
+        <button type="button" class="menu-titre">Essai</button>
+        <div class="menu-liste" role="menu" hidden>
+          <button type="button" class="menu-item" data-commande="lancer-essai"><span class="menu-libelle">Lancer l'essai</span><kbd>Espace</kbd></button>
+          <button type="button" class="menu-item" data-commande="pause-essai"><span class="menu-libelle">Pause</span><kbd>Espace</kbd></button>
+          <button type="button" class="menu-item" data-commande="recommencer-essai"><span class="menu-libelle">Recommencer l'essai</span></button>
+          <button type="button" class="menu-item" data-commande="arreter-essai"><span class="menu-libelle">Arrêter l'essai</span></button>
+          <div class="menu-separateur"></div>
+          <button type="button" class="menu-item" data-commande="vitesse-2"><span class="menu-libelle">Accéléré ×2</span></button>
+          <button type="button" class="menu-item" data-commande="vitesse-1"><span class="menu-libelle">Temps réel</span></button>
+          <button type="button" class="menu-item" data-commande="vitesse-0.5"><span class="menu-libelle">Ralenti ×0,5</span></button>
+          <button type="button" class="menu-item" data-commande="vitesse-0.25"><span class="menu-libelle">Ralenti ×0,25</span></button>
+          <button type="button" class="menu-item" data-commande="vitesse-0.1"><span class="menu-libelle">Ralenti ×0,1</span></button>
+        </div>
+      </div>
+      <div class="menu">
+        <button type="button" class="menu-titre">?</button>
+        <div class="menu-liste" role="menu" hidden>
+          <button type="button" class="menu-item" data-commande="aide-commandes"><span class="menu-libelle">Souris et clavier…</span><kbd>F1</kbd></button>
+        </div>
+      </div>
+      <span class="titre-document"><span id="niveau-courant"></span><span class="titre-logiciel">Simulateur de structures</span></span>
+    </nav>
 
-    <!-- ══ Bandeaux CONTEXTUELS (au-dessus de la barre du bas) ══ -->
-    <!-- Outil Sol -->
-    <div class="hud-card context-strip" id="terrain-bar" hidden>
-      <span class="context-hint">Sol : clique des points du maillage pour dessiner le HAUT du relief — tout ce qui est dessous est plein.</span>
-      <button id="terrain-new" class="strip-btn" title="Valider cette colline et en commencer une autre">Nouvelle colline</button>
-      <button id="terrain-undo" class="strip-btn" title="Retirer le dernier point posé">Annuler le point</button>
-      <button id="terrain-clear" class="strip-btn" title="Effacer tout le sol">Effacer le sol</button>
+    <!-- ══ Barre d'outils standard ══ -->
+    <div class="barre-outils" role="toolbar" aria-label="Barre d'outils standard">
+      <button type="button" class="bouton-barre" data-commande="niveaux" title="Choisir un niveau">
+        <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><path class="i-dossier-fond" d="M1.5 3.5h4l1.5 1.5h6.5v8.5h-12z"/><path class="i-dossier-face" d="M1.5 13.5l2.2-6.5h11.3l-2.2 6.5z"/></svg>
+        <span>Niveaux</span>
+      </button>
+      <button type="button" id="nouveau-pont-button" class="bouton-barre" data-commande="nouveau-pont" hidden title="Repartir d'un pont vide sur ce niveau. Ton pont enregistré est conservé : seule la construction à l'écran est perdue.">
+        <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><path class="i-trait" d="M1.5 11.5h13M4 11.5V7M8 11.5V5.5M12 11.5V7"/><path class="i-trait-bleu" d="M1.5 7.5h13"/></svg>
+        <span>Nouveau pont</span>
+      </button>
+      <span class="separateur"></span>
+      <button type="button" id="play-pause-button" class="bouton-barre bouton-principal" title="Lancer l'essai de charge (Espace)">
+        <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5v11l9-5.5z" fill="currentColor"/></svg>
+        <span>Lancer l'essai</span>
+      </button>
+      <span class="separateur"></span>
+      <button type="button" class="bouton-barre" data-commande="annuler" title="Annuler la dernière suppression ou le dernier déplacement (Ctrl+Z)">
+        <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><path class="i-trait-bleu" d="M3.5 7h6a3.5 3.5 0 0 1 0 7H7"/><path class="i-trait-bleu" d="M6.5 3.5L3 7l3.5 3.5"/></svg>
+      </button>
+      <button type="button" class="bouton-barre" data-commande="supprimer" title="Supprimer la sélection (Suppr)">
+        <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><path class="i-trait-rouge" d="M4 4l8 8M12 4l-8 8"/></svg>
+      </button>
+      <span class="separateur"></span>
+      <button type="button" class="bouton-barre" data-commande="zoom-avant" title="Zoom avant (+, molette)">
+        <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><circle class="i-loupe" cx="6.5" cy="6.5" r="4.5"/><path class="i-manche" d="M10 10l4 4"/><path class="i-trait" d="M4.5 6.5h4M6.5 4.5v4"/></svg>
+      </button>
+      <button type="button" class="bouton-barre" data-commande="zoom-arriere" title="Zoom arrière (−, molette)">
+        <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><circle class="i-loupe" cx="6.5" cy="6.5" r="4.5"/><path class="i-manche" d="M10 10l4 4"/><path class="i-trait" d="M4.5 6.5h4"/></svg>
+      </button>
+      <button type="button" class="bouton-barre" data-commande="vue-ensemble" title="Cadrer la zone de travail (0)">
+        <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><path class="i-trait" d="M1.5 5V1.5H5M11 1.5h3.5V5M14.5 11v3.5H11M5 14.5H1.5V11"/><rect class="i-cadre" x="4.5" y="5.5" width="7" height="5"/></svg>
+      </button>
+      <span class="separateur"></span>
+      <button type="button" id="toggle-percent-button" class="bouton-barre" data-commande="taux-travail" aria-pressed="true" title="Taux de travail des poutres pendant l'essai : cliquer passe de gros à petit, puis masqué">
+        <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><path class="i-trait" d="M3.5 12.5l9-9"/><circle class="i-trait" cx="4.5" cy="4.5" r="2"/><circle class="i-trait" cx="11.5" cy="11.5" r="2"/></svg>
+        <span>Taux : petit</span>
+      </button>
+      <span class="separateur" data-dev></span>
+      <button type="button" id="wind-toggle-button" class="bouton-barre" data-dev aria-pressed="false" title="Vent : rafales réglables, prévisualisées sur 30 s, puis particules d'air pendant l'essai">
+        <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><path class="i-trait-bleu" d="M1.5 6h8.5a2 2 0 1 0-2-2M1.5 9.5h11a2 2 0 1 1-2 2M1.5 12h5"/></svg>
+        <span>Vent</span>
+      </button>
+      <div class="pas-a-pas" data-dev title="Largeur de la grille : élargir ou rétrécir des deux côtés (les structures posées restent en place)">
+        <span class="afficheur-libelle">Largeur</span>
+        <button type="button" id="grid-shrink-button" class="bouton-pas" title="Rétrécir la grille">−</button>
+        <output id="grid-width-value" class="afficheur afficheur-court">50 m</output>
+        <button type="button" id="grid-widen-button" class="bouton-pas" title="Élargir la grille">+</button>
+      </div>
+      <div class="pas-a-pas" data-dev title="Hauteur de la grille : le plafond monte ou descend, le bas du monde ne bouge pas (on gagne du ciel pour bâtir haut)">
+        <span class="afficheur-libelle">Hauteur</span>
+        <button type="button" id="grid-lower-button" class="bouton-pas" title="Abaisser le plafond">−</button>
+        <output id="grid-height-value" class="afficheur afficheur-court">24 m</output>
+        <button type="button" id="grid-raise-button" class="bouton-pas" title="Monter le plafond">+</button>
+      </div>
+
+      <div class="afficheurs">
+        <span class="afficheur-groupe" title="Masse des éléments posés (l'énoncé du niveau ne compte pas)">
+          <span class="afficheur-libelle">Masse du pont</span>
+          <output id="structure-weight-display" class="afficheur">0 kg</output>
+        </span>
+        <span class="afficheur-groupe" id="objectif-groupe" title="Masse à ne pas dépasser pour la note maximale">
+          <span class="afficheur-libelle">Objectif</span>
+          <output id="objectif-display" class="afficheur">—</output>
+        </span>
+        <span class="afficheur-groupe">
+          <span class="afficheur-libelle">État</span>
+          <output id="etat-essai" class="afficheur afficheur-etat"></output>
+        </span>
+      </div>
     </div>
 
-    <!-- Outil Poids -->
-    <div class="hud-card context-strip" id="weight-bar" hidden>
-      <span class="context-hint">Poids : clique un point ou n'importe où le long d'une poutre.</span>
-      <label title="Masse du poids posé (kg)">Masse (kg)
-        <input type="number" id="weight-mass-input" min="1" step="100" />
-      </label>
-      <label id="weight-placement-field" title="Placer le poids POSÉ sur le point/la poutre (au-dessus) au lieu de le suspendre en dessous">
-        <input type="checkbox" id="weight-placement-input" />&nbsp;Posé dessus
-      </label>
+    <!-- ══ Barre des éléments ══ -->
+    <div class="barre-outils barre-elements" role="toolbar" aria-label="Éléments">
+      <button type="button" data-tool="select" class="bouton-barre" title="Sélection : cliquer un élément pour afficher ses propriétés, glisser un point pour le déplacer, glisser dans le vide pour une sélection multiple">
+        <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><path class="i-curseur" d="M4.5 1.5v11.5l2.8-2.8 2 4.6 1.9-.8-2-4.5h4z"/></svg>
+        <span>Sélection</span>
+      </button>
+      <span class="separateur"></span>
+      <span class="barre-libelle">Poutre</span>
+      <div class="elements" id="material-palette"></div>
+
+      <span class="separateur" data-dev></span>
+      <button type="button" data-tool="terrain" class="bouton-barre" data-dev title="Sol : cliquer des points du maillage pour tracer le haut du relief">
+        <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><path class="i-sol" d="M.5 14.5v-4l4-4.5 3 3.5 3-5 5 6v4z"/></svg>
+      </button>
+      <button type="button" data-tool="anchor" class="bouton-barre" data-dev title="Appui : poser un point ancré sur le maillage ou à l'extrémité d'une poutre ; recliquer un point ancré vide le retire">
+        <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><path class="i-appui" d="M8 3.5l4.5 7h-9z"/><path class="i-trait" d="M2 12.5h12M3.5 12.5l-1.5 2M7 12.5l-1.5 2M10.5 12.5l-1.5 2M14 12.5l-1.5 2"/></svg>
+      </button>
+      <button type="button" data-tool="arrivee" class="bouton-barre" data-dev title="Arrivée : cliquer un point de la route pour y planter le drapeau que tous les véhicules doivent atteindre ; recliquer le retire">
+        <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><path class="i-trait" d="M3.5 14.5V1.5"/><path class="i-drapeau" d="M3.5 2.5h9v5h-9z"/><path class="i-damier" d="M3.5 2.5h3v2.5h-3zM6.5 5h3v2.5h-3zM9.5 2.5h3v2.5h-3z"/></svg>
+      </button>
+      <button type="button" data-tool="addWeight" class="bouton-barre" data-dev title="Poids : cliquer un point ou une poutre pour y suspendre un bloc de lest">
+        <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><circle class="i-trait" cx="8" cy="3.5" r="1.8"/><rect class="i-bloc" x="2.5" y="6.5" width="11" height="8"/></svg>
+      </button>
+      <button type="button" data-tool="addCar" class="bouton-barre" data-dev title="Voiture : cliquer une poutre de route pour y poser une voiture">
+        <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><path class="i-voiture" d="M1 11.5V9l2-.8 2-2.7h5l2.5 2.7 2 .6v2.7z"/><circle class="i-roue" cx="4.5" cy="11.5" r="1.8"/><circle class="i-roue" cx="11.5" cy="11.5" r="1.8"/></svg>
+      </button>
+      <button type="button" data-tool="addVan" class="bouton-barre" data-dev title="Camionnette : cliquer une poutre de route pour y poser une camionnette">
+        <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><path class="i-voiture" d="M1 11.5V6.5h7.5l2.5 2.2 3 .6v2.2z"/><path class="i-cabine" d="M8.5 7.6h1.8l1.6 1.4h-3.4z"/><circle class="i-roue" cx="4" cy="11.5" r="1.7"/><circle class="i-roue" cx="11.5" cy="11.5" r="1.7"/></svg>
+      </button>
+      <button type="button" data-tool="addTruck" class="bouton-barre" data-dev title="Camion : cliquer une poutre de route pour y poser un camion">
+        <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><rect class="i-caisse" x=".5" y="3.5" width="9" height="8"/><path class="i-cabine" d="M9.5 5.5h3l2.5 3v3h-5.5z"/><circle class="i-roue" cx="3.5" cy="12" r="1.7"/><circle class="i-roue" cx="12" cy="12" r="1.7"/></svg>
+      </button>
+      <button type="button" data-tool="addBoat" class="bouton-barre" data-dev title="Bateau : cliquer sur l'eau pour poser un bateau (gabarit à laisser libre sous le pont) ; recliquer un bateau le retire">
+        <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><path class="i-trait" d="M8 1.5v6"/><path class="i-voile" d="M8.8 2.2l4 5.3h-4z"/><path class="i-coque" d="M1.5 9.5h13l-2.2 4.5H3.7z"/></svg>
+      </button>
+
+      <!-- Zone d'options, à droite : caractéristiques du type de poutre, ou
+           réglages de l'outil d'atelier en cours. -->
+      <div class="options-outil">
+        <div id="caracteristiques-poutre" class="caracteristiques"></div>
+        <div class="options-groupe" id="terrain-bar" data-dev hidden>
+          <label title="Nature de la partie de sol dessinée : elle ne change que l'aspect, la roche porte pareil">Sol
+            <select id="terrain-nature-input"></select>
+          </label>
+          <button type="button" id="terrain-new" class="bouton" title="Valider cette colline et en commencer une autre">Nouvelle colline</button>
+          <button type="button" id="terrain-undo" class="bouton" title="Retirer le dernier point posé">Annuler le point</button>
+          <button type="button" id="terrain-clear" class="bouton" title="Effacer tout le sol">Effacer le sol</button>
+        </div>
+        <div class="options-groupe" id="boat-bar" data-dev hidden>
+          <label title="Hauteur du bateau : c'est le tirant d'air qu'il impose au pont">Bateau
+            <select id="boat-type-input"></select>
+          </label>
+          <span class="unite">largeur 5 m — cliquer un bateau posé le retire</span>
+        </div>
+        <div class="options-groupe" id="weight-bar" data-dev hidden>
+          <label title="Masse du bloc posé">Masse
+            <input type="number" id="weight-mass-input" min="1" step="100" />
+            <span class="unite">kg</span>
+          </label>
+          <label id="weight-placement-field" title="Poser le bloc sur le point ou la poutre au lieu de le suspendre dessous">
+            <input type="checkbox" id="weight-placement-input" />Posé dessus
+          </label>
+        </div>
+        <div class="options-groupe" id="cable-bar" data-dev hidden>
+          <label id="cable-pretension-field" title="Tension des câbles posés : positive = déjà tendu au lancement, négative = mou">Tension initiale
+            <input type="number" id="cable-pretension-input" min="-50" max="10" step="1" />
+            <span class="unite">%</span>
+          </label>
+        </div>
+      </div>
     </div>
 
-    <!-- Matériau Câble -->
-    <div class="hud-card context-strip" id="cable-bar" hidden>
-      <span class="context-hint">Câble : ne travaille qu'en traction (mou en compression).</span>
-      <label id="cable-pretension-field" title="Tension de base des câbles posés (%) : > 0 = déjà tendu au lancement, < 0 = mou">Tension initiale (%)
-        <input type="number" id="cable-pretension-input" min="-50" max="10" step="1" />
-      </label>
-    </div>
+    <!-- ══ Vue ══ -->
+    <main class="vue" id="vue">
+      <canvas id="simulation-canvas"></canvas>
 
-    <!-- ══ Barre du BAS ══ -->
-    <footer class="hud hud-bottom">
-      <!-- Palette de matériaux : cliquer = sélectionner le matériau ET construire. -->
-      <div class="hud-card palette-card">
-        <div class="palette" id="material-palette" title="Choisis un matériau, puis clique des points du maillage pour poser des poutres"></div>
-      </div>
+      <!-- Palette de l'essai : flottante, déplaçable par sa barre de titre. -->
+      <section id="palette-essai" class="fenetre fenetre-flottante" hidden>
+        <header class="fenetre-titre" data-poignee>
+          <span>Essai de charge</span>
+        </header>
+        <div class="palette-corps">
+          <button type="button" class="bouton-outil" data-commande="recommencer-essai" title="Recommencer l'essai depuis le début">
+            <svg class="icone" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3v10" stroke="currentColor" stroke-width="2"/><path d="M13 3v10l-7.5-5z" fill="currentColor"/></svg>
+          </button>
+          <button type="button" id="essai-pause" class="bouton-outil" data-commande="pause-essai" title="Pause (Espace)"></button>
+          <span class="separateur"></span>
+          <label class="curseur" for="speed-slider" title="Vitesse de la simulation : ×0,1 = dix fois plus lent, ×1 = temps réel, ×2 = deux fois plus rapide">
+            <span>Vitesse</span>
+            <input type="range" id="speed-slider" min="0.1" max="2" step="0.05" />
+            <output id="speed-value" class="afficheur afficheur-court">×1,0</output>
+          </label>
+          <span class="separateur"></span>
+          <output id="time-display" class="afficheur afficheur-temps" title="Temps simulé">0,00 s</output>
+        </div>
+      </section>
 
-      <!-- Outils d'édition -->
-      <div class="hud-card tools-card">
-        <button data-tool="terrain" class="tool-btn" title="Dessiner le sol : clique des points du maillage pour tracer le haut du relief">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 19h19M3.5 19l5.5-9 3.5 5.5L15 11l5 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span>Sol</span>
-        </button>
-        <button data-tool="anchor" class="tool-btn" title="Poser un point ancré (appui) : sur un point vide du maillage OU sur l'extrémité d'une poutre existante. Type de liaison (pivot ou encastrement) réglable dans l'inspecteur. Recliquer un point ancré le désancre / le retire s'il est vide.">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5.5" r="1.7" fill="currentColor" stroke="none"/><path d="M12 7.5 6.5 16h11z M3.5 19.5h17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span>Appui</span>
-        </button>
-        <button data-tool="addWeight" class="tool-btn" title="Cliquer un point OU une poutre (n'importe où le long) pour y placer un poids">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 8V6.5a3 3 0 0 1 6 0V8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M6.2 8h11.6l1.4 10.2a1.6 1.6 0 0 1-1.6 1.8H6.4a1.6 1.6 0 0 1-1.6-1.8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
-          <span>Poids</span>
-        </button>
-        <span class="hud-sep"></span>
-        <button data-tool="addCar" class="tool-btn" title="Cliquer une poutre « Route » pour y placer une voiture">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 16.5v-3l2.2-4.5h8.8l3.3 4.5h1.7a1 1 0 0 1 1 1v2h-2.6M9.9 16.5h4.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7.5" cy="16.8" r="1.9" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="16.5" cy="16.8" r="1.9" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
-          <span>Voiture</span>
-        </button>
-        <button data-tool="addTruck" class="tool-btn" title="Cliquer une poutre « Route » pour y placer un camion">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1.5" y="6.5" width="12" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M13.5 9.5h4.2l2.8 3v3h-7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="6" cy="17.5" r="1.9" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17.5" cy="17.5" r="1.9" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
-          <span>Camion</span>
-        </button>
-        <span class="hud-sep"></span>
-        <button data-tool="select" class="tool-btn" title="Cliquer un élément pour l'inspecter — glisser dans le vide pour une sélection multiple (Échap depuis n'importe quel outil)">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 3.5 19 11l-6.2 1.6L9.5 19z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-          <span>Choisir</span>
-        </button>
-      </div>
+      <!-- Fenêtres d'outils accostées à droite. -->
+      <aside class="colonne-droite">
+        <section id="panneau-resultat" class="fenetre" hidden>
+          <header class="fenetre-titre">
+            <span>Rapport d'essai</span>
+            <button type="button" id="resultat-fermer" class="fenetre-fermer" title="Fermer">
+              <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 2l6 6M8 2L2 8"/></svg>
+            </button>
+          </header>
+          <div class="rapport-verdict" id="resultat-verdict">
+            <span id="resultat-icone" class="rapport-icone"></span>
+            <strong id="resultat-titre"></strong>
+          </div>
+          <div class="grille-proprietes" id="resultat-lignes"></div>
+          <p id="resultat-detail" class="rapport-detail"></p>
+          <div class="fenetre-actions">
+            <button type="button" id="resultat-rejouer" class="bouton">Modifier le pont</button>
+            <button type="button" id="resultat-suivant" class="bouton bouton-defaut">Niveau suivant</button>
+          </div>
+          <div class="fenetre-actions fenetre-actions-secondaires">
+            <button type="button" id="resultat-niveaux" class="bouton-lien">Liste des niveaux…</button>
+          </div>
+        </section>
 
-      <!-- Poids total + vent en direct -->
-      <div class="hud-card status-card">
-        <span id="structure-weight-display" title="Poids total de la structure">Poids : 0.00 kN</span>
-        <span id="wind-display"></span>
-      </div>
+        <section id="inspector-panel" class="fenetre inspector" hidden></section>
+
+        <section id="wind-bar" class="fenetre" data-dev hidden>
+          <header class="fenetre-titre"><span>Vent</span></header>
+          <div class="grille-champs">
+            <label title="Vitesse de base (m/s). Négative : vent de droite à gauche.">Vitesse (m/s)
+              <input type="number" id="wind-speed" step="1" />
+            </label>
+            <label title="Amplitude des rafales autour de la vitesse de base (± m/s).">Rafales ± (m/s)
+              <input type="number" id="wind-gust-amp" min="0" step="1" />
+            </label>
+            <label title="Nervosité du vent : plus c'est haut, plus la vitesse varie souvent (≈ Hz).">Variation (Hz)
+              <input type="number" id="wind-gust-rate" min="0.02" step="0.05" />
+            </label>
+            <label title="Graine aléatoire : rejoue exactement la même courbe de vent.">Graine
+              <input type="number" id="wind-seed" min="0" step="1" />
+            </label>
+            <label title="Nombre de particules d'air générées pendant l'essai.">Particules
+              <input type="number" id="wind-count" min="0" max="2000" step="10" />
+            </label>
+            <label title="Longueur d'une particule = durée de sa traînée (s).">Traînée (s)
+              <input type="number" id="wind-length" min="0.2" max="6" step="0.5" />
+            </label>
+          </div>
+          <span class="legende">Courbe de vent sur 30 s</span>
+          <canvas id="wind-curve-canvas"></canvas>
+        </section>
+      </aside>
+    </main>
+
+    <!-- ══ Barre d'état ══ -->
+    <footer class="barre-etat">
+      <span id="etat-message" class="etat-case etat-message">Prêt</span>
+      <span id="wind-display" class="etat-case" data-dev></span>
+      <span id="etat-solveur" class="etat-case" title="Calcul allégé : la scène est assez grosse pour que le solveur ajoute de l'inertie aux éléments les plus raides et allonge son pas de calcul — mêmes flèches, mêmes efforts, mêmes ruptures, mise en charge un peu plus molle. « Ralenti » indique que la machine n'arrive pas à suivre le temps réel : la simulation se déroule plus lentement, le pont se comportant exactement pareil."></span>
+      <span id="etat-coordonnees" class="etat-case etat-coordonnees"></span>
+      <span id="etat-zoom" class="etat-case etat-zoom"></span>
+      <span id="etat-temps" class="etat-case etat-temps"></span>
     </footer>
+
+    <!-- ══ Dialogue des niveaux ══ -->
+    <div id="ecran-niveaux" class="voile" hidden>
+      <section class="dialogue dialogue-niveaux" role="dialog" aria-labelledby="niveaux-titre">
+        <header class="dialogue-titre">
+          <h2 id="niveaux-titre">Niveaux</h2>
+          <button type="button" id="niveaux-fermer" class="fenetre-fermer" title="Fermer">
+            <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 2l6 6M8 2L2 8"/></svg>
+          </button>
+        </header>
+        <div class="dialogue-corps">
+          <div class="liste" id="niveaux-grille" tabindex="0"></div>
+          <fieldset class="cadre">
+            <legend>Énoncé</legend>
+            <p id="niveau-enonce" class="enonce"></p>
+            <p id="niveau-contrainte" class="enonce-contrainte" hidden></p>
+            <p id="niveau-progression" class="enonce-progression" hidden></p>
+          </fieldset>
+          <div class="dialogue-boutons">
+            <span class="espace"></span>
+            <button type="button" id="niveau-ouvrir" class="bouton bouton-defaut">Ouvrir</button>
+            <button type="button" id="niveau-ouvrir-neuf" class="bouton" hidden title="Ouvrir ce niveau sans reprendre le pont enregistré">Nouveau pont</button>
+            <button type="button" id="niveau-annuler" class="bouton">Annuler</button>
+          </div>
+          <fieldset class="cadre" data-admin>
+            <legend>Édition du niveau</legend>
+            <div id="editeur-champs"></div>
+            <p id="editeur-message" class="editeur-message"></p>
+            <div class="dialogue-boutons">
+              <button type="button" id="editeur-nouveau" class="bouton">Nouveau</button>
+              <button type="button" id="editeur-supprimer" class="bouton bouton-danger">Supprimer</button>
+              <button type="button" id="editeur-monter" class="bouton bouton-rang" title="Monter dans la catégorie">&#9650;</button>
+              <button type="button" id="editeur-descendre" class="bouton bouton-rang" title="Descendre dans la catégorie">&#9660;</button>
+              <span class="espace"></span>
+              <button type="button" id="editeur-enregistrer" class="bouton bouton-defaut" title="Enregistrer ce niveau sur le serveur : il devient aussitôt celui de tout le monde">Enregistrer</button>
+            </div>
+          </fieldset>
+        </div>
+      </section>
+    </div>
+
+    <!-- ══ Aide : souris et clavier ══ -->
+    <div id="ecran-aide" class="voile" hidden>
+      <section class="dialogue dialogue-aide" role="dialog" aria-labelledby="aide-titre">
+        <header class="dialogue-titre">
+          <h2 id="aide-titre">Souris et clavier</h2>
+          <button type="button" id="aide-fermer" class="fenetre-fermer" title="Fermer">
+            <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 2l6 6M8 2L2 8"/></svg>
+          </button>
+        </header>
+        <div class="dialogue-corps">
+          <table class="tableau-commandes">
+            <tbody>
+              <tr><th>Clic gauche</th><td>Poser une poutre, sélectionner un élément</td></tr>
+              <tr><th>Glisser un point</th><td>Déplacer ce point (outil Sélection)</td></tr>
+              <tr><th>Glisser dans le vide</th><td>Sélection multiple (outil Sélection)</td></tr>
+              <tr><th>Clic droit glissé</th><td>Déplacer la vue</td></tr>
+              <tr><th>Molette</th><td>Zoom autour du pointeur</td></tr>
+              <tr><th>Échap</th><td>Interrompre la pose, puis revenir à la sélection</td></tr>
+              <tr><th>Suppr</th><td>Supprimer la sélection</td></tr>
+              <tr><th>Ctrl+Z</th><td>Annuler la dernière suppression ou le dernier déplacement</td></tr>
+              <tr><th>Espace</th><td>Lancer l'essai, puis pause / reprise</td></tr>
+              <tr><th>+ / − / 0</th><td>Zoom avant, zoom arrière, cadrer la zone de travail</td></tr>
+            </tbody>
+          </table>
+          <div class="dialogue-boutons">
+            <span class="espace"></span>
+            <button type="button" id="aide-ok" class="bouton bouton-defaut">Fermer</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
   </div>
 
   <script type="module" src="js/main.js"></script>

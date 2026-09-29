@@ -9,21 +9,28 @@
 // monde est (origin + i·pas, origin + j·pas). Travailler en indices ENTIERS
 // rend la détection de chevauchement exacte (pas d'imprécision flottante).
 
-// Dimensions de DÉPART de la grille (largeur). On peut ensuite l'ÉLARGIR ou la
-// RÉTRÉCIR par la gauche ET la droite (voir resizeWorldWidth dans Structure.js) :
-// `cols` grandit et `originX` glisse vers les x négatifs, si bien que les
-// positions MONDE déjà construites ne bougent pas (les structures restent au
-// centre). BASE_* = valeurs par défaut (grille d'un plan neuf / d'une ancienne
-// sauvegarde sans largeur mémorisée).
+// Dimensions de DÉPART de la grille. On peut ensuite la redimensionner dans les
+// deux sens (voir resizeWorldWidth / resizeWorldHeight dans Structure.js) ; dans
+// les deux cas les positions MONDE déjà construites NE BOUGENT PAS :
+//   LARGEUR : `cols` grandit des deux côtés et `originX` glisse vers les x
+//     négatifs — les structures restent au centre ;
+//   HAUTEUR : `rows` grandit par le HAUT seulement et `originY` glisse vers les
+//     y négatifs. Le BAS du monde ne bouge donc jamais : le fond du ravin, l'eau
+//     et les altitudes lues sur la règle verticale restent ce qu'ils étaient, et
+//     ce qu'on gagne est du CIEL — la place d'un portique, d'une arche, d'un
+//     pylône.
+// BASE_* = valeurs par défaut (plan neuf, ou sauvegarde sans dimensions).
 export const BASE_ORIGIN_X = 0;
 export const BASE_COLS = 100;
+export const BASE_ORIGIN_Y = 0;
+export const BASE_ROWS = 48;
 
 export const MESH = {
   originX: BASE_ORIGIN_X,
-  originY: 0,
+  originY: BASE_ORIGIN_Y,
   spacing: 0.5, // mètres entre deux points voisins (maillage 50 cm × 50 cm)
   cols: BASE_COLS, // i de 0 à cols inclus (→ 100 × 0,5 = 50 m de large)
-  rows: 48, // j de 0 à rows inclus (→ 48 × 0,5 = 24 m de haut)
+  rows: BASE_ROWS, // j de 0 à rows inclus (→ 48 × 0,5 = 24 m de haut)
 };
 
 // Bornes et pas du redimensionnement de la LARGEUR (en colonnes / mailles).
@@ -33,17 +40,26 @@ export const MESH_MIN_COLS = 40; // 20 m au minimum
 export const MESH_MAX_COLS = 600; // 300 m au maximum
 export const MESH_RESIZE_STEP = 4;
 
-// Applique un état de LARGEUR (origine + nombre de colonnes) au maillage vivant.
-// `world` vient d'une structure (structure.world) ; absent → dimensions de base
-// (ancienne sauvegarde). rows/originY/spacing ne changent jamais.
+// Mêmes bornes pour la HAUTEUR, en lignes. Le pas vaut ici 4 mailles ajoutées
+// EN HAUT (et non de chaque côté) : 2 m de ciel par clic.
+export const MESH_MIN_ROWS = 24; // 12 m au minimum
+export const MESH_MAX_ROWS = 400; // 200 m au maximum
+
+// Applique les dimensions mémorisées au maillage vivant. `world` vient d'une
+// structure (structure.world) ; une valeur absente retombe sur la base — c'est
+// ce qui fait qu'une sauvegarde d'avant le réglage de hauteur s'ouvre encore.
+// `spacing` ne change jamais.
 export function applyWorldToMesh(world) {
-  MESH.originX = world && typeof world.originX === "number" ? world.originX : BASE_ORIGIN_X;
-  MESH.cols = world && typeof world.cols === "number" ? world.cols : BASE_COLS;
+  const lire = (cle, defaut) => (world && typeof world[cle] === "number" ? world[cle] : defaut);
+  MESH.originX = lire("originX", BASE_ORIGIN_X);
+  MESH.cols = lire("cols", BASE_COLS);
+  MESH.originY = lire("originY", BASE_ORIGIN_Y);
+  MESH.rows = lire("rows", BASE_ROWS);
 }
 
-// État de LARGEUR courant du maillage, à mémoriser sur la structure.
+// Dimensions courantes du maillage, à mémoriser sur la structure.
 export function getMeshWorld() {
-  return { originX: MESH.originX, cols: MESH.cols };
+  return { originX: MESH.originX, cols: MESH.cols, originY: MESH.originY, rows: MESH.rows };
 }
 
 // Élargit (delta>0) ou rétrécit (delta<0) la grille de `deltaPerSide` colonnes
@@ -53,6 +69,15 @@ export function getMeshWorld() {
 export function applyMeshWidthResize(deltaPerSide) {
   MESH.cols += 2 * deltaPerSide;
   MESH.originX -= deltaPerSide * MESH.spacing;
+}
+
+// Monte (delta>0) ou abaisse (delta<0) le PLAFOND de la grille de `delta` lignes.
+// `originY` glisse d'autant : le bas du monde reste où il est, et les positions
+// monde existantes aussi. Les indices j de la structure, eux, se décalent de
+// +delta (voir Structure.js::resizeWorldHeight).
+export function applyMeshHeightResize(delta) {
+  MESH.rows += delta;
+  MESH.originY -= delta * MESH.spacing;
 }
 
 // Longueur MINIMALE d'une poutre (m). Le maillage est à 50 cm, mais on interdit

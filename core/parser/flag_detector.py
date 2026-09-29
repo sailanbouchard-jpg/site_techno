@@ -33,6 +33,9 @@ PDF SPECIFICS:
   The first SIZE flag = panel width.
   The second SIZE flag = panel height.
   A PERCENT flag overrides the height: 150% means 1.5× the reference height for that width.
+  The bare keyword "raw" removes the buttons and the browser PDF viewer chrome
+  (toolbar/panel/scrollbar) — see detect_pdf_flags.
+  The bare keyword "horizontal" does the same, with pages side by side (scroll right).
 """
 
 import re
@@ -123,10 +126,18 @@ def detect_pdf_flags(text: str) -> dict:
     'l 150% fiche.pdf' → width=l, height_vh=225 (150% of l's 150vh)
     'm l fiche.pdf'    → width=m, height_vh=150  (l reference)
     'm fiche.pdf'      → width=m, height_vh=100  (m default)
+    'raw m fiche.pdf'  → raw=True, width=m, height_vh=100 — pas de boutons,
+                         pas de barre d'outils/panneau/scrollbar du lecteur PDF.
 
-    Output keys: size, height_vh (int), align, file, legend
+    'horizontal m fiche.pdf' → horizontal=True — comme raw, mais les pages sont
+                         côte à côte et on défile vers la droite.
+    'horizontal fleches m fiche.pdf' → + boutons verticaux page précédente/suivante
+                         sur les bords.
+
+    Output keys: size, height_vh (int), align, file, legend, raw, horizontal, fleches
     """
-    attrs = {"size": "m", "height_vh": None, "align": "centre", "file": "", "legend": ""}
+    attrs = {"size": "m", "height_vh": None, "align": "centre", "file": "", "legend": "",
+             "raw": False, "horizontal": False, "fleches": False}
 
     text, legend = _pull_out_quoted_legend(text)
     attrs["legend"] = legend
@@ -136,7 +147,10 @@ def detect_pdf_flags(text: str) -> dict:
 
     for word in text.split():
         word_lower = word.lower()
-        if   word_lower in SIZE_FLAGS:   sizes_found.append(word_lower)
+        if   word_lower == "raw":        attrs["raw"]   = True
+        elif word_lower == "horizontal": attrs["horizontal"] = True
+        elif word_lower == "fleches":    attrs["fleches"]    = True
+        elif word_lower in SIZE_FLAGS:   sizes_found.append(word_lower)
         elif word_lower in ALIGN_FLAGS:  attrs["align"] = word_lower
         elif _looks_like_filename(word): attrs["file"]  = word
         elif _RE_PERCENTAGE.match(word):

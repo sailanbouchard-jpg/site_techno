@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>C2 — Le binaire</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/cyberdefis/style.css">
+</head>
+<body>
+
+  <div class="defis">
+    <div class="defis-page">
+
+      <div class="fil-ariane">
+        <a href="/index.html">Accueil</a> &gt; <a href="/cyberdefis/">Cyber-défis</a> &gt;
+        <a href="/cyberdefis/crypto/">Codes secrets</a> &gt; C2
+      </div>
+
+      <div class="bandeau"><h1>C2 — Le binaire</h1></div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Énoncé</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <p>
+              Le binaire, c'est un alphabet que les ordinateurs utilisent pour traiter des
+              informations. Plutôt que nos lettres (a, b, c, … z), ils n'emploient que deux
+              symboles pour communiquer : le 0 et le 1. Ça a l'air pratique, non ?
+            </p>
+            <p>
+              Pour nous, ce n'est pas facile à lire. À part ceux qui auront fait LV2 Binaire, il
+              sera dur de comprendre ce que veut dire
+              <span class="monospace">01100001 01101100 01101100 01101111</span>. Mais les
+              ordinateurs, eux, comprennent très bien que cela se traduit dans notre alphabet par
+              « allo ».
+            </p>
+            <p>
+              Connecte-toi dans l'espace ci-dessous avec les accès : identifiant =
+              <span class="monospace">admin</span>, mot de passe =
+              <span class="monospace">motdepasse</span>.
+            </p>
+            <p class="discret">Format attendu : <span class="monospace">FLAG{…}</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="fenetre">
+        <div class="fenetre-titre"><span class="puce"></span>Espace de connexion</div>
+        <div class="fenetre-corps">
+          <div class="papier">
+            <form id="cnx-bin">
+              <div class="outil-champ">
+                <span class="outil-etiquette">Identifiant</span>
+                <input class="champ" id="bin-id" autocomplete="off" spellcheck="false">
+              </div>
+              <div class="outil-champ">
+                <span class="outil-etiquette">Mot de passe</span>
+                <input class="champ" id="bin-mdp" autocomplete="off" spellcheck="false">
+              </div>
+              <button class="bouton" type="submit">Se connecter</button>
+            </form>
+            <p id="bin-msg" class="panneau-message"></p>
+          </div>
+        </div>
+      </div>
+
+      <div id="panneau"></div>
+
+    </div>
+  </div>
+
+  <script>
+    // Cet espace ne comprend que le binaire : on décode ce qui est saisi, puis on compare.
+    (function () {
+      function debin(saisie) {
+        var bits = (saisie.match(/[01]/g) || []).join("");
+        var texte = "";
+        for (var i = 0; i + 8 <= bits.length; i += 8) {
+          texte += String.fromCharCode(parseInt(bits.substr(i, 8), 2));
+        }
+        return texte;
+      }
+      document.getElementById("cnx-bin").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var id  = debin(document.getElementById("bin-id").value);
+        var mdp = debin(document.getElementById("bin-mdp").value);
+        var msg = document.getElementById("bin-msg");
+        if (id === "admin" && mdp === "motdepasse") {
+          msg.textContent = "Succès ! FLAG{10110010}";
+          msg.className = "panneau-message est-ok";
+        } else {
+          msg.textContent = "Mauvais identifiant / mot de passe.";
+          msg.className = "panneau-message est-erreur";
+        }
+      });
+    })();
+  </script>
+  <script src="/cyberdefis/defis.js"></script>
+  <script>Defis.panneau({ defi: "c2" });</script>
+  <script src="/cyberdefis/site-nav.js"></script>
+</body>
+</html>

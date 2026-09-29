@@ -1,104 +1,123 @@
 // ui/materialPalette.js
 // ─────────────────────
-// La PALETTE de matériaux (bas gauche de l'écran). Les types sont GROUPÉS par
-// famille de matériau — les déclinaisons (fin / large) côte à côte, le nom de
-// la famille dessous, un léger séparateur entre familles (style.css). Chaque
-// bouton montre la BARRE du matériau : sa vraie couleur, sa hauteur figure
-// l'épaisseur relative. Cliquer fait DEUX choses d'un coup : sélectionner ce
-// type ET activer le placement de poutre — plus besoin d'un bouton « Poutre »
-// séparé (si on a choisi un matériau, c'est qu'on veut évidemment construire).
+// La barre des ÉLÉMENTS : un bouton par type de poutre (matériau × épaisseur),
+// avec une vignette dessinée par le code même de la scène (memberRenderer.js) —
+// on voit la vraie poutre, sa matière et son épaisseur relative. Cliquer choisit
+// le type ET active la pose : pas de bouton « Poutre » séparé.
 //
-// Ne contient ni physique ni dessin : ne fait que piloter state.js.
+// À droite de la barre, les caractéristiques du type choisi : épaisseur, masse
+// par mètre, longueur maximale d'un élément.
+//
+// Ne contient ni physique : ne fait que piloter state.js.
 
-import { BEAM_TYPES, getMaterialById } from "../model/materials.js";
-import { state, setTool, TOOLS } from "../state.js";
+import { BEAM_TYPES, getMaterialById, getBeamTypeById } from "../model/materials.js";
+import { state, setTool, TOOLS, MODES, typePoutreAutorise } from "../state.js";
+import { drawMember, drawnWidth, edgeWidth } from "../render/memberRenderer.js";
+import { formatInteger } from "../units.js";
 
-let chips = [];
+let buttons = [];
 
 export function initMaterialPalette(container, { onChange } = {}) {
   container.innerHTML = "";
-  chips = [];
-
-  // Groupes par matériau, dans l'ordre du catalogue (bois, acier, béton, ...).
-  const groups = new Map();
+  buttons = [];
   for (const beamType of BEAM_TYPES) {
-    if (!groups.has(beamType.materialId)) groups.set(beamType.materialId, []);
-    groups.get(beamType.materialId).push(beamType);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "element";
+    button.dataset.beamtype = beamType.id;
+    button.title = `${beamType.label} : épaisseur ${thicknessMm(beamType)} mm, éléments de ${beamType.maxLength} m au plus`;
+
+    const vignette = document.createElement("canvas");
+    vignette.className = "element-vignette";
+    const libelle = document.createElement("span");
+    libelle.textContent = beamType.label;
+    button.append(vignette, libelle);
+
+    button.addEventListener("click", () => {
+      if (button.disabled) return;
+      state.currentBeamTypeId = beamType.id;
+      setTool(TOOLS.ADD_BEAM);
+      refreshMaterialPalette();
+      if (onChange) onChange();
+    });
+    container.appendChild(button);
+    buttons.push({ button, vignette, beamType });
   }
-
-  for (const [materialId, types] of groups) {
-    const material = getMaterialById(materialId);
-
-    const group = document.createElement("div");
-    group.className = "mat-group";
-
-    const row = document.createElement("div");
-    row.className = "mat-row";
-    for (const beamType of types) {
-      row.appendChild(buildChip(beamType, material, onChange));
+  // Vignettes dessinées dès que leur taille est connue, et redessinées si elle
+  // change (zoom du navigateur, densité d'écran).
+  const observer = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      const item = buttons.find((b) => b.vignette === entry.target);
+      if (item) drawVignette(item.vignette, item.beamType);
     }
-
-    const label = document.createElement("span");
-    label.className = "mat-group-label";
-    label.textContent = material.name;
-
-    group.append(row, label);
-    container.appendChild(group);
+  });
+  for (const b of buttons) {
+    drawVignette(b.vignette, b.beamType);
+    observer.observe(b.vignette);
   }
-
   refreshMaterialPalette();
 }
 
-// Hauteur (px) de la barre témoin : figure l'épaisseur RELATIVE du type, pas
-// une échelle exacte (un béton large de 40 cm écraserait tout le reste).
-function barHeightFor(beamType) {
-  if (beamType.cable) return 3;
-  if (beamType.road) return 8;
-  return beamType.id.includes("large") ? 10 : 5;
+function thicknessMm(beamType) {
+  return Math.round(beamType.thickness * 1000);
 }
 
-// « Bois fin » → « fin » (le nom de la famille est déjà le libellé du groupe).
-function variantLabel(beamType, material) {
-  return beamType.label.replace(material.name, "").trim();
+// La poutre du type, couchée à l'horizontale, réduite si elle est plus épaisse
+// que la vignette (le béton large reste ainsi le plus épais de la barre).
+function drawVignette(canvas, beamType) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  if (w === 0 || h === 0) return;
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  const ctx = canvas.getContext("2d");
+  const member = { materialId: beamType.materialId, sectionArea: beamType.thickness, isCable: !!beamType.cable, id: beamType.id };
+  const width = drawnWidth(member);
+  const scale = Math.min(1, (h - 1) / (width + 2 * edgeWidth(width)));
+  ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, (dpr * h) / 2);
+  drawMember(ctx, [{ x: 1 / scale, y: 0 }, { x: (w - 1) / scale, y: 0 }], member);
 }
 
-function buildChip(beamType, material, onChange) {
-  const chip = document.createElement("button");
-  chip.className = "mat-chip";
-  chip.dataset.beamtype = beamType.id;
-  const maxTxt = beamType.maxLength ? ` — éléments de ${beamType.maxLength} m max (cliquer plus loin en pose plusieurs à la suite)` : "";
-  chip.title = `${beamType.label}${maxTxt}`;
-
-  const bar = document.createElement("span");
-  bar.className = "mat-bar";
-  bar.style.height = `${barHeightFor(beamType)}px`;
-  bar.style.background = `linear-gradient(180deg, ${material.colorHi}, ${material.color} 55%, ${material.colorEdge})`;
-
-  const variant = document.createElement("span");
-  variant.className = "mat-variant";
-  variant.textContent = variantLabel(beamType, material) || " ";
-
-  chip.append(bar, variant);
-  chip.addEventListener("click", () => {
-    if (chip.disabled) return;
-    state.currentBeamTypeId = beamType.id;
-    setTool(TOOLS.ADD_BEAM);
-    refreshMaterialPalette();
-    if (onChange) onChange();
-  });
-  chips.push(chip);
-  return chip;
-}
-
-// Met en évidence la pastille active (uniquement quand l'outil courant est bien
-// le placement de poutre — sinon aucune pastille n'est « active »).
+// Met en évidence le bouton actif (seulement quand l'outil courant est bien la
+// pose de poutre), cache les matériaux que le niveau interdit, et affiche les
+// caractéristiques du type choisi.
 export function refreshMaterialPalette() {
-  for (const chip of chips) {
-    const active = state.currentTool === TOOLS.ADD_BEAM && state.currentBeamTypeId === chip.dataset.beamtype;
-    chip.classList.toggle("active", active);
+  let famille = null; // le trait de séparation va au premier VISIBLE de chaque famille
+  for (const { button, beamType } of buttons) {
+    button.hidden = !typePoutreAutorise(beamType.id);
+    const active = state.currentTool === TOOLS.ADD_BEAM && state.currentBeamTypeId === beamType.id;
+    button.classList.toggle("active", active);
+    button.classList.toggle("element-famille", !button.hidden && beamType.materialId !== famille);
+    if (!button.hidden) famille = beamType.materialId;
+  }
+  refreshCharacteristics();
+}
+
+function refreshCharacteristics() {
+  const zone = document.getElementById("caracteristiques-poutre");
+  const beamType = getBeamTypeById(state.currentBeamTypeId);
+  const visible = state.mode === MODES.EDIT && state.currentTool === TOOLS.ADD_BEAM && beamType;
+  const key = visible ? beamType.id : "";
+  if (zone.dataset.type === key) return;
+  zone.dataset.type = key;
+  zone.innerHTML = "";
+  if (!visible) return;
+  const material = getMaterialById(beamType.materialId);
+  const items = [
+    ["Épaisseur", `${thicknessMm(beamType)} mm`],
+    ["Masse", `${formatInteger(material.density * beamType.thickness)} kg/m`],
+    ["Longueur max", `${beamType.maxLength} m`],
+  ];
+  for (const [label, value] of items) {
+    const item = document.createElement("span");
+    const b = document.createElement("b");
+    b.textContent = value;
+    item.append(`${label} `, b);
+    zone.appendChild(item);
   }
 }
 
 export function setMaterialPaletteEnabled(enabled) {
-  for (const chip of chips) chip.disabled = !enabled;
+  for (const { button } of buttons) button.disabled = !enabled;
 }

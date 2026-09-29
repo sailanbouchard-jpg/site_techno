@@ -1,83 +1,69 @@
 // render/grid.js
 // ──────────────
-// Le QUADRILLAGE de construction (façon papier millimétré / blueprint), à TROIS
-// niveaux : très fines lignes à chaque maille (50 cm), lignes moyennes tous les
-// 1 m, lignes épaisses tous les 5 m, plus un cadre autour de la zone. Met aussi
-// en évidence le point survolé (où le prochain clic va s'accrocher).
+// La GRILLE DE CONCEPTION, visible en mode Conception seulement (l'essai se
+// regarde sur la scène nue) : un voile léger sur la zone constructible, puis des
+// lignes à trois niveaux — 50 cm (seulement si l'on est assez près pour les
+// distinguer), 1 m, 5 m — et le cadre de la zone.
 //
-// Dessiné dans le contexte DÉJÀ transformé par la vue : on divise les épaisseurs
-// par le zoom pour qu'elles restent constantes à l'écran. LECTURE SEULE.
+// Tracée en pixels ÉCRAN, calée sur les pixels : des traits d'un pixel nets à
+// tous les zooms. LECTURE SEULE.
 
-import { MESH, gridToWorld } from "../model/mesh.js";
-import { worldToBasePixels } from "./displayTransform.js";
+import { MESH } from "../model/mesh.js";
+import { getViewTranslation } from "./displayTransform.js";
 import {
   PIXELS_PER_METER,
-  GRID_MAJOR_EVERY, GRID_MEDIUM_EVERY,
-  GRID_FINE_COLOR, GRID_MEDIUM_COLOR, GRID_MAJOR_COLOR,
-  GRID_FINE_WIDTH, GRID_MEDIUM_WIDTH, GRID_MAJOR_WIDTH, GRID_FRAME_COLOR,
-  GRID_HOVER_COLOR, GRID_HOVER_RING, GRID_HOVER_RADIUS,
+  GRID_VEIL, GRID_LINE_RGB, GRID_FINE_ALPHA, GRID_MEDIUM_ALPHA, GRID_MAJOR_ALPHA, GRID_FRAME_ALPHA,
+  GRID_MAJOR_EVERY, GRID_MEDIUM_EVERY, GRID_FINE_MIN_PX,
 } from "./styleConfig.js";
 
-const ppm = PIXELS_PER_METER;
+export function drawDesignGrid(ctx, view) {
+  const mPx = PIXELS_PER_METER * view.zoomLevel;
+  const t = getViewTranslation(view);
+  const sp = MESH.spacing * mPx;
+  const x0 = t.x + MESH.originX * mPx;
+  const y0 = t.y + MESH.originY * mPx;
+  const x1 = x0 + MESH.cols * sp;
+  const y1 = y0 + MESH.rows * sp;
+  const clip = {
+    x0: Math.max(0, x0), x1: Math.min(view.canvasWidth, x1),
+    y0: Math.max(0, y0), y1: Math.min(view.canvasHeight, y1),
+  };
+  if (clip.x1 <= clip.x0 || clip.y1 <= clip.y0) return;
 
-export function drawGrid(ctx, view) {
-  const zoom = view.zoomLevel || 1;
-  const sp = MESH.spacing * ppm; // espacement d'une maille, en px de base
-  const x1 = MESH.cols * sp;
-  const y1 = MESH.rows * sp;
+  ctx.fillStyle = GRID_VEIL;
+  ctx.fillRect(clip.x0, clip.y0, clip.x1 - clip.x0, clip.y1 - clip.y0);
 
-  // Du plus fin au plus fort (3 passes pour grouper les traits par style).
-  strokeLines(ctx, sp, x1, y1, GRID_FINE_WIDTH / zoom, GRID_FINE_COLOR,
-    (k) => k % GRID_MEDIUM_EVERY !== 0); // 50 cm : ni 1 m ni 5 m
-  strokeLines(ctx, sp, x1, y1, GRID_MEDIUM_WIDTH / zoom, GRID_MEDIUM_COLOR,
-    (k) => k % GRID_MEDIUM_EVERY === 0 && k % GRID_MAJOR_EVERY !== 0); // 1 m
-  strokeLines(ctx, sp, x1, y1, GRID_MAJOR_WIDTH / zoom, GRID_MAJOR_COLOR,
-    (k) => k % GRID_MAJOR_EVERY === 0); // 5 m
-
-  // Cadre du plan de travail.
+  const isMajor = (k) => k % GRID_MAJOR_EVERY === 0;
+  const isMedium = (k) => k % GRID_MEDIUM_EVERY === 0 && !isMajor(k);
+  const isFine = (k) => k % GRID_MEDIUM_EVERY !== 0;
   ctx.save();
-  ctx.lineWidth = GRID_MAJOR_WIDTH / zoom;
-  ctx.strokeStyle = GRID_FRAME_COLOR;
-  ctx.strokeRect(0, 0, x1, y1);
+  ctx.lineWidth = 1;
+  if (sp >= GRID_FINE_MIN_PX) strokeLines(ctx, x0, y0, sp, clip, isFine, GRID_FINE_ALPHA);
+  strokeLines(ctx, x0, y0, sp, clip, isMedium, GRID_MEDIUM_ALPHA);
+  strokeLines(ctx, x0, y0, sp, clip, isMajor, GRID_MAJOR_ALPHA);
+  ctx.strokeStyle = `rgba(${GRID_LINE_RGB}, ${GRID_FRAME_ALPHA})`;
+  ctx.strokeRect(Math.round(x0) + 0.5, Math.round(y0) + 0.5, Math.round(x1 - x0), Math.round(y1 - y0));
   ctx.restore();
 }
 
-function strokeLines(ctx, sp, x1, y1, width, color, keep) {
-  ctx.save();
-  ctx.lineWidth = width;
-  ctx.strokeStyle = color;
+function strokeLines(ctx, x0, y0, sp, clip, keep, alpha) {
   ctx.beginPath();
-  for (let i = 0; i <= MESH.cols; i++) {
+  const iStart = Math.max(0, Math.ceil((clip.x0 - x0) / sp));
+  const iEnd = Math.min(MESH.cols, Math.floor((clip.x1 - x0) / sp));
+  for (let i = iStart; i <= iEnd; i++) {
     if (!keep(i)) continue;
-    const x = i * sp;
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, y1);
+    const x = Math.round(x0 + i * sp) + 0.5;
+    ctx.moveTo(x, clip.y0);
+    ctx.lineTo(x, clip.y1);
   }
-  for (let j = 0; j <= MESH.rows; j++) {
+  const jStart = Math.max(0, Math.ceil((clip.y0 - y0) / sp));
+  const jEnd = Math.min(MESH.rows, Math.floor((clip.y1 - y0) / sp));
+  for (let j = jStart; j <= jEnd; j++) {
     if (!keep(j)) continue;
-    const y = j * sp;
-    ctx.moveTo(0, y);
-    ctx.lineTo(x1, y);
+    const y = Math.round(y0 + j * sp) + 0.5;
+    ctx.moveTo(clip.x0, y);
+    ctx.lineTo(clip.x1, y);
   }
+  ctx.strokeStyle = `rgba(${GRID_LINE_RGB}, ${alpha})`;
   ctx.stroke();
-  ctx.restore();
-}
-
-// Marqueur du point du maillage survolé (outils Poutre / Sol / Ancrer) : un petit
-// disque cerclé qui montre où l'accrochage va se faire.
-export function drawHoverMarker(ctx, hoverGrid, view) {
-  if (!hoverGrid) return;
-  const zoom = view.zoomLevel || 1;
-  const p = worldToBasePixels(gridToWorld(hoverGrid.i, hoverGrid.j));
-  const r = GRID_HOVER_RADIUS / zoom;
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-  ctx.fillStyle = GRID_HOVER_COLOR;
-  ctx.fill();
-  ctx.lineWidth = 1.5 / zoom;
-  ctx.strokeStyle = GRID_HOVER_RING;
-  ctx.stroke();
-  ctx.restore();
 }

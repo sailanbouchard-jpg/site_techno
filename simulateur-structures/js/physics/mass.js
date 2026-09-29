@@ -9,8 +9,14 @@
 // appliqué comme une FORCE dans loads.js (mass × g), pas comme une inertie —
 // sinon l'accélération vaudrait g quelle que soit la charge (F=m·a → a=g) et la
 // structure ne "sentirait" jamais une surcharge, donc ne romprait jamais.
+//
+// DEUX MASSES, depuis le solveur adaptatif. Ce fichier calcule la masse VRAIE,
+// posée sur node._masse : c'est elle qui fait le POIDS (loads.js) et l'inertie
+// par défaut. En scène lourde, physics/solveur.js pose à côté une masse
+// d'INERTIE gonflée (node._masseInertie) sur les quelques nœuds les plus raides,
+// pour allonger le pas de temps sans toucher ni au poids ni à l'équilibre.
 
-import { findBeamById, findSegmentById, ensureIndex } from "../model/Structure.js";
+import { findNodeById, findBeamById, findSegmentById, ensureIndex } from "../model/Structure.js";
 import { getMaterialById } from "../model/materials.js";
 import { MIN_NODE_MASS, GRAVITY_ACCELERATION } from "./config.js";
 
@@ -34,29 +40,33 @@ export function computeBeamMass(structure, beam) {
 }
 
 // La masse effective ne dépend QUE de la topologie (segments connectés ×
-// matériau × longueur). Elle était recalculée DEUX fois par pas et par nœud,
-// chacune en O(segments) → on la calcule une seule fois par état de topologie
-// et on la met en cache (clé : l'identité de l'index courant, voir
-// Structure.js). Le cache est jeté en même temps que l'index (invalidateIndex).
-function buildMassCache(structure) {
-  const cache = new Map();
-  for (const node of structure.nodes) cache.set(node.id, 0);
+// matériau × longueur) : on la calcule une seule fois par état de topologie et
+// on la POSE SUR LE NŒUD (node._masse). Une propriété d'objet se lit sans
+// détour, là où la Map d'avant coûtait une recherche par nœud ET PAR PAS — deux
+// fois, même (poids puis intégration), soit ~1,6 million de recherches par
+// seconde simulée sur une grosse scène. Le cache est jeté en même temps que
+// l'index (invalidateIndex), via le jeton ci-dessous.
+export function preparerMasses(structure) {
+  const token = ensureIndex(structure);
+  if (structure._massToken === token) return;
+  for (const node of structure.nodes) node._masse = 0;
   for (const segment of structure.segments) {
     const half = segmentOwnMass(structure, segment) / 2;
-    if (cache.has(segment.nodeAId)) cache.set(segment.nodeAId, cache.get(segment.nodeAId) + half);
-    if (cache.has(segment.nodeBId)) cache.set(segment.nodeBId, cache.get(segment.nodeBId) + half);
+    const a = findNodeById(structure, segment.nodeAId);
+    const b = findNodeById(structure, segment.nodeBId);
+    if (a) a._masse += half;
+    if (b) b._masse += half;
   }
-  for (const [id, m] of cache) cache.set(id, Math.max(m, MIN_NODE_MASS));
-  structure._massByNode = cache;
-  structure._massToken = structure._index;
-  return cache;
+  for (const node of structure.nodes) {
+    if (node._masse < MIN_NODE_MASS) node._masse = MIN_NODE_MASS;
+    node._masseInertie = node._masse; // le solveur la gonflera peut-être
+  }
+  structure._massToken = token;
 }
 
 export function computeNodeEffectiveMass(structure, node) {
-  let cache = structure._massByNode;
-  if (!cache || structure._massToken !== structure._index) cache = buildMassCache(structure);
-  const m = cache.get(node.id);
-  return m === undefined ? MIN_NODE_MASS : m;
+  preparerMasses(structure);
+  return node._masse;
 }
 
 // Poids total (N) de la structure : poutres + poids posés. Pour l'affichage.

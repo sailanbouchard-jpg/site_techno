@@ -1,13 +1,18 @@
 /*
   style.css
   ─────────
-  Rôle : structure et mise en page du simulateur. Le canvas occupe TOUT
-  l'écran ; l'interface flotte dessus en panneaux compacts (« HUD ») :
-  barre du haut (lecture, vue), barre du bas (matériaux + outils), tiroir
-  bibliothèque à gauche, inspecteur/vent à droite, bandeaux contextuels.
+  Rôle : structure et mise en page du simulateur, organisé comme un logiciel
+  d'ingénierie de bureau. Une grille verticale : barre de menus, barre d'outils
+  standard, barre des éléments, VUE (canvas + fenêtres d'outils), barre d'état.
+
+  Les boutons n'ont pas tous la même forme — chaque rôle a la sienne :
+    1. Lancer l'essai     → seul bouton PLEIN (l'action principale) ;
+    2. boutons de barre   → PLATS, révélés au survol, ENFONCÉS quand actifs ;
+    3. boutons de commande (dialogues, fenêtres) → en relief, filet net ;
+    4. entrées de menu    → surlignées au survol, coche pour les bascules.
 
   AUCUNE couleur ni dimension n'est écrite en dur ici : tout vient des
-  variables définies dans style-config.css (à charger avant ce fichier).
+  variables de style-config.css (à charger avant ce fichier).
 */
 
 * {
@@ -21,895 +26,1428 @@ body {
 
 body {
   margin: 0;
-  font-family: var(--font-family);
-  font-size: var(--font-size-base);
-  color: var(--color-text);
-  background: var(--color-background);
+  font-family: var(--font-ui);
+  font-size: var(--font-size);
+  line-height: 1.35;
+  color: var(--text);
+  background: var(--app-bg);
   overflow: hidden;
 }
-
-/* ── Scène : canvas plein écran, HUD par-dessus ── */
 
 .app {
-  position: relative;
-  width: 100vw;
+  display: grid;
+  grid-template-rows: var(--menubar-height) var(--toolbar-height) var(--toolbar-height) minmax(0, 1fr) var(--statusbar-height);
   height: 100vh;
-  overflow: hidden;
+  user-select: none;
 }
 
-#simulation-canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  background: var(--canvas-fallback-bg);
+button {
+  font: inherit;
+  color: inherit;
+  border-radius: var(--radius);
+  cursor: default;
 }
 
-/* ── Conteneurs HUD : ne bloquent pas les clics entre les cartes ── */
+button:focus-visible {
+  outline: 1px dotted var(--text);
+  outline-offset: -4px;
+}
 
-.hud {
-  position: absolute;
-  left: var(--hud-margin);
-  right: var(--hud-margin);
+/* ══ Barre de menus ══ */
+
+.barre-menus {
+  position: relative;
+  z-index: 30;
   display: flex;
-  align-items: flex-start;
-  gap: var(--hud-gap);
-  pointer-events: none;
-  z-index: 10;
+  align-items: stretch;
+  padding: 0 2px;
+  background: var(--menubar-bg);
+  border-bottom: 1px solid var(--menubar-border);
 }
 
-.hud-top {
-  top: var(--hud-margin);
+.menu {
+  position: relative;
 }
 
-.hud-bottom {
-  bottom: var(--hud-margin);
-  align-items: flex-end;
+.menu-titre {
+  height: 100%;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  background: transparent;
 }
 
-.hud-card {
-  pointer-events: auto;
+.menu-titre:hover,
+.menu.ouvert .menu-titre {
+  background: var(--menu-title-hover-bg);
+  border-color: var(--menu-title-hover-border);
+}
+
+.menu.ouvert .menu-titre {
+  background: var(--menu-title-open-bg);
+}
+
+.menu-liste {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 240px;
+  padding: 2px;
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(90deg, var(--menu-gutter) 0 27px, var(--menu-gutter-line) 27px 28px, transparent 28px),
+    var(--menu-bg);
+  border: 1px solid var(--menu-border);
+  box-shadow: var(--menu-shadow);
+}
+
+.menu-liste[hidden] {
+  display: none;
+}
+
+.menu-item {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: var(--spacing-small);
-  padding: 6px 10px;
-  background: var(--hud-bg);
-  border: 1px solid var(--hud-border);
-  border-radius: var(--hud-radius);
-  box-shadow: var(--hud-shadow);
-  backdrop-filter: blur(var(--hud-blur));
-  -webkit-backdrop-filter: blur(var(--hud-blur));
+  gap: 28px;
+  height: 22px;
+  padding: 0 10px 0 34px;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  white-space: nowrap;
 }
 
-/* Poussent la carte suivante à droite. */
-.sim-card {
-  margin-inline: auto;
+.menu-item:hover:not(:disabled) {
+  background: var(--menu-item-hover-bg);
+  border-color: var(--menu-item-hover-border);
 }
 
-/* ── Séparateur vertical léger ── */
+.menu-item:disabled {
+  color: var(--text-disabled);
+}
 
-.hud-sep {
-  width: 1px;
-  align-self: stretch;
-  margin: 3px 2px;
-  background: var(--sep-color);
+.menu-item[hidden] {
+  display: none;
+}
+
+.menu-libelle {
+  flex: 1;
+}
+
+.menu-item kbd {
+  font: inherit;
+  color: var(--menu-kbd);
+}
+
+/* Coche d'une bascule active (dessinée en CSS, pas de glyphe de police). */
+.menu-item[aria-checked="true"]::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 6px;
+  width: 7px;
+  height: 4px;
+  border-left: 2px solid var(--text);
+  border-bottom: 2px solid var(--text);
+  transform: rotate(-45deg);
+}
+
+.menu-separateur {
+  height: 1px;
+  margin: 3px 2px 3px 31px;
+  background: var(--menu-gutter-line);
+}
+
+.titre-document {
+  margin-left: auto;
+  align-self: center;
+  padding: 0 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+
+#niveau-courant:not(:empty)::after {
+  content: " — ";
+  color: var(--text-faint);
+}
+
+.titre-logiciel {
+  color: var(--text-faint);
+}
+
+/* ══ Barres d'outils ══ */
+
+.barre-outils {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+  padding: 0 4px;
+  background: var(--toolbar-bg);
+  border-bottom: 1px solid var(--toolbar-border);
+  box-shadow: inset 0 1px 0 var(--toolbar-highlight);
+  /* Avec tous les outils d'administration, la barre peut dépasser la fenêtre :
+     elle DÉFILE plutôt que de rogner ses derniers boutons. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+/* Aucun bouton ne se laisse comprimer : c'est la barre qui glisse. */
+.barre-outils > * {
   flex-shrink: 0;
 }
 
-/* ── Boutons du HUD (icône + libellé en ligne) ── */
+.separateur {
+  flex-shrink: 0;
+  width: 2px;
+  height: 20px;
+  margin: 0 4px;
+  border-left: 1px solid var(--sep-dark);
+  border-right: 1px solid var(--sep-light);
+}
 
-.hud-btn {
+.barre-libelle {
+  flex-shrink: 0;
+  margin: 0 4px 0 2px;
+  color: var(--text-muted);
+}
+
+.icone {
+  flex-shrink: 0;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  overflow: visible;
+}
+
+/* ── 2. Bouton de barre : plat, révélé au survol, enfoncé quand actif ── */
+
+.bouton-barre,
+.element {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: var(--button-height);
+  min-width: var(--button-height);
+  padding: 0 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  white-space: nowrap;
+}
+
+/* Matériau fermé par le niveau : `display: inline-flex` l'emporterait sur le
+   `hidden` du navigateur, il faut donc le masquer explicitement. */
+.element[hidden] {
+  display: none;
+}
+
+/* Même raison pour un bouton de barre masqué (« Nouveau pont », qui n'apparaît
+   que si l'élève a un pont enregistré sur le niveau en cours). */
+.bouton-barre[hidden] {
+  display: none;
+}
+
+.bouton-barre:hover:not(:disabled),
+.element:hover:not(:disabled) {
+  background: var(--btn-hover-bg);
+  border-color: var(--btn-hover-border);
+}
+
+.bouton-barre:active:not(:disabled),
+.bouton-barre.active,
+.bouton-barre[aria-pressed="true"],
+.element:active:not(:disabled),
+.element.active {
+  background: var(--btn-pressed-bg);
+  border-color: var(--btn-pressed-border);
+  box-shadow: var(--btn-pressed-inset);
+}
+
+.bouton-barre:disabled,
+.element:disabled {
+  color: var(--text-disabled);
+}
+
+.bouton-barre:disabled .icone,
+.element:disabled .element-vignette {
+  opacity: var(--icon-disabled-opacity);
+}
+
+/* ── 1. Bouton principal : Lancer l'essai, le seul bouton plein ── */
+
+.bouton-principal {
+  padding: 0 10px 0 7px;
+  background: var(--primary-bg);
+  border-color: var(--primary-border);
+  color: var(--primary-text);
+  font-weight: 600;
+  box-shadow: var(--primary-gloss);
+}
+
+.bouton-principal:hover:not(:disabled) {
+  background: var(--primary-bg-hover);
+  border-color: var(--primary-border);
+}
+
+.bouton-principal:active:not(:disabled) {
+  background: var(--primary-bg-pressed);
+  box-shadow: var(--btn-pressed-inset);
+}
+
+/* Pendant l'essai, le même emplacement ARRÊTE l'essai : bouton de commande. */
+.bouton-principal.en-essai {
+  background: var(--cmd-bg);
+  border-color: var(--cmd-border);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.bouton-principal.en-essai:hover:not(:disabled) {
+  background: var(--cmd-hover-bg);
+  border-color: var(--cmd-hover-border);
+}
+
+.bouton-principal.en-essai .icone {
+  color: var(--icon-red);
+}
+
+/* ── Éléments de la barre des icônes ── */
+
+.i-trait {
+  fill: none;
+  stroke: var(--icon-line);
+  stroke-width: 1.2;
+}
+
+.i-trait-bleu {
+  fill: none;
+  stroke: var(--icon-blue);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.i-trait-rouge {
+  fill: none;
+  stroke: var(--icon-red);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.i-loupe {
+  fill: var(--icon-blue-light);
+  stroke: var(--icon-line);
+  stroke-width: 1.3;
+}
+
+.i-manche {
+  fill: none;
+  stroke: var(--icon-line);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.i-cadre {
+  fill: var(--icon-blue-light);
+  stroke: var(--icon-blue);
+  stroke-width: 1;
+}
+
+.i-dossier-fond,
+.i-dossier-face {
+  stroke: var(--icon-folder-line);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+
+.i-dossier-fond {
+  fill: var(--icon-folder-back);
+}
+
+.i-dossier-face {
+  fill: var(--icon-folder-front);
+}
+
+.i-curseur,
+.i-appui,
+.i-caisse {
+  fill: var(--icon-fill);
+  stroke: var(--icon-line);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+
+.i-sol {
+  fill: var(--icon-earth);
+  stroke: var(--icon-green-dark);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+
+/* Drapeau d'arrivée : un damier, comme une ligne d'arrivée. */
+.i-drapeau {
+  fill: var(--icon-fill);
+  stroke: var(--icon-line);
+  stroke-width: 1;
+}
+
+.i-damier {
+  fill: var(--icon-line);
+  stroke: none;
+}
+
+.i-bloc {
+  fill: var(--icon-grey);
+  stroke: var(--icon-line);
+  stroke-width: 1;
+}
+
+.i-voiture {
+  fill: var(--icon-red);
+  stroke: var(--icon-line);
+  stroke-width: 0.9;
+  stroke-linejoin: round;
+}
+
+.i-cabine {
+  fill: var(--icon-folder-back);
+  stroke: var(--icon-line);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+
+.i-roue {
+  fill: var(--icon-line);
+}
+
+/* ── Largeur de la grille (atelier) ── */
+
+.pas-a-pas {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+}
+
+.bouton-pas {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--cmd-border);
+  background: var(--cmd-bg);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.bouton-pas:hover:not(:disabled) {
+  background: var(--cmd-hover-bg);
+  border-color: var(--cmd-hover-border);
+}
+
+/* ── Afficheurs du projet (droite de la barre standard) ── */
+
+.afficheurs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin-left: auto;
+  padding-left: 12px;
+}
+
+.afficheur-groupe {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
-  border: 1px solid transparent;
-  border-radius: var(--ctrl-radius);
-  background: var(--ctrl-bg);
-  color: var(--color-text);
-  font: inherit;
-  line-height: 1;
-  cursor: pointer;
   white-space: nowrap;
-  transition: background 0.12s ease, border-color 0.12s ease, transform 0.06s ease;
 }
 
-.hud-btn svg {
-  width: var(--icon-size);
-  height: var(--icon-size);
+.afficheur-libelle {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.afficheur {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  height: 20px;
+  min-width: 86px;
+  padding: 0 6px;
+  background: var(--readout-bg);
+  border: 1px solid var(--readout-border);
+  box-shadow: var(--field-inset);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.afficheur-court {
+  min-width: 46px;
+  justify-content: center;
+}
+
+.afficheur-etat {
+  min-width: 118px;
+  justify-content: flex-start;
+}
+
+.afficheur-etat svg {
   flex-shrink: 0;
+  width: 14px;
+  height: 14px;
 }
 
-.hud-btn:hover:not(:disabled) {
-  background: var(--ctrl-bg-hover);
-}
-
-.hud-btn:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.hud-btn.active {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: var(--ctrl-active-text);
-}
-
-.hud-btn-glyph {
-  font-weight: 700;
-  font-size: 14px;
-  min-width: var(--icon-size);
-  text-align: center;
-}
-
-/* Bouton Tester : l'action principale, en vert franc. */
-.play-btn {
-  background: var(--color-play);
-  border-color: var(--color-play);
-  color: #0c1a10;
+#objectif-display.objectif-atteint {
+  color: var(--ok);
   font-weight: 600;
 }
 
-.play-btn:hover:not(:disabled) {
-  background: var(--color-play-hover);
+/* Pastilles d'état (afficheur État, rapport d'essai). */
+.etat-anneau {
+  fill: none;
+  stroke: var(--idle);
+  stroke-width: 1.5;
 }
 
-/* ── Identité (haut gauche) ── */
-
-.brand-logo {
-  width: 26px;
-  height: 26px;
-  color: var(--color-accent);
-  flex-shrink: 0;
+.etat-fond-ok {
+  fill: var(--ok);
 }
 
-.brand-text {
+.etat-fond-danger {
+  fill: var(--danger);
+}
+
+.etat-fond-essai {
+  fill: var(--running);
+}
+
+.etat-glyphe {
+  fill: none;
+  stroke: var(--icon-fill);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.etat-glyphe-plein {
+  fill: var(--icon-fill);
+}
+
+/* ══ Barre des éléments ══ */
+
+.elements {
   display: flex;
-  flex-direction: column;
-  line-height: 1.15;
-  margin-right: 2px;
+  align-items: center;
+  gap: 1px;
 }
 
-.brand-text strong {
-  font-size: var(--font-size-title);
-  letter-spacing: 0.04em;
+.element {
+  gap: 6px;
+  padding: 0 7px 0 4px;
 }
 
-.brand-text span {
-  font-size: var(--font-size-tiny);
-  color: var(--color-text-muted);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+/* Première déclinaison d'une famille : léger écart avec la famille précédente. */
+.element-famille:not(:first-child) {
+  margin-left: 6px;
 }
 
-/* ── Affichages (temps, valeurs) ── */
+.element-vignette {
+  flex-shrink: 0;
+  width: var(--element-swatch-width);
+  height: var(--element-swatch-height);
+}
 
-.hud-readout {
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
+.options-outil {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  padding-left: 12px;
+}
+
+.caracteristiques {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--text-muted);
   white-space: nowrap;
-  font-size: var(--font-size-small);
 }
 
-/* ── Curseurs compacts (ralenti, zoom) ── */
+.caracteristiques:empty {
+  display: none;
+}
 
-.hud-slider {
+.caracteristiques b {
+  font-weight: normal;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.options-groupe {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.options-groupe[hidden] {
+  display: none;
+}
+
+.options-groupe label {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  color: var(--color-text-muted);
+  gap: 5px;
+  color: var(--text-muted);
 }
 
-.hud-slider svg {
-  width: var(--icon-size);
-  height: var(--icon-size);
-  flex-shrink: 0;
+.unite {
+  color: var(--text-muted);
 }
 
-.hud-slider-name {
-  font-size: var(--font-size-small);
+/* ══ 3. Boutons de commande ══ */
+
+.bouton,
+.bouton-outil {
+  height: 22px;
+  padding: 0 12px;
+  border: 1px solid var(--cmd-border);
+  background: var(--cmd-bg);
+  white-space: nowrap;
 }
 
-.hud-slider .hud-readout {
-  min-width: 32px;
+.bouton:hover:not(:disabled),
+.bouton-outil:hover:not(:disabled) {
+  background: var(--cmd-hover-bg);
+  border-color: var(--cmd-hover-border);
+}
+
+.bouton:active:not(:disabled),
+.bouton-outil:active:not(:disabled) {
+  background: var(--cmd-pressed-bg);
+}
+
+.bouton:disabled {
+  color: var(--text-disabled);
+}
+
+.bouton[hidden] {
+  display: none;
+}
+
+/* Bouton par défaut d'une fenêtre (validé par Entrée) : filet intérieur d'accent. */
+.bouton-defaut {
+  min-width: 90px;
+  border-color: var(--cmd-hover-border);
+  box-shadow: var(--cmd-default-ring);
+}
+
+.bouton-danger {
+  color: var(--danger);
+}
+
+.bouton-outil {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  color: var(--icon-line);
+}
+
+.bouton-lien {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.bouton-lien:hover {
+  text-decoration: underline;
+}
+
+/* ══ Champs ══ */
+
+input[type="number"],
+select {
+  height: 20px;
+  padding: 0 4px;
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius);
+  background: var(--field-bg);
+  box-shadow: var(--field-inset);
+  font: inherit;
+  color: var(--text);
+}
+
+input[type="number"] {
+  width: 64px;
+  font-variant-numeric: tabular-nums;
+}
+
+input[type="number"]:focus,
+select:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+  border-color: var(--accent);
+}
+
+input[type="checkbox"] {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+input:disabled,
+select:disabled {
+  color: var(--text-disabled);
+  background: var(--app-bg);
 }
 
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
-  width: 90px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--ctrl-bg-hover);
-  outline: none;
-  cursor: pointer;
+  width: var(--slider-width);
+  height: 16px;
+  margin: 0;
+  background: transparent;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  background: var(--slider-track);
+  border: 1px solid var(--slider-track-border);
+  box-shadow: var(--field-inset);
 }
 
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: var(--color-text);
-  border: none;
-  transition: background 0.12s ease;
+  width: 9px;
+  height: 16px;
+  margin-top: -6px;
+  background: var(--slider-thumb-bg);
+  border: 1px solid var(--slider-thumb-border);
+  border-radius: var(--radius);
 }
 
-input[type="range"]::-webkit-slider-thumb:hover {
-  background: var(--color-accent);
-}
-
-input[type="range"]::-moz-range-thumb {
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: var(--color-text);
-  border: none;
+input[type="range"]:hover::-webkit-slider-thumb {
+  background: var(--slider-thumb-hover-bg);
 }
 
 input[type="range"]::-moz-range-track {
   height: 4px;
-  border-radius: 2px;
-  background: var(--ctrl-bg-hover);
+  background: var(--slider-track);
+  border: 1px solid var(--slider-track-border);
 }
 
-/* ── Sélecteur de largeur de grille (− 50 m +) ── */
-
-.hud-stepper {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
+input[type="range"]::-moz-range-thumb {
+  width: 9px;
+  height: 16px;
+  background: var(--slider-thumb-bg);
+  border: 1px solid var(--slider-thumb-border);
+  border-radius: var(--radius);
 }
 
-.hud-stepper button {
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 1px solid var(--ctrl-border);
-  border-radius: 6px;
-  background: var(--ctrl-bg);
-  color: var(--color-text);
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
+/* ══ Vue ══ */
+
+.vue {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--app-bg);
 }
 
-.hud-stepper button:hover:not(:disabled) {
-  background: var(--ctrl-bg-hover);
-}
-
-.stepper-label {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 44px;
-  line-height: 1.1;
-  font-size: var(--font-size-tiny);
-  color: var(--color-text-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.stepper-label b {
-  font-size: var(--font-size-small);
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-/* ── Palette de matériaux (bas gauche) ── */
-
-.palette-card {
-  padding: 6px 8px;
-}
-
-.palette {
-  display: flex;
-  align-items: stretch;
-  gap: 2px;
-}
-
-/* Une famille = ses déclinaisons côte à côte + le nom dessous. Le séparateur
-   léger entre familles est porté par la bordure gauche des groupes suivants. */
-.mat-group {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  padding: 0 5px;
-}
-
-.mat-group + .mat-group {
-  border-left: 1px solid var(--sep-color);
-}
-
-.mat-row {
-  display: flex;
-  gap: 3px;
-}
-
-.mat-group-label {
-  font-size: var(--font-size-tiny);
-  color: var(--color-text-muted);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  line-height: 1;
-  padding-bottom: 1px;
-}
-
-/* Une déclinaison = un bouton montrant la BARRE du matériau (fine ou épaisse). */
-.mat-chip {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  width: var(--mat-chip-width);
-  padding: 5px 4px 3px;
-  border: 1px solid transparent;
-  border-radius: var(--ctrl-radius);
-  background: transparent;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-tiny);
-  line-height: 1;
-  cursor: pointer;
-  transition: background 0.12s ease, border-color 0.12s ease;
-}
-
-.mat-chip:hover:not(:disabled) {
-  background: var(--ctrl-bg-hover);
-}
-
-.mat-chip.active {
-  background: var(--color-accent-soft);
-  border-color: var(--color-accent);
-  color: var(--color-text);
-  box-shadow: 0 0 0 2px var(--color-accent-ring);
-}
-
-.mat-chip:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-/* La barre témoin : couleur réelle du matériau, hauteur = épaisseur relative. */
-.mat-bar {
-  width: var(--mat-bar-width);
-  border-radius: 2px;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.35), 0 1px 2px rgba(0, 0, 0, 0.45);
-}
-
-.mat-variant {
-  white-space: nowrap;
-}
-
-/* ── Outils d'édition (bas, à côté de la palette) ── */
-
-.tools-card {
-  padding: 5px 8px;
-  gap: 2px;
-}
-
-.tool-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  min-width: 56px;
-  padding: 6px 8px 5px;
-  border: 1px solid transparent;
-  border-radius: var(--ctrl-radius);
-  background: transparent;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-tiny);
-  line-height: 1;
-  cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
-}
-
-.tool-btn svg {
-  width: var(--tool-icon-size);
-  height: var(--tool-icon-size);
-}
-
-.tool-btn:hover:not(:disabled) {
-  background: var(--ctrl-bg-hover);
-  color: var(--color-text);
-}
-
-.tool-btn.active {
-  background: var(--color-accent-soft);
-  border-color: var(--color-accent);
-  color: var(--color-text);
-}
-
-/* ── Poids total / vent (bas droite) ── */
-
-.status-card {
-  margin-left: auto;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  padding: 8px 12px;
-  font-size: var(--font-size-small);
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-#wind-display {
-  color: var(--color-accent);
-  font-weight: 600;
-}
-
-#wind-display:empty {
-  display: none;
-}
-
-/* ── Bandeaux contextuels (Sol, Poids, Câble) ── */
-
-.context-strip {
+#simulation-canvas {
   position: absolute;
-  bottom: var(--bottom-offset);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 11;
-  max-width: min(92vw, 780px);
-  padding: 7px 12px;
-  font-size: var(--font-size-small);
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
-.context-strip[hidden] {
-  display: none;
-}
+/* ══ Fenêtres d'outils ══ */
 
-.context-hint {
-  color: var(--color-text-muted);
-}
-
-.context-strip label {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--color-text-muted);
-  white-space: nowrap;
-}
-
-.strip-btn {
-  padding: 5px 9px;
-  border: 1px solid var(--ctrl-border);
-  border-radius: var(--ctrl-radius);
-  background: var(--ctrl-bg);
-  color: var(--color-text);
-  font-size: var(--font-size-small);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.strip-btn:hover:not(:disabled) {
-  background: var(--ctrl-bg-hover);
-}
-
-/* ── Champs de saisie sur panneaux sombres ── */
-
-input[type="number"],
-select {
-  padding: 4px 6px;
-  border: 1px solid var(--input-border);
-  border-radius: 6px;
-  background: var(--input-bg);
-  color: var(--input-text);
-  font: inherit;
-  font-size: var(--font-size-small);
-}
-
-input[type="number"] {
-  width: 4.8em;
-}
-
-input[type="number"]:focus,
-select:focus {
-  outline: 1px solid var(--color-accent);
-  outline-offset: 0;
-}
-
-input:disabled,
-select:disabled,
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  color: var(--color-disabled-text);
-}
-
-/* ── Tiroir bibliothèque (gauche) ── */
-
-.library-drawer {
-  position: absolute;
-  top: var(--top-offset);
-  left: var(--hud-margin);
-  bottom: var(--bottom-offset);
-  z-index: 12;
-  width: var(--library-width);
+.fenetre {
+  display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: 0;
-  padding: 10px 12px;
-  overflow-y: auto;
+  background: var(--window-bg);
+  border: 1px solid var(--window-border);
+  box-shadow: var(--window-shadow);
 }
 
-.library-drawer[hidden] {
+.fenetre[hidden] {
   display: none;
 }
 
-.drawer-header {
+.fenetre-titre {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--spacing-small);
-}
-
-.drawer-header h3 {
-  margin: 0;
-  font-size: var(--font-size-title);
-  letter-spacing: 0.03em;
-}
-
-.drawer-close {
-  border: none;
-  background: transparent;
-  color: var(--color-text-muted);
-  font-size: 13px;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 6px;
-}
-
-.drawer-close:hover {
-  background: var(--ctrl-bg-hover);
-  color: var(--color-text);
-}
-
-/* Contenu du tiroir : démos + sauvegardes (rendu par testCasePanel.js). */
-
-.test-case-panel h3 {
-  margin: var(--spacing-small) 0;
-  font-size: var(--font-size-small);
-  color: var(--color-text-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  gap: 6px;
+  height: var(--window-title-height);
+  padding: 0 3px 0 8px;
+  background: var(--window-title-bg);
+  border-bottom: 1px solid var(--window-title-border);
+  color: var(--window-title-text);
   font-weight: 600;
+  white-space: nowrap;
 }
 
-.test-case-button {
-  display: block;
-  width: 100%;
-  text-align: left;
-  margin-bottom: 4px;
-  padding: 7px 9px;
+.fenetre-titre[data-poignee] {
+  cursor: move;
+}
+
+.fenetre-fermer {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 16px;
+  padding: 0;
   border: 1px solid transparent;
-  border-radius: var(--ctrl-radius);
-  background: var(--ctrl-bg);
-  color: var(--color-text);
-  font: inherit;
-  font-size: var(--font-size-small);
-  cursor: pointer;
+  background: transparent;
 }
 
-.test-case-button:hover {
-  background: var(--ctrl-bg-hover);
-  border-color: var(--ctrl-border);
+.fenetre-fermer svg {
+  width: 9px;
+  height: 9px;
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.6;
 }
 
-.test-case-separator {
-  border-top: 1px solid var(--sep-color);
-  margin: var(--spacing-medium) 0;
+.fenetre-fermer:hover {
+  background: var(--btn-hover-bg);
+  border-color: var(--btn-hover-border);
 }
 
-.test-case-save-button {
-  display: block;
-  width: 100%;
-  margin-bottom: var(--spacing-medium);
-  padding: 7px 9px;
-  border: 1px solid var(--color-accent);
-  border-radius: var(--ctrl-radius);
-  background: var(--color-accent-soft);
-  color: var(--color-text);
-  font: inherit;
-  font-size: var(--font-size-small);
-  font-weight: 600;
-  cursor: pointer;
+.fenetre-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 8px;
 }
 
-.test-case-save-button:hover {
-  background: var(--color-accent);
-  color: var(--ctrl-active-text);
+.fenetre-actions:empty {
+  display: none;
 }
 
-.test-case-row {
+.fenetre-actions-secondaires {
+  justify-content: flex-start;
+  padding-top: 0;
+}
+
+/* ── Palette « Essai de charge » : flottante, déplaçable ── */
+
+.fenetre-flottante {
+  position: absolute;
+  top: var(--window-margin);
+  left: var(--window-margin);
+  z-index: 15;
+}
+
+.palette-corps {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-bottom: 4px;
+  gap: 3px;
+  padding: 5px 6px;
 }
 
-.test-case-row .test-case-button {
-  flex: 1;
-  margin-bottom: 0;
+.curseur {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
 }
 
-.test-case-delete-button {
-  flex-shrink: 0;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--color-danger);
-  font-size: 12px;
-  padding: 4px 6px;
-  cursor: pointer;
+.afficheur-temps {
+  min-width: 66px;
 }
 
-.test-case-delete-button:hover {
-  background: var(--menu-danger-hover);
-}
+/* ── Colonne de droite : rapport, propriétés, vent ── */
 
-.saved-structure-hint {
-  font-size: var(--font-size-small);
-  color: var(--color-text-faint);
-}
-
-/* ── Colonne de droite : inspecteur + panneau du vent ── */
-
-.hud-right {
+.colonne-droite {
   position: absolute;
-  top: var(--top-offset);
-  right: var(--hud-margin);
-  bottom: var(--bottom-offset);
-  z-index: 12;
+  top: calc(var(--ruler-size) + var(--window-margin));
+  right: var(--window-margin);
+  bottom: var(--window-margin);
+  z-index: 14;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: var(--hud-gap);
+  gap: var(--window-gap);
+  width: var(--window-width);
   pointer-events: none;
-  overflow: hidden;
 }
 
-.hud-right > .hud-card {
+.colonne-droite > .fenetre {
+  flex-shrink: 0;
+  max-height: 100%;
   pointer-events: auto;
 }
 
-.inspector {
-  width: var(--inspector-width);
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0;
-  padding: 10px 12px;
-  overflow-y: auto;
-  max-height: 100%;
+.colonne-droite > .inspector {
   flex-shrink: 1;
+  min-height: 0;
 }
 
-.inspector[hidden] {
+.inspector .grille-proprietes {
+  overflow-y: auto;
+}
+
+/* ── Grille de propriétés ── */
+
+.grille-proprietes {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--field-bg);
+  border-bottom: 1px solid var(--prop-line);
+}
+
+.grille-proprietes:empty {
   display: none;
 }
 
-.inspector h3 {
-  margin: 0 0 var(--spacing-small);
-  font-size: var(--font-size-title);
+.prop-categorie {
+  padding: 3px 8px;
+  background: var(--prop-category-bg);
+  border-bottom: 1px solid var(--prop-line);
+  color: var(--prop-category-text);
+  font-weight: 600;
 }
 
-.inspector h4 {
-  font-size: var(--font-size-base);
-  margin: var(--spacing-small) 0;
+.prop-ligne {
+  display: grid;
+  grid-template-columns: var(--prop-name-width) minmax(0, 1fr);
+  min-height: 22px;
+  border-bottom: 1px solid var(--prop-line);
 }
 
-.inspector-field {
+.prop-ligne:last-child {
+  border-bottom: 0;
+}
+
+.prop-nom {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-small);
-  margin-bottom: var(--spacing-small);
-  font-size: var(--font-size-small);
-  color: var(--color-text-muted);
+  padding: 0 8px;
+  border-right: 1px solid var(--prop-line);
+  color: var(--prop-name);
 }
 
-.inspector-field input {
-  width: var(--field-input-width);
-}
-
-.inspector-readonly-value {
-  color: var(--color-text);
-  font-weight: 600;
+.prop-valeur {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 1px 6px;
+  color: var(--prop-value);
   font-variant-numeric: tabular-nums;
 }
 
-.inspector-swatch-value {
+.prop-valeur input[type="number"],
+.prop-valeur select {
+  width: 100%;
+  min-width: 0;
+}
+
+.pastille-valeur {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  font-weight: 600;
-  color: var(--color-text);
+  gap: 6px;
 }
 
-.inspector-button {
-  margin-top: var(--spacing-small);
-  width: 100%;
-  padding: 7px;
-  border: 1px solid var(--ctrl-border);
-  border-radius: var(--ctrl-radius);
-  background: var(--ctrl-bg);
-  color: var(--color-danger);
-  font: inherit;
-  font-size: var(--font-size-small);
-  cursor: pointer;
+.mat-swatch {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border: 1px solid;
 }
 
-.inspector-button:hover {
-  background: var(--menu-danger-hover);
-}
+/* ── Rapport d'essai ── */
 
-/* Liste à cocher des forces appliquées (dans l'inspecteur de nœud). */
-
-.force-assignment-list {
-  margin-top: var(--spacing-medium);
-  border-top: 1px solid var(--sep-color);
-  padding-top: var(--spacing-small);
-}
-
-.force-assignment-empty {
-  font-size: var(--font-size-small);
-  color: var(--color-text-faint);
-}
-
-.force-assignment-row {
+.rapport-verdict {
   display: flex;
   align-items: center;
-  gap: var(--spacing-small);
-  margin-bottom: var(--spacing-small);
-}
-
-.force-assignment-label {
-  flex: 1;
-}
-
-.force-color-swatch {
-  display: inline-block;
-  width: var(--force-color-swatch-size);
-  height: var(--force-color-swatch-size);
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-/* ── Panneau du vent (droite, sous l'inspecteur) ── */
-
-.wind-panel {
-  width: var(--inspector-width);
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0;
-  padding: 10px 12px;
-  flex-shrink: 0;
-}
-
-.wind-panel[hidden] {
-  display: none;
-}
-
-.wind-panel h3 {
-  margin: 0 0 var(--spacing-small);
+  gap: 8px;
+  padding: 8px 8px 7px;
   font-size: var(--font-size-title);
 }
 
-.wind-fields {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-small);
-  margin-bottom: var(--spacing-small);
-}
-
-.wind-fields label {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: var(--font-size-small);
-  color: var(--color-text-muted);
-}
-
-.wind-fields input {
-  width: 100%;
-}
-
-.wind-preview-caption {
+.rapport-icone svg {
   display: block;
-  margin: var(--spacing-small) 0 2px;
-  font-size: var(--font-size-tiny);
-  color: var(--color-text-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  width: 18px;
+  height: 18px;
 }
 
-#wind-curve-canvas {
-  width: 100%;
-  height: var(--wind-preview-height);
-  border: 1px solid var(--ctrl-border);
-  border-radius: 6px;
-  display: block;
-  background: var(--input-bg);
+.resultat-reussi {
+  color: var(--ok);
 }
 
-/* ── Barres de défilement discrètes (panneaux sombres) ── */
-
-.library-drawer::-webkit-scrollbar,
-.inspector::-webkit-scrollbar {
-  width: 8px;
+.resultat-echoue {
+  color: var(--danger);
 }
 
-.library-drawer::-webkit-scrollbar-thumb,
-.inspector::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
-  border-radius: 4px;
+.rapport-detail {
+  margin: 0;
+  padding: 7px 8px 0;
+  color: var(--text-muted);
 }
 
-.library-drawer::-webkit-scrollbar-track,
-.inspector::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-/* ── Menu du clic droit (conservé si réactivé) ── */
-
-.context-menu {
-  position: fixed;
-  z-index: 1000;
-  min-width: 180px;
-  padding: 5px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  background: var(--menu-bg);
-  border: 1px solid var(--hud-border);
-  border-radius: var(--menu-radius);
-  box-shadow: var(--menu-shadow);
-}
-
-.context-menu[hidden] {
+.rapport-detail:empty {
   display: none;
 }
 
-.context-menu-item {
+.etoiles {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.etoiles svg {
+  width: 13px;
+  height: 13px;
+}
+
+.etoile-pleine {
+  fill: var(--gold);
+  stroke: var(--gold-line);
+  stroke-width: 0.8;
+}
+
+.etoile-vide {
+  fill: none;
+  stroke: var(--star-empty);
+  stroke-width: 1;
+}
+
+/* ── Vent (atelier) ── */
+
+.grille-champs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 8px;
+  padding: 8px;
+}
+
+.grille-champs label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.grille-champs input {
+  width: 100%;
+}
+
+.legende {
+  padding: 0 8px 3px;
+  color: var(--text-faint);
+  font-size: var(--font-size-small);
+}
+
+#wind-curve-canvas {
+  display: block;
+  width: calc(100% - 16px);
+  height: 88px;
+  margin: 0 8px 8px;
+  background: var(--field-bg);
+  border: 1px solid var(--field-border);
+}
+
+/* ══ Barre d'état ══ */
+
+.barre-etat {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  background: var(--toolbar-bg);
+  border-top: 1px solid var(--toolbar-border);
+  color: var(--text-muted);
+}
+
+.etat-case {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border-left: 1px solid var(--sep-dark);
+  box-shadow: inset 1px 0 0 var(--sep-light);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.etat-case:empty {
+  display: none;
+}
+
+.etat-message {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-left: 0;
+  box-shadow: none;
+  color: var(--text);
+}
+
+.etat-coordonnees {
+  min-width: 176px;
+}
+
+.etat-zoom,
+.etat-temps {
+  min-width: 92px;
+}
+
+/* ══ Dialogues ══ */
+
+.voile {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: var(--overlay);
+}
+
+.voile[hidden] {
+  display: none;
+}
+
+.dialogue {
+  display: flex;
+  flex-direction: column;
+  width: min(94vw, var(--dialog-width));
+  max-height: 92vh;
+  background: var(--dialog-bg);
+  border: 1px solid var(--window-border);
+  box-shadow: var(--dialog-shadow);
+}
+
+.dialogue-aide {
+  width: min(94vw, var(--dialog-help-width));
+}
+
+.dialogue-titre {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  padding: 0 4px 0 10px;
+  background: var(--dialog-title-bg);
+  border-bottom: 1px solid var(--window-title-border);
+}
+
+.dialogue-titre h2 {
+  margin: 0;
+  font-size: var(--font-size-title);
+  font-weight: 600;
+  color: var(--window-title-text);
+}
+
+.dialogue-corps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  overflow: auto;
+  /* Sans min-height: 0, un conteneur flex refuse de descendre sous la taille de
+     son contenu : le dialogue déborderait de l'écran au lieu de faire défiler
+     son corps (fenêtre basse + éditeur d'administration ouvert). */
+  min-height: 0;
+}
+
+/* Aucun bloc ne doit être COMPRIMÉ quand le dialogue devient plus haut que la
+   fenêtre : c'est le corps qui défile. Sans ça, la liste des niveaux (hauteur
+   fixe mais rétrécissable par défaut en flex) se réduisait à une seule ligne
+   dès que l'éditeur d'administration s'ajoutait dessous. */
+.dialogue-corps > * {
+  flex-shrink: 0;
+}
+
+.dialogue-boutons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.espace {
+  flex: 1;
+}
+
+.cadre {
+  margin: 0;
+  padding: 5px 10px 8px;
+  border: 1px solid var(--line);
+}
+
+.cadre legend {
+  padding: 0 4px;
+  color: var(--text-muted);
+}
+
+.enonce {
+  min-height: 3em;
+  margin: 0;
+  line-height: 1.45;
+  user-select: text;
+}
+
+/* Contrainte de matériaux du niveau, sous l'énoncé : le joueur doit savoir
+   pourquoi la barre des éléments est plus courte que d'habitude. */
+.enonce-contrainte {
+  margin: var(--spacing-xs) 0 0;
+  font-size: var(--font-size-small);
+  color: var(--text-muted);
+  user-select: text;
+}
+
+/* Ce que l'élève a déjà fait sur le niveau choisi, sous l'énoncé : ce qui va
+   s'ouvrir, et à quel poids. */
+.enonce-progression {
+  margin: var(--spacing-xs) 0 0;
+  font-size: var(--font-size-small);
+  color: var(--ok);
+  user-select: text;
+}
+
+/* ── Liste des niveaux (vue « détails ») ── */
+
+.liste {
+  height: var(--list-height);
+  overflow: auto;
+  scroll-padding-top: calc(var(--list-row-height) + 1px); /* l'en-tête collant ne masque pas la ligne choisie */
+  background: var(--list-bg);
+  border: 1px solid var(--list-border);
+  outline: none;
+}
+
+.liste table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.liste th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: var(--list-row-height);
+  padding: 0 8px;
+  background: var(--list-header-bg);
+  border-right: 1px solid var(--list-header-border);
+  border-bottom: 1px solid var(--list-header-border);
+  font-weight: normal;
   text-align: left;
-  padding: 8px 10px;
-  border: none;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--color-text);
-  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.liste td {
+  height: var(--list-row-height);
+  padding: 0 8px;
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid var(--list-line);
+  white-space: nowrap;
+}
+
+.liste .col-nombre {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.liste tr.groupe td {
+  height: 26px;
+  padding-top: 5px;
+  border-bottom: 1px solid var(--list-group-line);
+  color: var(--list-group-text);
+  font-weight: 600;
+}
+
+.liste tr.niveau:hover td {
+  background: var(--list-hover-bg);
+}
+
+.liste tr.niveau.choisi td {
+  background: var(--list-selected-bg);
+  border-top-color: var(--list-selected-border);
+  border-bottom-color: var(--list-selected-border);
+}
+
+.liste tr.niveau.courant .col-nom {
+  font-weight: 600;
+}
+
+.liste .col-note {
+  width: 1%;
+}
+
+/* Colonne « Ton pont » : la coche de validation et la masse du meilleur essai.
+   La coche porte l'information que les étoiles ne portent pas — un niveau fini
+   avec 0 étoile reste un niveau fini. */
+.liste .col-pont {
+  width: 1%;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.liste tr.niveau-valide .col-pont {
+  color: inherit;
+}
+
+.valide {
+  display: inline-flex;
+  margin-right: var(--spacing-xs);
+  vertical-align: -2px;
+}
+
+.valide svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: var(--ok);
+  stroke-width: 2;
+}
+
+/* ── Aide : souris et clavier ── */
+
+.tableau-commandes {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--list-bg);
+  border: 1px solid var(--list-border);
+}
+
+.tableau-commandes th,
+.tableau-commandes td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--list-line);
+  text-align: left;
+}
+
+.tableau-commandes th {
+  width: 38%;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tableau-commandes td {
+  color: var(--text-muted);
+}
+
+/* ══ TROIS PUBLICS ══
+   `data-dev` : les outils de fabrication de niveau (sol, appuis, poids,
+   véhicules, bateaux, vent, largeur de grille). Le JOUEUR ne les voit pas ;
+   l'atelier (?dev) et l'ADMINISTRATEUR, si — c'est avec eux qu'on bâtit
+   l'énoncé d'un niveau. */
+
+body.interface-joueur:not(.interface-admin) [data-dev] {
+  display: none !important;
+}
+
+/* ── Écrans plus étroits : on retire des libellés plutôt que de passer à la ligne ── */
+
+@media (max-width: 1180px) {
+  .barre-outils .bouton-barre > span,
+  .caracteristiques .optionnel {
+    display: none;
+  }
+
+  .barre-outils .bouton-principal > span {
+    display: inline;
+  }
+
+  .afficheur {
+    min-width: 70px;
+  }
+}
+
+/* Curseur de la vue : réticule pour les outils de pose, flèche sinon. */
+#simulation-canvas.curseur-pose {
+  cursor: crosshair;
+}
+
+/* ══ ÉDITEUR DE NIVEAUX (administrateur) ══
+   Réservé à la session admin du site : tout ce qui porte `data-admin` reste
+   masqué pour les autres, exactement comme `data-dev` pour le mode joueur. */
+
+body:not(.interface-admin) [data-admin] {
+  display: none !important;
+}
+
+.champ-texte {
+  width: 100%;
+  padding: 2px 5px;
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius);
+  background: var(--field-bg);
+  box-shadow: var(--field-inset);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--font-size-small);
+}
+
+.champ-texte:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: -2px;
+}
+
+textarea.champ-texte {
+  resize: vertical;
+  line-height: 1.35;
+}
+
+/* Matériaux autorisés : deux colonnes de cases à cocher, pour que les huit
+   types tiennent sans allonger le formulaire. */
+.editeur-materiaux {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-xs) var(--spacing-s);
+}
+
+.editeur-materiau {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-small);
   cursor: pointer;
 }
 
-.context-menu-item:hover {
-  background: var(--menu-hover);
+.editeur-materiau input {
+  flex: 0 0 auto;
+  margin: 0;
 }
 
-.context-menu-item.danger {
-  color: var(--color-danger);
+.bouton-rang {
+  min-width: 2em;
+  padding-inline: 4px;
 }
 
-.context-menu-item.danger:hover {
-  background: var(--menu-danger-hover);
+.editeur-message {
+  margin: var(--window-gap) 0 0;
+  min-height: 1.2em;
+  font-size: var(--font-size-small);
+  color: var(--text-muted);
 }
 
-/* ── Petits écrans : les cartes du bas passent à la ligne ── */
+.editeur-message-erreur {
+  color: var(--danger);
+  font-weight: 600;
+}
 
-@media (max-width: 1100px) {
-  .hud {
-    flex-wrap: wrap;
-  }
-
-  .sim-card,
-  .status-card {
-    margin-inline: 0;
-  }
+.editeur-cadrage-boutons {
+  display: flex;
+  gap: 10px;
 }
