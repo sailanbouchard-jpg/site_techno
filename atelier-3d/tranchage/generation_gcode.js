@@ -571,11 +571,28 @@ export function genererGcode(etat, machine, matiere) {
       }
       ecrire(`; FEATURE: ${NOMS_DE_TYPE[type]}`);
       ecrire(`; LINE_WIDTH: ${mm(largeur)}`);
-      // Un essai de calibration impose sa vitesse (débit maximal) ou l'étire (tour de vitesse).
+      // Un surplomb reçoit un peu moins de matière : la ligne pend moins et se
+      // retrousse moins. La réduction suit la part de la ligne qui est dans le
+      // vide — une ligne posée au quart dans le vide n'en perd qu'un quart.
+      const reduction = type === T.paroiEnSurplomb ? (1 - rp.debit_surplomb / 100) * surplomb : 0;
+      const debit = rp.rapport_debit * (1 - reduction);
+      const section = sectionExtrudee(type, largeur, epaisseur, rp) * debit;
+      const parMm = section / aireDuFil;
+
+      // Un essai de calibration impose sa vitesse (tour de vitesse, VFA), son
+      // DÉBIT (essai de débit maximal), ou étire celle du préréglage.
       const brute = champ(6) / 100;
       // La pièce l'emporte sur la couche : un mât de repères garde sa vitesse
       // pendant que la tour à côté monte en régime.
-      const imposee = surPiece?.vitesseImposee ?? modulationCourante?.vitesseImposee ?? null;
+      const surPieceOuCouche = (cle) => surPiece?.[cle] ?? modulationCourante?.[cle] ?? null;
+      // Un débit imposé se traduit en vitesse, puisque c'est la vitesse qui le
+      // produit : mm³/s = section déposée × mm/s. Sans cette ligne, l'essai de
+      // débit maximal n'imposait rien du tout et la tour sortait au même débit
+      // du bas en haut — il annonçait une mesure qu'il ne faisait pas.
+      const debitImpose = surPieceOuCouche("debitImpose");
+      const imposee = debitImpose !== null && section > 0
+        ? debitImpose / section
+        : surPieceOuCouche("vitesseImposee");
       const facteur = (surPiece?.facteurVitesse ?? 1) * (modulationCourante?.facteurVitesse ?? 1);
       const voulue = imposee ?? brute * facteur;
       const ralentie = voulue / etat.facteurs[k];
@@ -583,13 +600,6 @@ export function genererGcode(etat, machine, matiere) {
       const f = Math.round(v * 60);
       if (f !== vitesse) ecrire(`G1 F${f}`);
       vitesse = f;
-
-      // Un surplomb reçoit un peu moins de matière : la ligne pend moins et se
-      // retrousse moins. La réduction suit la part de la ligne qui est dans le
-      // vide — une ligne posée au quart dans le vide n'en perd qu'un quart.
-      const reduction = type === T.paroiEnSurplomb ? (1 - rp.debit_surplomb / 100) * surplomb : 0;
-      const debit = rp.rapport_debit * (1 - reduction);
-      const parMm = sectionExtrudee(type, largeur, epaisseur, rp) * debit / aireDuFil;
       // Les arcs ne valent que pour un débit constant : une couture en biseau
       // module la matière segment par segment, on la laisse en droites.
       const morceaux = rp.arcs === "oui" && parts === null

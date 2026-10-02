@@ -357,8 +357,22 @@ ACCUEIL_PALETTE_VARS = {
     "titre":            "--acc-titre",
     "muet":             "--acc-muet",
     "titre_taille":     "--acc-titre-taille",
-    "technique":        "--acc-technique",
-    "technique_taille": "--acc-technique-taille",
+    # Encadrés d'explication en bas de page : texte, fenêtre de code, aperçu
+    "expl_titre":        "--acc-expl-titre",
+    "expl_texte":        "--acc-expl-texte",
+    "expl_muet":         "--acc-expl-muet",
+    "expl_taille":       "--acc-expl-taille",
+    "cadre_bordure":     "--acc-cadre-bordure",
+    "cadre_barre_fond":  "--acc-cadre-barre-fond",
+    "cadre_barre_texte": "--acc-cadre-barre-texte",
+    "rendu_fond":        "--acc-rendu-fond",
+    "code_fond":         "--acc-code-fond",
+    "code_texte":        "--acc-code-texte",
+    "code_balise":       "--acc-code-balise",
+    "code_attribut":     "--acc-code-attribut",
+    "code_valeur":       "--acc-code-valeur",
+    "code_barre_fond":   "--acc-code-barre-fond",
+    "code_barre_texte":  "--acc-code-barre-texte",
 }
 
 

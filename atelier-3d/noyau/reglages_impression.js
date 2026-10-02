@@ -578,6 +578,18 @@ const CATALOGUE = [
     aide: "La P1P et la P1S tranchent pareil : même volume, même extrudeur, mêmes limites. Seul l'en-tête du fichier diffère (la P1S a un ventilateur de carte et un ventilateur de caisson). Envoyée par le réseau, l'impression prend d'elle-même le modèle de l'imprimante choisie ; ce réglage ne sert qu'au fichier qu'on met sur la carte SD.",
   },
   {
+    cle: "vitesse_max_machine", onglet: "vitesse", groupe: "Limites de la machine", etiquette: "Vitesse maximale",
+    unite: "mm/s", niveau: "avance", defaut: 500, min: 10, max: 2000, source: "imprimante",
+    orca: "machine_max_speed_x",
+    aide: "Ce que la mécanique ne dépassera jamais, quoi qu'on lui demande. Elle ne sert pas à imprimer : rien ici n'est bridé par elle. Elle sert aux essais de DYNAMIQUE — passage des coins, lissage d'entrée — qui doivent pousser la machine à sa limite, parce que le défaut qu'ils mesurent n'existe que là. Mesurer le lissage à 50 mm/s ne mesure rien.",
+  },
+  {
+    cle: "acceleration_max_machine", onglet: "vitesse", groupe: "Limites de la machine", etiquette: "Accélération maximale",
+    unite: "mm/s²", niveau: "avance", defaut: 20000, min: 100, max: 50000, source: "imprimante",
+    orca: "machine_max_acceleration_extruding",
+    aide: "L'accélération que le micrologiciel accepte au plus, en extrusion. Comme la vitesse maximale, elle ne sert qu'aux essais de dynamique : c'est la secousse qui fait apparaître l'écho qu'ils cherchent.",
+  },
+  {
     cle: "ventilateur_auxiliaire", onglet: "matiere", groupe: "Refroidissement", etiquette: "Ventilateur auxiliaire",
     unite: "%", niveau: "avance", defaut: 70, min: 0, max: 100, entier: true, orca: "additional_cooling_fan_speed",
     aide: "Le gros ventilateur latéral du P1S (absent du P1P). Il souffle sur toute la pièce dès que le ventilateur de pièce tourne.",
@@ -626,6 +638,7 @@ const CATALOGUE = [
 // La machine : sa mécanique et sa sortie. Chez Orca, l'onglet Printer.
 const DE_L_IMPRIMANTE = new Set([
   "modele_machine", "deplacement_sans_retraction", "levee_buse", "longueur_essuyage",
+  "vitesse_max_machine", "acceleration_max_machine",
 ]);
 
 // La buse : son diamètre. Les largeurs de ligne qu'elle pose sont un réglage
@@ -718,7 +731,7 @@ export const reglagesDetermines = (idOutil) => REGLAGES.filter((r) => r.determin
  *   - le refroidissement et les températures au milieu de la plage de la matière,
  *     pour que la tour de température trouve son optimum dans ses bandes.
  * Un préréglage personnel, lui, naît du bouton « Enregistrer » du panneau de
- * droite : les réglages en vigueur, gardés sous un nom, sur ce poste.
+ * droite : les réglages en vigueur, gardés sous un nom, dans la base du site.
  */
 
 // ── Imprimante ──
@@ -732,6 +745,11 @@ export const PREREGLAGES_IMPRIMANTE = Object.freeze([
     valeurs: {
       modele_machine: "p1s",
       deplacement_sans_retraction: 1, levee_buse: 0.4, longueur_essuyage: 2,
+      // Les limites du micrologiciel des P1, relevées dans leur profil machine
+      // Bambu Lab (machine_max_speed_x/y = 500, machine_max_acceleration_extruding
+      // = 20000). Elles ne brident rien ici : seuls les essais de dynamique s'en
+      // servent, pour pousser la machine là où leur défaut apparaît.
+      vitesse_max_machine: 500, acceleration_max_machine: 20000,
     },
   },
 ]);
@@ -1026,38 +1044,45 @@ const DEFAUTS = Object.freeze({
 });
 
 /*
- * Les profils enregistrés sur ce poste
- * ────────────────────────────────────
+ * Les profils du site
+ * ───────────────────
+ * Le logiciel livre les profils ci-dessus dans son code. Ce que
+ * l'ADMINISTRATEUR en change va dans la base de données du site, et tout le
+ * monde lit la même chose : un réglage n'a aucune raison de dépendre du poste.
+ * Rien n'est rangé dans le navigateur — une copie locale finit par masquer le
+ * profil livré sans que rien ne le dise, et aucune mise à jour du logiciel ne
+ * la corrige.
+ *
  * Une seule liste par source, et un seul geste pour la remplir : Enregistrer
  * écrit les valeurs en vigueur DANS le profil choisi, sous son nom, sans rien
  * demander. Un profil fourni avec le logiciel s'enregistre comme les autres :
- * la version du poste prend sa place, au même rang et sous le même nom, et
- * Réinitialiser la retire pour retrouver celle d'origine.
+ * la version du site prend sa place, au même rang et sous le même nom, et
+ * Supprimer la retire pour retrouver celle d'origine.
  *
- * Le nom n'appartient donc qu'à l'utilisateur : rien ne lui accole jamais de
+ * Le nom n'appartient donc qu'à l'administrateur : rien ne lui accole jamais de
  * suffixe. Renommer et Dupliquer sont des gestes à part, qu'il demande.
  *
- * Fusion par identifiant : un profil du poste qui porte l'identifiant d'un
+ * Fusion par identifiant : un profil du site qui porte l'identifiant d'un
  * profil fourni le remplace là où il est ; les autres viennent à la suite.
  */
-let personnels = Object.fromEntries(SOURCES.map(({ id }) => [id, []]));
+let duSite = Object.fromEntries(SOURCES.map(({ id }) => [id, []]));
 
-/* Remplace les profils du poste (au démarrage, puis à chaque enregistrement). */
-export function definirLesPrereglagesPersonnels(parSource) {
-  personnels = Object.fromEntries(SOURCES.map(({ id }) => [id, parSource[id] ?? []]));
+/* Remplace les profils du site (au démarrage, puis à chaque enregistrement). */
+export function definirLesPrereglagesDuSite(parSource) {
+  duSite = Object.fromEntries(SOURCES.map(({ id }) => [id, parSource[id] ?? []]));
 }
 
-/* Tous les profils du poste, tels qu'il faut les ranger dans le stockage. */
-export const tousLesPrereglagesPersonnels = () => ({ ...personnels });
+/* Tous les profils du site, tels qu'il faut les envoyer au serveur. */
+export const tousLesPrereglagesDuSite = () => ({ ...duSite });
 
 const fournisDe = (source) => LISTES[source] ?? [];
-const persoDe = (source) => personnels[source] ?? [];
+const siteDe = (source) => duSite[source] ?? [];
 
 /* Ce profil vient-il avec le logiciel ? On peut alors toujours le réinitialiser. */
 export const estPrereglageFourni = (source, id) => fournisDe(source).some((p) => p.id === id);
 
-/* Ce profil a-t-il une version enregistrée sur ce poste ? */
-export const estPrereglageDuPoste = (source, id) => persoDe(source).some((p) => p.id === id);
+/* Ce profil a-t-il une version enregistrée sur le site ? */
+export const estPrereglageDuSite = (source, id) => siteDe(source).some((p) => p.id === id);
 
 /*
  * Les profils d'une source. Passer une buse ne garde que ceux qui ont été faits
@@ -1065,24 +1090,24 @@ export const estPrereglageDuPoste = (source, id) => persoDe(source).some((p) => 
  * famille de plaques, de matériaux et de réglages d'impression.
  */
 export function listeDesPrereglages(source, buse = null) {
-  const duPoste = new Map(persoDe(source).map((p) => [p.id, p]));
+  const duSiteParId = new Map(siteDe(source).map((p) => [p.id, p]));
   const idsFournis = new Set(fournisDe(source).map((p) => p.id));
   const tous = [
-    ...fournisDe(source).map((p) => duPoste.get(p.id) ?? p),
-    ...persoDe(source).filter((p) => !idsFournis.has(p.id)),
+    ...fournisDe(source).map((p) => duSiteParId.get(p.id) ?? p),
+    ...siteDe(source).filter((p) => !idsFournis.has(p.id)),
   ];
   if (buse === null || !dependDeLaBuse(source)) return tous;
   return tous.filter((p) => p.buse === buse);
 }
 
-/* Remplace la liste du poste pour une source, en gardant les autres. */
+/* Remplace la liste du site pour une source, en gardant les autres. */
 function poser(source, liste) {
-  personnels = { ...personnels, [source]: liste };
+  duSite = { ...duSite, [source]: liste };
 }
 
-/* Range le profil à sa place dans la liste du poste, ou l'y ajoute. */
+/* Range le profil à sa place dans la liste du site, ou l'y ajoute. */
 function ranger(source, profil) {
-  const liste = persoDe(source);
+  const liste = siteDe(source);
   poser(source, liste.some((p) => p.id === profil.id)
     ? liste.map((p) => (p.id === profil.id ? profil : p))
     : [...liste, profil]);
@@ -1129,7 +1154,7 @@ export function dupliquerPrereglage(source, id, nom, impression) {
     nom: nom.trim(),
     valeurs: valeursAEnregistrer(source, id, impression),
   };
-  poser(source, [...persoDe(source), cree]);
+  poser(source, [...siteDe(source), cree]);
   return { cree };
 }
 
@@ -1147,7 +1172,7 @@ export function renommerPrereglage(source, id, nom) {
  * le profil d'origine revient, un autre s'il n'y a plus rien sous celui-là.
  */
 export function supprimerPrereglage(source, id, buse) {
-  poser(source, persoDe(source).filter((p) => p.id !== id));
+  poser(source, siteDe(source).filter((p) => p.id !== id));
   return estPrereglageFourni(source, id) ? id : prereglageParDefaut(source, buse);
 }
 

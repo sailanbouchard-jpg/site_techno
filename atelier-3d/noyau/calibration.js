@@ -18,7 +18,42 @@
  *
  * Les éprouvettes sont les maillages d'Orca, dans calibration/modeles/, au
  * format Draco (voir geometrie/lecture_draco.js).
+ *
+ * CE QU'UN ESSAI A LE DROIT D'IMPOSER
+ * ───────────────────────────────────
+ * Un essai s'imprime avec LES RÉGLAGES DE L'UTILISATEUR. Son `reglages()` ne
+ * doit en écarter que trois choses, et rien d'autre :
+ *
+ *   1. CE QU'IL MESURE. La grandeur cherchée ne peut pas être bridée par
+ *      ailleurs, ni partir d'une valeur qui fausse la lecture : le plafond de
+ *      débit est levé pour l'essai de débit maximal, le décalage de plaque est
+ *      remis à zéro pour l'essai d'écrasement.
+ *   2. CE QUI REND LA MESURE ILLISIBLE. La forme de l'éprouvette (parois, peau,
+ *      remplissage), ce qui la fait tomber (une tour haute sans bordure), et ce
+ *      qui change le signal d'une bande à l'autre sans rapport avec l'essai —
+ *      au premier chef le ralentissement des couches courtes, qui ferait varier
+ *      la vitesse entre deux bandes qu'on compare.
+ *   3. LE RÉGIME OÙ LA MESURE EXISTE. Un écho de vibration n'existe pas à
+ *      50 mm/s : les essais de dynamique poussent donc la machine à sa limite,
+ *      lue dans le préréglage d'imprimante (vitesse_max_machine,
+ *      acceleration_max_machine). C'est ce que fait Orca.
+ *
+ * Tout le reste vient du plateau, et doit en venir : si l'utilisateur change un
+ * préréglage, l'essai suivant doit le prendre en compte. Une valeur écrite ici
+ * est une valeur qui ne suivra jamais — d'où la règle : quand c'est un MINIMUM
+ * qui compte, on borne la valeur de l'utilisateur au lieu de la remplacer.
  */
+
+import { reglageDe } from "./reglages_impression.js";
+
+/*
+ * « Plus de plafond » : le maximum que le catalogue accepte pour le débit. Trois
+ * essais doivent lever cette borne — ce qu'ils mesurent (le débit lui-même, ou
+ * une vitesse) ne peut pas être décidé par elle. On le lit du catalogue plutôt
+ * que de l'écrire : une borne changée là-bas ne doit pas laisser ici un nombre
+ * qui ne veut plus rien dire. Aucune buse n'approche cette valeur, c'est le but.
+ */
+const SANS_PLAFOND_DE_DEBIT = reglageDe("debit_maximal").max;
 
 // Le dossier des éprouvettes, relatif à ce fichier.
 export const DOSSIER_DES_MODELES = "../calibration/modeles/";
@@ -146,11 +181,13 @@ const ESSAI_TEMPERATURE = {
   echelle: (p, r) => (p.echelleBuse ? echelleDeBuse(r) : 1),
   reglages(p, r) {
     const impose = {
-      // La tour part à la première température : la buse ne doit pas avoir à
-      // redescendre en arrivant sur le premier palier.
+      // 1. CE QU'ON MESURE. La tour part à la première température : la buse ne
+      // doit pas avoir à redescendre en arrivant sur le premier palier.
       temperature_buse: p.debut, temperature_buse_premiere: p.debut,
-      // Une bordure extérieure large : la tour est haute et mince.
-      type_bordure: "exterieur", largeur_bordure: 5, ecart_bordure: 0,
+      // 2. SANS QUOI ON NE LIT RIEN. La tour est haute et mince : sans bordure
+      // elle se couche. Et la couture en biseau module la matière le long de la
+      // couture, ce qui brouille justement l'aspect qu'on vient juger.
+      type_bordure: "complete", largeur_bordure: 5, ecart_bordure: 0,
       couture_biseau: "non",
     };
     if (p.echelleBuse) {
@@ -190,16 +227,21 @@ const ESSAI_DEBIT_MAX = {
   reglages(p, r) {
     const buse = r.diametre_buse ?? BUSE_DE_REFERENCE;
     return {
-      // Une ligne large et une couche haute : le débit visé est atteint à une
-      // vitesse que la mécanique tient vraiment.
+      // 1. CE QU'ON MESURE. Le plafond est levé : c'est lui qu'on cherche, il ne
+      // peut pas se brider lui-même. Et une ligne large sur une couche haute
+      // atteint le débit visé à une vitesse que la mécanique tient vraiment —
+      // sinon on mesurerait la limite du moteur, pas celle de la buse.
+      debit_maximal: Math.max(r.debit_maximal ?? 0, SANS_PLAFOND_DE_DEBIT),
       largeur_paroi_exterieure: arrondi(buse * 1.75),
       hauteur_couche: arrondi(buse * 0.8),
       hauteur_premiere_couche: arrondi(buse * 0.8),
-      // Le plafond est levé : c'est lui qu'on mesure, il ne peut pas se brider.
-      debit_maximal: Math.max(r.debit_maximal ?? 0, 200),
+      // 2. SANS QUOI ON NE LIT RIEN. Une bande ralentie parce que sa couche est
+      // courte ne serait plus au débit gravé en face d'elle.
       temps_couche_min: 0,
+      // Un mur d'une seule ligne, creux : tout ce qui est posé l'est au débit
+      // qu'on teste. Et une bordure, parce que la structure est mince et haute.
       nombre_parois: 1, couches_dessus: 0, couches_dessous: 0, densite_remplissage: 0,
-      type_bordure: "exterieur_interieur", largeur_bordure: 5, ecart_bordure: 0,
+      type_bordure: "complete", largeur_bordure: 5, ecart_bordure: 0,
     };
   },
   /* Le débit demandé croît avec la hauteur ; le trancheur en tire la vitesse. */
@@ -253,10 +295,26 @@ const ESSAI_PRESSION = {
   },
   coupe: () => null,
   echelle: () => 1,
+  /*
+   * Rien ici ne touche à la VITESSE ni à l'ACCÉLÉRATION, et c'est voulu : K
+   * compense le retard de pression aux changements de régime, donc il se mesure
+   * dans le régime où l'on imprimera vraiment. Orca fait pareil pour la tour.
+   * Changer ses vitesses demande de refaire cet essai, pas l'inverse.
+   */
   reglages: () => ({
+    // 2. SANS QUOI ON NE LIT RIEN. Le coin qu'on juge est celui qui suit la
+    // couture : elle doit être au même endroit à chaque couche, et à l'arrière,
+    // pour qu'on compare des coins comparables. Le biseau, lui, module la
+    // matière le long de cette couture — exactement ce qu'on vient mesurer.
     position_couture: "arriere",
     couture_biseau: "non",
+    // Une bande ralentie parce que sa couche est courte ne serait pas imprimée à
+    // la même vitesse que les autres : les K ne seraient plus comparables.
     temps_couche_min: 0,
+    // La tour est creuse et haute : deux parois, aucune peau, aucun remplissage,
+    // et des oreilles pour qu'elle tienne debout. C'est l'éprouvette d'Orca.
+    nombre_parois: 2, couches_dessus: 0, couches_dessous: 0, densite_remplissage: 0,
+    type_bordure: "oreilles", largeur_bordure: 6, ecart_bordure: 0, angle_des_oreilles: 135,
   }),
   modulations: (p, nombreDeCouches) =>
     bandesDeValeurs(nombreDeCouches, p.debut, p.fin, p.pas).map(({ couche, valeur }) => ({
@@ -318,15 +376,25 @@ const ESSAI_DEBIT = {
   reglages(p, r) {
     const buse = r.diametre_buse ?? BUSE_DE_REFERENCE;
     return {
+      // 2. SANS QUOI ON NE LIT RIEN. Tout ici sert la SURFACE DU DESSUS, qui est
+      // la seule chose qu'on regarde.
+      // Une paroi unique, et aucune boucle au milieu du dessus : la surface
+      // lisible ne doit pas être mangée par des tours de paroi.
       nombre_parois: 1, une_paroi_sur_dessus: "oui",
+      // Un appui régulier et identique sous chaque plaquette : un dessus qui
+      // s'affaisse entre deux lignes de remplissage se lit comme un manque de
+      // matière, et on comparerait des affaissements au lieu de débits.
       densite_remplissage: 35, motif_remplissage: "rectiligne",
       couches_dessous: 2, couches_dessus: 5, epaisseur_dessus: 0, epaisseur_dessous: 0,
+      // Des lignes un peu larges, posées dans un seul sens : c'est entre elles
+      // que le manque ou l'excès se voit.
       motif_dessus: p.motifDessus,
       largeur_dessus: arrondi(buse * 1.2),
       largeur_plein_interieur: arrondi(buse * 1.2),
-      angle_remplissage: 45,
-      repassage: "non", couture_biseau: "non",
-      remplir_interstices: "nulle_part",
+      // Trois façons de maquiller la surface, qu'on interdit : le repassage la
+      // lisse, le biseau module la matière, et les interstices y ajoutent des
+      // filets fins qui ressemblent à de la sur-extrusion.
+      repassage: "non", couture_biseau: "non", remplir_interstices: "nulle_part",
     };
   },
   /* Une pièce par plaquette, chacune tranchée avec son propre rapport de débit. */
@@ -372,8 +440,13 @@ const ESSAI_RETRACTION = {
     const buse = r.diametre_buse ?? BUSE_DE_REFERENCE;
     const couche = buse <= 0.1 ? 0.05 : buse <= 0.2 ? 0.1 : 0.2;
     return {
+      // 2. SANS QUOI ON NE LIT RIEN. Les piliers sont creux : le seul déplacement
+      // d'une couche est le saut d'un pilier à l'autre, donc le seul fil visible
+      // vient de la rétraction qu'on teste.
       nombre_parois: 2, couches_dessus: 0, couches_dessous: 3, densite_remplissage: 0,
       hauteur_couche: couche, hauteur_premiere_couche: couche,
+      // La lecture se fait sur la COLONNE de coutures : elle doit être droite,
+      // au même endroit à chaque couche, et ne pas être fondue par un biseau.
       position_couture: "alignee", ordre_parois: "interieures_puis_exterieure",
       couture_biseau: "non",
     };
@@ -400,6 +473,40 @@ export const MODELES_DE_CORNERING = Object.freeze([
   { valeur: "scv", etiquette: "SCV-V2", fichier: "SCV-V2.drc" },
 ]);
 
+/*
+ * Les réglages communs aux trois essais de DYNAMIQUE — passage des coins et
+ * lissage d'entrée. Ce sont les seuls à toucher la vitesse et l'accélération, et
+ * ils y sont obligés : l'écho qu'ils mesurent n'existe pas à 50 mm/s. Il faut
+ * secouer la machine pour le voir.
+ *
+ * Les valeurs ne sont pas écrites ici : elles viennent du PRÉRÉGLAGE
+ * D'IMPRIMANTE (vitesse_max_machine, acceleration_max_machine), là où sont déjà
+ * les limites de la machine. Changer de machine les change ; rien à retoucher
+ * dans les essais. C'est ce que fait Orca, qui lit machine_max_speed_x et
+ * machine_max_acceleration_extruding de son profil d'imprimante.
+ *
+ * L'éprouvette est un mur d'une ligne, creux : ce qu'on regarde est la trace que
+ * la mécanique laisse sur une paroi, et rien d'autre ne doit la marquer.
+ */
+function reglagesDeDynamique(r) {
+  const vitesse = r.vitesse_max_machine ?? 500;
+  const acceleration = r.acceleration_max_machine ?? 20000;
+  return {
+    // 3. LE RÉGIME OÙ LA MESURE EXISTE.
+    vitesse_paroi_exterieure: vitesse,
+    acceleration_defaut: acceleration,
+    acceleration_paroi_exterieure: acceleration,
+    // 2. SANS QUOI ON NE LIT RIEN. Un ralentissement de couche courte ferait
+    // varier la vitesse d'une bande à l'autre : on ne saurait plus si l'écho
+    // change à cause du réglage testé ou de la vitesse.
+    temps_couche_min: 0,
+    // Un mur d'une seule ligne, creux, et une bordure : la tour est haute.
+    nombre_parois: 1, couches_dessus: 0, couches_dessous: 1, densite_remplissage: 0,
+    type_bordure: "complete", largeur_bordure: 3, ecart_bordure: 0,
+    couture_biseau: "non",
+  };
+}
+
 const ESSAI_CORNERING = {
   id: "cornering",
   nom: "Passage des coins",
@@ -420,7 +527,17 @@ const ESSAI_CORNERING = {
   valider: (p) => plageCroissante(p, "mm/s"),
   coupe: () => null,
   echelle: () => 1,
-  reglages: () => ({ temps_couche_min: 0 }),
+  /*
+   * 1. CE QU'ON MESURE. Le jerk ne limite la vitesse dans un coin que si la
+   * vitesse d'arrivée est haute : à 50 mm/s, tous les jerks se valent et la tour
+   * sort identique du bas au haut. D'où la dynamique poussée au maximum. Le
+   * plafond de débit est levé pour la même raison qu'à l'essai de débit maximal :
+   * sinon c'est lui, et non le jerk, qui déciderait de la vitesse réelle.
+   */
+  reglages: (p, r) => ({
+    ...reglagesDeDynamique(r),
+    debit_maximal: Math.max(r.debit_maximal ?? 0, SANS_PLAFOND_DE_DEBIT),
+  }),
   modulations: (p, nombreDeCouches) =>
     bandesDeValeurs(nombreDeCouches, p.debut, p.fin, p.pas).map(({ couche, valeur }) => ({
       couche,
@@ -451,7 +568,14 @@ const ESSAI_SHAPING_FREQUENCE = {
   valider: (p) => ((p.finX > p.debutX && p.finY > p.debutY) ? null : "L'arrivée doit dépasser le départ, sur X comme sur Y."),
   coupe: () => null,
   echelle: () => 1,
-  reglages: () => ({ temps_couche_min: 0 }),
+  /*
+   * 3. LE RÉGIME OÙ LA MESURE EXISTE. L'écho qu'on vient juger est la réponse de
+   * la machine à une secousse : sans secousse, la tour est lisse à toutes les
+   * fréquences et l'essai ne dit rien. Le plafond de débit, lui, n'est PAS levé —
+   * comme chez Orca : la buse ne peut pas fondre ce qu'il faudrait à 500 mm/s, et
+   * c'est l'accélération, pas la vitesse, qui fait l'écho.
+   */
+  reglages: (p, r) => reglagesDeDynamique(r),
   modulations(p, nombreDeCouches) {
     const memesAxes = p.debutX === p.debutY && p.finX === p.finY;
     return Array.from({ length: nombreDeCouches }, (_v, k) => {
@@ -484,7 +608,8 @@ const ESSAI_SHAPING_AMORTISSEMENT = {
   valider: (p) => (p.fin > p.debut ? null : "L'amortissement d'arrivée doit dépasser celui de départ."),
   coupe: () => null,
   echelle: () => 1,
-  reglages: () => ({ temps_couche_min: 0 }),
+  // Même régime que l'essai de fréquence : sans secousse, rien à amortir.
+  reglages: (p, r) => reglagesDeDynamique(r),
   modulations: (p, nombreDeCouches) => Array.from({ length: nombreDeCouches }, (_v, k) => {
     const d = valeurALaCouche(k, nombreDeCouches, p.debut, p.fin);
     return {
@@ -551,9 +676,19 @@ const ESSAI_VFA = {
   },
   reglages(p, r) {
     const impose = {
+      // 1. CE QU'ON MESURE est la VITESSE elle-même, imposée bande par bande. Le
+      // plafond de débit doit donc être levé : sinon le trancheur écrête les
+      // bandes rapides, toutes celles du haut sortent à la même vitesse, et on
+      // ne verrait jamais la résonance qu'on cherche. Les bandes les plus
+      // rapides peuvent manquer de matière : c'est normal, on y regarde la
+      // trace laissée par la mécanique, pas le remplissage de la ligne.
+      debit_maximal: Math.max(r.debit_maximal ?? 0, SANS_PLAFOND_DE_DEBIT),
+      // 2. SANS QUOI ON NE LIT RIEN. Un mur d'une ligne, creux ; aucune bande
+      // ralentie pour cause de couche courte, sinon sa vitesse n'est plus celle
+      // qui est gravée en face ; une bordure, parce que la tour est haute.
       nombre_parois: 1, couches_dessus: 0, couches_dessous: 1, densite_remplissage: 0,
       temps_couche_min: 0,
-      type_bordure: "exterieur", largeur_bordure: 3, ecart_bordure: 0,
+      type_bordure: "complete", largeur_bordure: 3, ecart_bordure: 0,
     };
     if (p.echelleBuse) {
       const couche = p.hauteurCouche ?? moitieDeBuse(r);
@@ -629,25 +764,24 @@ const ESSAI_ECRASEMENT = {
     const xy = buse / 0.6;
     return xy > 1.2 ? [xy, xy, z] : [1, 1, z];
   },
-  reglages() {
+  reglages(p, r) {
     return {
-      // Le décalage de la plaque est remis à zéro : c'est lui qu'on mesure, et le
-      // décalage de chaque plaquette doit se lire en absolu. Sans cela, le nombre
-      // gravé ne serait qu'un écart à une valeur qu'on cherche encore.
+      // 1. CE QU'ON MESURE. Le décalage de la plaque repart de zéro : le nombre
+      // gravé sur la plaquette retenue doit se lire en ABSOLU, sinon ce n'est
+      // qu'un écart à une valeur qu'on cherche encore.
       decalage_z_plaque: 0,
-      // La patte d'éléphant rentrerait le contour de la première couche : on
-      // lirait une correction, pas l'écrasement.
+      // 2. SANS QUOI ON NE LIT RIEN. La patte d'éléphant rentre le contour de la
+      // première couche : on lirait une correction, pas un écrasement.
       compensation_premiere_couche: 0,
-      // Une première couche pleine, en lignes parallèles, sans rien qui brouille
-      // la lecture : pas d'interstices, pas de jupe ni de bordure à décoller.
-      nombre_parois: 1, couches_dessous: 1, couches_dessus: 1,
-      epaisseur_dessus: 0, epaisseur_dessous: 0,
-      motif_dessous: "monotone", motif_dessus: "monotone",
-      densite_remplissage: 35, motif_remplissage: "rectiligne",
-      angle_remplissage: 45,
-      remplir_interstices: "nulle_part",
-      repassage: "non", couture_biseau: "non",
-      tours_jupe: 0, largeur_bordure: 0,
+      // La surface qu'on lit est la PREMIÈRE COUCHE : il lui faut au moins une
+      // couche pleine, posée en lignes parallèles — c'est entre ces lignes qu'on
+      // cherche les trous. On BORNE le réglage de l'utilisateur au lieu de le
+      // remplacer : trois couches de dessous restent trois couches de dessous.
+      couches_dessous: Math.max(1, r.couches_dessous ?? 1),
+      motif_dessous: "monotone",
+      // La jupe est posée au Z du plateau, pas à celui des plaquettes : elle
+      // donnerait un écrasement de plus, qui n'est à personne.
+      tours_jupe: 0,
     };
   },
   /* Une plaquette par décalage, chacune posée à sa propre hauteur. */

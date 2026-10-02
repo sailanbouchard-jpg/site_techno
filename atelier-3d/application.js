@@ -76,9 +76,9 @@ import { creerMenuBibliotheque } from "./interface/menu_bibliotheque.js";
 import { creerBandeauModele } from "./interface/bandeau_modele.js";
 import { creerEspaceImpression, ESPACES } from "./application/espace_impression.js";
 import { creerCalibration } from "./application/calibration.js";
-import { lireLesPrereglagesPersonnels, ecrireLesPrereglagesPersonnels } from "./stockage/prereglages_personnels.js";
+import { creerStockageDesPrereglages } from "./stockage/prereglages_du_site.js";
 import { objetsImprimables } from "./noyau/plateau.js";
-import { listeDesPrereglages, definirLesPrereglagesPersonnels } from "./noyau/reglages_impression.js";
+import { listeDesPrereglages, definirLesPrereglagesDuSite } from "./noyau/reglages_impression.js";
 import { creerRubanImpression } from "./interface/ruban_impression.js";
 import { creerPanneauPlateau } from "./interface/panneau_plateau.js";
 import { creerInspecteurPlateau } from "./interface/inspecteur_plateau.js";
@@ -108,9 +108,11 @@ async function demarrer() {
     return;
   }
   scene.surPerteDuContexte(() => annoncer("L'affichage 3D s'est interrompu. Recharger la page : le travail est enregistré.", true));
-  // Les préréglages calibrés sur ce poste, avant tout document : un projet
-  // enregistré peut en désigner un, et il doit exister quand on le relit.
-  definirLesPrereglagesPersonnels(lireLesPrereglagesPersonnels());
+  // Les préréglages du site, avant tout document : un projet enregistré peut en
+  // désigner un, et il doit exister quand on le relit. Le site ne répond pas ?
+  // On garde ceux que le logiciel livre, les mêmes pour tout le monde.
+  const stockagePrereglages = creerStockageDesPrereglages();
+  definirLesPrereglagesDuSite(await stockagePrereglages.charger());
   const etat = creerEtatApplication(creerDocument());
   const eleve = await eleveConnecte();
   const stockageProjets = creerStockageDeProjets(eleve);
@@ -148,7 +150,7 @@ async function demarrer() {
       scene.cacherLesPieces(actif);
       apercuCouches.montrer(actif);
     },
-    enregistrerLesPrereglages: (parSource) => ecrireLesPrereglagesPersonnels(parSource),
+    enregistrerLesPrereglages: (parSource) => stockagePrereglages.enregistrer(parSource),
     changerDeCouche: (pas) => apercuCouches.deplacerHaut(pas),
     avancerDansLaCouche: (pas) => apercuCouches.deplacerParcours(pas),
   });
@@ -600,6 +602,9 @@ async function demarrer() {
     dupliquerPrereglage: (source, nom) => plateau.actions.dupliquerPrereglage(source, nom),
     supprimerPrereglage: (source) => plateau.actions.supprimerPrereglage(source),
   });
+  // Un profil vaut pour tout le site : seul l'administrateur le modifie. La
+  // réponse arrive après le premier dessin, le panneau se redresse tout seul.
+  stockagePrereglages.peutEcrire().then((peut) => panneauReglages.autoriserLesProfils(peut));
 
   // ── Aperçu du tranchage ──
   const apercuCouches = creerApercuCouches(element("vue"), [

@@ -66,6 +66,7 @@ from core.database import (
     get_sim_structures,
     get_sim_niveaux,
     get_sim_pont,
+    get_prereglages_impression,
     get_sim_catalogue,
     init_db,
     save_drop_fichier,
@@ -73,6 +74,7 @@ from core.database import (
     save_reponse,
     save_sim_structure,
     save_sim_niveau,
+    save_prereglages_impression,
     save_sim_catalogue,
     seed_test_data,
     update_bloc_note,
@@ -780,6 +782,37 @@ def api_save_sim_niveau() -> Response:
 # enregistrement (voir core/database.py).
 
 CATALOGUE_MAX_OCTETS = 400_000
+
+
+# ── Préréglages d'impression de l'Atelier 3D ──────────────────────────────────
+# Le logiciel livre un jeu de préréglages dans son code. Cette table garde ce que
+# l'administrateur en a changé, et tout le monde lit la même chose : un réglage
+# n'a aucune raison de dépendre du navigateur ou du poste, et un réglage qui en
+# dépend induit en erreur — on croit lire le profil du logiciel et on lit autre
+# chose. Même forme que le catalogue du simulateur : lecture libre, écriture
+# réservée à l'administrateur, JSON réécrit en bloc.
+
+PREREGLAGES_MAX_OCTETS = 512 * 1024
+
+
+@app.get("/api/cao/prereglages")
+def api_get_prereglages_impression() -> Response:
+    contenu = get_prereglages_impression()
+    return jsonify({"prereglages": json.loads(contenu) if contenu else None})
+
+
+@app.put("/api/cao/prereglages")
+@require_admin
+def api_save_prereglages_impression() -> Response:
+    data = request.get_json(silent=True) or {}
+    prereglages = data.get("prereglages")
+    if not isinstance(prereglages, dict):
+        return jsonify({"erreur": "Préréglages invalides"}), 400
+    contenu = json.dumps(prereglages, ensure_ascii=False)
+    if len(contenu.encode("utf-8")) > PREREGLAGES_MAX_OCTETS:
+        return jsonify({"erreur": "Préréglages trop volumineux"}), 400
+    save_prereglages_impression(contenu, datetime.now(timezone.utc).isoformat())
+    return jsonify({"message": "Préréglages enregistrés"})
 
 
 @app.get("/api/sim-catalogue")

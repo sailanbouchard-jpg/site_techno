@@ -110,6 +110,18 @@ def init_db() -> None:
                 modifie_le  TEXT    NOT NULL
             );
 
+            -- Préréglages d'impression de l'Atelier 3D. Le logiciel en livre un
+            -- jeu dans son code ; cette table garde ce que l'ADMINISTRATEUR en a
+            -- changé, et c'est la même chose pour tout le monde. Rien n'est
+            -- rangé dans le navigateur : un réglage vu sur un poste doit être le
+            -- réglage vu sur tous. Même forme que sim_catalogue : une seule
+            -- ligne, le JSON entier, réécrit en bloc.
+            CREATE TABLE IF NOT EXISTS prereglages_impression (
+                id          INTEGER PRIMARY KEY CHECK (id = 1),
+                contenu     TEXT    NOT NULL,
+                modifie_le  TEXT    NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS projets_cao (
                 id             INTEGER PRIMARY KEY AUTOINCREMENT,
                 eleve_id       INTEGER NOT NULL,
@@ -609,6 +621,26 @@ def save_sim_niveau(eleve_id: int, niveau_id: str, etoiles: int, masse_kg: float
 # Le catalogue tient dans UNE ligne : le JSON de toutes les fiches de niveau.
 # L'administrateur l'écrit en entier à chaque enregistrement (il n'y a jamais
 # deux rédacteurs en même temps, et ça évite toute gestion d'ordre partiel).
+
+def get_prereglages_impression() -> str | None:
+    """Le JSON des préréglages d'impression du site, ou None s'il est resté celui du logiciel."""
+    with get_connection() as conn:
+        row = conn.execute("SELECT contenu FROM prereglages_impression WHERE id = 1").fetchone()
+        return row["contenu"] if row else None
+
+
+def save_prereglages_impression(contenu_json: str, now: str) -> None:
+    with get_connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO prereglages_impression (id, contenu, modifie_le)
+            VALUES (1, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET contenu    = excluded.contenu,
+                                          modifie_le = excluded.modifie_le
+            """,
+            (contenu_json, now),
+        )
+
 
 def get_sim_catalogue() -> str | None:
     """Le JSON du catalogue enregistré, ou None s'il n'y en a jamais eu."""

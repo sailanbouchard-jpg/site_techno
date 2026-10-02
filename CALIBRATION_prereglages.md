@@ -559,7 +559,7 @@ Vérifié sur le G-code produit : onze plaquettes, Z de première couche de 0,19
 
 ## 7. Les défauts du logiciel trouvés en chemin, et corrigés
 
-Sept, dont trois qui faussaient silencieusement les impressions.
+Dix, dont six qui faussaient silencieusement les impressions ou les mesures.
 
 ### 7.1 Les réglages d'un essai restaient sur le plateau après le retrait
 
@@ -628,7 +628,83 @@ perdue. Vérifiés un à un contre les 955 clés de leur `PrintConfig.cpp` :
 Les quatre sans équivalent portent `orca: null` et le disent dans leur aide. La
 recherche du panneau plantait sur un `orca` nul : corrigée au passage.
 
-### 7.7 Une durée annoncée qui va dériver
+### 7.7 Les préréglages étaient rangés dans le navigateur
+
+**Trouvé parce que les nouvelles valeurs n'apparaissaient pas.** Sur un poste,
+le débit volumétrique maximal affichait **60 mm³/s** et le temps de couche
+minimal **0 s** là où le logiciel livre 12 et 6. Le fichier était pourtant à
+jour : un profil « PLA Polyterra » enregistré dans le `localStorage` de ce
+navigateur prenait la place du profil livré, **par identifiant et en silence**.
+Et aucune mise à jour du logiciel ne pouvait le corriger, puisqu'il n'y touchait
+pas.
+
+Les valeurs en question sont d'ailleurs signées : 60 mm³/s et 0 s sont exactement
+ce que **l'essai de débit maximal** impose. Elles avaient été enregistrées dans le
+profil par un « Enregistrer » fait après cet essai — conséquence directe du
+défaut §7.1.
+
+Corrigé en supprimant la notion : **il n'y a plus que les profils du site.**
+
+- `stockage/prereglages_personnels.js` est remplacé par
+  `stockage/prereglages_du_site.js` ; plus rien ne passe par le navigateur ;
+- table `prereglages_impression` dans `core/database.py`, sur le modèle de
+  `sim_catalogue` : une ligne, le JSON entier, réécrit en bloc ;
+- `GET /api/cao/prereglages` est libre (un élève doit pouvoir imprimer),
+  `PUT /api/cao/prereglages` est sous `@require_admin` ;
+- dans le panneau, Enregistrer, Renommer, Dupliquer et Supprimer n'apparaissent
+  que pour l'administrateur. **Rétablir reste pour tout le monde** : il ne touche
+  qu'aux écarts du plateau, pas au profil ;
+- un profil du site qui remplace un profil livré **le dit**, et Supprimer rend
+  les valeurs d'origine.
+
+Si le site ne répond pas (serveur statique, poste hors réseau), l'atelier garde
+les profils livrés avec le logiciel : les mêmes pour tout le monde.
+
+### 7.8 Les essais n'imposaient pas le régime qu'ils mesurent
+
+**Le plus coûteux en temps perdu.** Trois essais — passage des coins, lissage en
+fréquence, lissage en amortissement — mesurent la réponse de la mécanique à une
+secousse. Ils ne forçaient ni vitesse ni accélération : ils tournaient donc à
+50 mm/s et 1 500 mm/s², **où l'écho qu'ils cherchent n'existe pas**. La tour
+sortait identique du bas au haut, en 1 h 22, et ne disait rien.
+
+OrcaSlicer, dans `Plater::calib_input_shaping_freq` et `Plater::Calib_Cornering`,
+fait exactement l'inverse :
+
+```cpp
+set_config_values(print_config, "outer_wall_speed", machine_max_speed);
+set_config_values(print_config, "default_acceleration", machine_max_acceleration);
+set_config_values(print_config, "outer_wall_acceleration", machine_max_acceleration);
+```
+
+Corrigé, et **sans rien écrire en dur** : deux réglages sont apparus dans le
+préréglage d'IMPRIMANTE — `vitesse_max_machine` (500) et
+`acceleration_max_machine` (20 000), relevés du profil machine Bambu. Les trois
+essais les lisent. Changer de machine les change ; aucun essai à retoucher.
+
+Mesuré après correction : `M204` monte bien à **20 000**, et la tour passe de
+**1 h 22 à 33 min**.
+
+### 7.9 Les essais imposaient trop, et l'un à l'autre
+
+Deux défauts jumeaux du précédent.
+
+- **Trop.** L'essai d'écrasement forçait 17 réglages, dont le motif de
+  remplissage, la densité, l'angle, le repassage — rien de tout cela ne touche la
+  première couche. Un préréglage changé n'aurait pas été pris en compte. Il en
+  force **5**. Même traitement partout : chaque ligne doit dire *pourquoi*.
+- **L'un à l'autre.** Poser un essai partait des écarts déjà sur le plateau :
+  l'avance de pression héritait des 20 000 mm/s² laissés par le lissage. Vérifié :
+  elle tourne maintenant à **1 500**, celle de l'utilisateur.
+
+Et une erreur de valeur, présente depuis le début : les essais demandaient une
+bordure `"exterieur"` / `"exterieur_interieur"`, qui sont les noms d'Orca. Notre
+catalogue n'accepte que `complete` ou `oreilles`, donc la valeur était **rejetée
+en silence** : les tours hautes et minces n'avaient aucune bordure. Un contrôle
+passe maintenant toutes les valeurs imposées par `valeurValide` — il en a trouvé
+douze invalides.
+
+### 7.10 Une durée annoncée qui va dériver
 
 Pas corrigé, mais à savoir. `estimations.js:192` estime le temps avec
 `tempsTrapeze`, qui modélise l'accélération ; le générateur de G-code compte

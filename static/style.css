@@ -1205,21 +1205,119 @@ body.accueil > main {
     color:  var(--acc-muet);
 }
 
-/* ── Note technique, en bas à droite et discrète ── */
-.acc-technique {
-    margin-top:  auto;
-    margin-left: auto;
-    padding-top: 22px;
-    max-width:   46em;
-    text-align:  right;
-    font-size:   var(--acc-technique-taille, 0.78em);
-    line-height: 1.5;
-    color:       var(--acc-technique);
+/* ── Explications, en bas de page et alignées à gauche ── */
+.acc-expl {
+    margin-top:   auto;
+    margin-right: auto;
+    padding-top:  30px;
+    max-width:    62em;
+    text-align:   left;
+    font-size:    var(--acc-expl-taille, 0.9em);
+    line-height:  1.55;
+    color:        var(--acc-expl-texte);
 }
-.acc-technique p            { margin: 0 0 6px; }
-.acc-technique p:last-child { margin-bottom: 0; }
-.acc-technique-titre        { font-weight: 700; }
-.acc-technique code         { font-family: ui-monospace, Consolas, monospace; }
+.acc-expl-titre {
+    margin:      0 0 10px;
+    font-size:   1.12em;
+    font-weight: 700;
+    color:       var(--acc-expl-titre);
+}
+/* Titre d'une section qui suit un bloc : un peu d'air au-dessus. */
+.acc-expl-titre--suite { margin-top: 18px; }
+.acc-expl p            { margin: 0 0 9px; }
+.acc-expl p:last-child { margin-bottom: 0; }
+.acc-expl-muet         { color: var(--acc-expl-muet); }
+.acc-expl code {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size:   0.94em;
+}
+.acc-expl-liste {
+    margin:  0 0 9px;
+    padding: 0 0 0 17px;
+}
+.acc-expl-liste li { margin: 0 0 4px; }
+
+/* ── Fenêtres : code à gauche, rendu à droite ──
+   Deux colonnes égales ; une seule colonne sous 900 px. Angles droits. */
+.acc-demo {
+    display:               grid;
+    grid-template-columns: 1fr 1fr;
+    gap:                   14px;
+    margin:                12px 0 14px;
+    align-items:           start;
+}
+@media (max-width: 900px) {
+    .acc-demo { grid-template-columns: 1fr; }
+}
+
+.acc-fenetre {
+    border:   1px solid var(--acc-cadre-bordure);
+    overflow: hidden;
+}
+.acc-fenetre-barre {
+    padding:        4px 9px;
+    border-bottom:  1px solid var(--acc-cadre-bordure);
+    background:     var(--acc-cadre-barre-fond);
+    color:          var(--acc-cadre-barre-texte);
+    font-family:    ui-monospace, Consolas, monospace;
+    font-size:      0.8em;
+    letter-spacing: 0.02em;
+}
+
+/* Fenêtre de code : fond sombre, façon terminal. */
+.acc-fenetre--code                    { border-color: var(--acc-code-fond); }
+.acc-fenetre--code .acc-fenetre-barre {
+    border-bottom-color: var(--acc-code-fond);
+    background:          var(--acc-code-barre-fond);
+    color:               var(--acc-code-barre-texte);
+}
+.acc-code {
+    margin:      0;
+    padding:     11px 12px;
+    background:  var(--acc-code-fond);
+    color:       var(--acc-code-texte);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size:   0.88em;
+    line-height: 1.5;
+    white-space: pre;
+    overflow-x:  auto;
+    tab-size:    2;
+}
+/* Coloration : les trois classes sont posées à la main dans le template. */
+.acc-code .bal { color: var(--acc-code-balise); }
+.acc-code .att { color: var(--acc-code-attribut); }
+.acc-code .val { color: var(--acc-code-valeur); }
+
+/* Fenêtre de rendu : ce que le navigateur affiche. */
+.acc-rendu {
+    padding:    11px 12px;
+    background: var(--acc-rendu-fond);
+    overflow-x: auto;
+}
+/* Le contenu du rendu ne doit pas hériter des styles de la page. */
+.acc-rendu h1       { margin: 0 0 6px; font-size: 1.5em; line-height: 1.2; }
+.acc-rendu p        { margin: 0 0 6px; }
+.acc-rendu *:last-child { margin-bottom: 0; }
+
+/* ── Encadré d'essai : on tape du HTML, le rendu suit ── */
+.acc-essai-zone {
+    display:     block;
+    width:       100%;
+    box-sizing:  border-box;
+    margin:      0;
+    padding:     11px 12px;
+    border:      none;
+    background:  var(--acc-code-fond);
+    color:       var(--acc-code-texte);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size:   0.88em;
+    line-height: 1.5;
+    resize:      vertical;
+    min-height:  6.2em;
+    tab-size:    2;
+}
+.acc-essai-zone:focus { outline: none; }
+.acc-essai-rendu      { min-height: 6.2em; }
 
 
 /* ─────────────────────────────────────────────────────────

@@ -27,7 +27,7 @@ import {
 } from "../noyau/plateau.js";
 import { stlBinaire, morceauAExporter } from "../geometrie/export_stl.js";
 import {
-  ecartsDeLaSource, valeursEffectives, tousLesPrereglagesPersonnels, prereglage,
+  ecartsDeLaSource, valeursEffectives, tousLesPrereglagesDuSite, prereglage,
   enregistrerPrereglage, dupliquerPrereglage, renommerPrereglage, supprimerPrereglage,
 } from "../noyau/reglages_impression.js";
 
@@ -153,11 +153,25 @@ export function creerEspaceImpression(dependances) {
     return partie.startsWith(nom) ? partie : nom + " — " + partie;
   }
 
-  /* Range les profils du poste ; dit si le navigateur a refusé d'écrire. */
+  /* Les écarts d'un plateau, moins tout ce qu'un essai de calibration impose. */
+  function sansLesReglagesDEssai(ecarts) {
+    const propres = { ...ecarts };
+    for (const cle of CLES_IMPOSEES_PAR_LES_ESSAIS) delete propres[cle];
+    return propres;
+  }
+
+  /*
+   * Range les profils sur le site. L'écriture est réservée à l'administrateur :
+   * le serveur refuse les autres, et c'est SON message qu'on affiche. Comme
+   * l'appel part sans qu'on l'attende, le refus arrive après coup — la liste
+   * affichée est alors en avance sur la base, et un rechargement la remet
+   * d'aplomb. C'est dit tel quel plutôt que de bloquer l'interface.
+   */
   function rangerLesProfils(quoi) {
-    if (dependances.enregistrerLesPrereglages(tousLesPrereglagesPersonnels())) return true;
-    annoncer(quoi + " vaut pour cette séance : ce navigateur refuse d'enregistrer.", true);
-    return false;
+    dependances.enregistrerLesPrereglages(tousLesPrereglagesDuSite()).catch((erreur) => {
+      annoncer(quoi + " n'a pas été enregistré sur le site : " + erreur.message
+        + " Recharger la page pour retrouver les profils du site.", true);
+    });
   }
 
   // ── Actions ─────────────────────────────────────────────────────────────
@@ -354,7 +368,11 @@ export function creerEspaceImpression(dependances) {
         x: m.largeur / 2 + pieces[i].x, y: m.profondeur / 2 + pieces[i].y,
       }));
       const avant = impression();
-      const apres = avecPieces(avecReglages(avant, { ecarts: { ...avant.ecarts, ...ecarts } }), posees);
+      // On part d'un plateau DÉBARRASSÉ de ce qu'un essai précédent avait imposé,
+      // sinon le nouvel essai hérite des réglages de l'ancien : on mesurerait
+      // l'avance de pression à l'accélération maximale laissée par le lissage.
+      // Les écarts que l'utilisateur a faits lui-même, eux, restent.
+      const apres = avecPieces(avecReglages(avant, { ecarts: { ...sansLesReglagesDEssai(avant.ecarts), ...ecarts } }), posees);
 
       const commandes = [
         ...anciennes.map((n) => commandeSupprimerNoeud.creer(document, n.id)),
@@ -377,8 +395,7 @@ export function creerEspaceImpression(dependances) {
       // plateau garderait une seule paroi, pas de jupe ou un décalage de plaque
       // à zéro, et la pièce suivante s'imprimerait avec sans rien dire.
       const avant = impression();
-      const ecarts = { ...avant.ecarts };
-      for (const cle of CLES_IMPOSEES_PAR_LES_ESSAIS) delete ecarts[cle];
+      const ecarts = sansLesReglagesDEssai(avant.ecarts);
       const commandes = [
         ...anciennes.map((n) => commandeSupprimerNoeud.creer(document, n.id)),
         commandeModifierPlateau.creer(document.impression,
@@ -398,9 +415,8 @@ export function creerEspaceImpression(dependances) {
     enregistrerPrereglage(source) {
       const i = impression();
       const enregistre = enregistrerPrereglage(source, i[source], i);
-      if (rangerLesProfils("« " + enregistre.nom + " »")) {
-        annoncer("Profil « " + enregistre.nom + " » enregistré sur ce poste.");
-      }
+      rangerLesProfils("« " + enregistre.nom + " »");
+      annoncer("Profil « " + enregistre.nom + " » enregistré sur le site.");
       // Les écarts sont désormais DANS le profil : le plateau n'en porte plus.
       actions.changerPrereglage(source, enregistre.id, false);
     },
@@ -410,9 +426,8 @@ export function creerEspaceImpression(dependances) {
       const i = impression();
       const { erreur, cree } = dupliquerPrereglage(source, i[source], nom, i);
       if (erreur !== undefined) return erreur;
-      if (rangerLesProfils("« " + cree.nom + " »")) {
-        annoncer("Profil « " + cree.nom + " » créé sur ce poste.");
-      }
+      rangerLesProfils("« " + cree.nom + " »");
+      annoncer("Profil « " + cree.nom + " » créé sur le site.");
       actions.changerPrereglage(source, cree.id, false);
       return null;
     },
@@ -435,7 +450,7 @@ export function creerEspaceImpression(dependances) {
       const nom = prereglage(source, i[source]).nom;
       const suivant = supprimerPrereglage(source, i[source], i.buse);
       rangerLesProfils("La suppression");
-      annoncer("Profil « " + nom + " » supprimé de ce poste.");
+      annoncer("Profil « " + nom + " » supprimé du site.");
       if (suivant !== null) actions.changerPrereglage(source, suivant, false);
       else dependances.rafraichir();
     },

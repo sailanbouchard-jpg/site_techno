@@ -170,5 +170,23 @@ texte             = #1c1a16
 titre             = #111111
 muet              = #55504a
 titre_taille      = 2.05em
-technique         = #7a6a4e
-technique_taille  = 0.78em
+
+# Encadres d'explication en bas de page : texte, fenetre de code facon terminal
+# (fond sombre, volontairement : c'est l'image que les eleves associent au code)
+# et apercu du rendu a cote. Pas de commentaire en fin de ligne : le # sert aux
+# couleurs hexa.
+expl_titre        = #111111
+expl_texte        = #3a352d
+expl_muet         = #6b6253
+expl_taille       = 0.9em
+cadre_bordure     = #d6cfc2
+cadre_barre_fond  = #f1ece2
+cadre_barre_texte = #6b6253
+rendu_fond        = #ffffff
+code_fond         = #16181c
+code_texte        = #d8dee9
+code_balise       = #7fb3e8
+code_attribut     = #d9a66c
+code_valeur       = #a3c98a
+code_barre_fond   = #2a2e35
+code_barre_texte  = #9aa3b0

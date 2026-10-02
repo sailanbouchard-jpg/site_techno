@@ -8,8 +8,8 @@
     Les noms ci-dessous sont sans accolades : écrits {{ainsi}}, ils seraient
     eux aussi remplacés, et chaque page embarquerait un menu en double.
 
-    La page est volontairement nue : la navigation se fait par la navbar. Seule
-    la note technique en bas à droite s'ajoute au titre.
+    La page reste nue en haut : la navigation se fait par la navbar. Le bas
+    de page explique aux élèves comment une page web est fabriquée.
 -->
 <head>
     <meta charset="utf-8">
@@ -24,34 +24,52 @@
         <header>
             <h1 class="acc-hero-titre">Page d'accueil</h1>
             <p class="acc-hero-ligne">
-                Cours, travaux pratiques, entraînements et outils.
             </p>
         </header>
 
-        <footer class="acc-technique">
-            <p class="acc-technique-titre">Comment ce site est fait</p>
+        <footer class="acc-expl">
+            <p class="acc-expl-titre">Comment fonctionne ce site web</p>
+
             <p>
-                Serveur <b>Python</b> avec <b>Flask</b> ; les réponses des élèves sont
-                enregistrées dans une base <b>SQLite</b> via des routes <b>JSON</b>.
+                Pour afficher cette page web, votre ordinateur utilise le <b>Code Source</b>
+                et il comprend les instructions. Par exemple : « affiche un titre en gras, puis place telle image en dessous ».
+                Vous pouvez voir le code source de cette page, en cliquant sur le bouton droit de la souris et en sélectionnant "Afficher le code source de la page".
             </p>
             <p>
-                Les activités sont écrites dans un langage de balisage maison
-                (fichiers <code>.md</code>) : un analyseur les découpe en blocs, puis
-                chaque bloc est rendu en <b>HTML</b> par une fonction Python. Le site
-                complet est généré une fois pour toutes en pages statiques.
+                Ce code contient un <b>programme</b> : une suite d'instructions que l'ordinateur va exécuter. Pour écrire ce programme, on peut utiliser plusieurs <b>langages de programmation</b>. Ces programmes sont difficiles à lire pour les humains, mais ils contiennent toutes les informations nécessaires pour que l'ordinateur affiche correctement la page. 
             </p>
             <p>
-                Mise en page en <b>CSS</b> pur ; toutes les couleurs, tailles et polices
-                viennent de fichiers de thème <code>.palette</code>, injectés en variables CSS.
-                Interactions en <b>JavaScript</b> standard, sans aucune bibliothèque externe.
+                La majorité des sites web utilisent trois langages de programmation différents : le <b>HTML</b>, le <b>CSS</b> et le <b>JavaScript</b>. Chaque langage permet de réaliser des choses différentes :
             </p>
-            <p>
-                Les outils de conception (atelier 3D, simulateur de structures) tournent
-                dans le navigateur : <b>WebGL</b> pour l'affichage 3D et <b>WebAssembly</b>
-                pour les calculs de géométrie. Aucune ressource n'est chargée depuis
-                l'extérieur : tout est hébergé ici.
+            <p><b>Le HTML</b> : Il permet de placer des éléments sur une page, par exemple un paragraphe, un titre, une image, un bouton.
+                On place les éléments les uns après les autres, et on dispose le contenu du site.
             </p>
+            <p><b>Le CSS</b> : Une fois les éléments placés avec le HTML, on utilise le CSS pour modifier leur apparence. 
+                On peut changer la couleur d'un élément, sa taille, la position. c'est grâce au CSS que les boutons changent de couleur lorsqu'on clique dessus.
+            </p>
+            <p><b>Le JavaScript</b> : On utilise le JavaScript (js) pour rendre la page interactive. C'est utile pour créer des animations, des jeux et tout ce qui sera interactif. Le système de comptes élèves de ce site est construit en utilisant du JavaScript.
+            </p>
+
+            <p> Voici une démonstration d'un programme écrit en HTML.
+             </p>
+
+            <div class="acc-demo">
+                <div class="acc-fenetre acc-fenetre--code">
+                    <div class="acc-fenetre-barre">index.html</div>
+<pre class="acc-code"><span class="bal">&lt;h1&gt;</span>Hello world!<span class="bal">&lt;/h1&gt;</span>
+<span class="bal">&lt;p&gt;</span>Ma première page web.<span class="bal">&lt;/p&gt;</span>
+<span class="bal">&lt;p&gt;</span>je peux écrire ce que je veux sur la page.<span class="bal">&lt;/p&gt;</span></pre>
+                </div>
+                <div class="acc-fenetre">
+                    <div class="acc-fenetre-barre">rendu dans le navigateur</div>
+                    <div class="acc-rendu">
+                        <h1>Hello world!</h1>
+                        <p>Ma première page web.</p>
+                        <p>je peux écrire ce que je veux sur la page.</p>
+                    </div>
+                </div>
+            </div>
+
         </footer>
-    </main>
 </body>
 </html>

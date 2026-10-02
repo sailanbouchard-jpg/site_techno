@@ -30,7 +30,7 @@ import { creerChampNumerique } from "./champ_numerique.js";
 import {
   REGLAGES, SOURCES, listeDesPrereglages, dependDeLaBuse,
   valeurDuPrereglage, valeursEffectives, ecartsDeLaSource, prereglage,
-  nomDeCopieDisponible, estPrereglageFourni, estPrereglageDuPoste,
+  nomDeCopieDisponible, estPrereglageFourni, estPrereglageDuSite,
 } from "../noyau/reglages_impression.js";
 
 const CLE_MODE = "atelier-3d:reglages-avances";
@@ -62,6 +62,11 @@ const texteDeValeur = (r, v) => (r.choix ? r.choix.find((c) => c.valeur === v)?.
  */
 export function creerPanneauReglagesImpression(conteneur, actions) {
   let avance = lireMode();
+  // Modifier un profil est réservé à l'administrateur : un profil vaut pour TOUT
+  // le site, et il n'y en a pas d'autres. Tant qu'on ne sait pas, on n'affiche
+  // pas les gestes d'écriture — mieux vaut un bouton qui apparaît qu'un bouton
+  // qui refuse.
+  let administrateur = false;
   let recherche = "";
   let impression = null;
 
@@ -75,6 +80,11 @@ export function creerPanneauReglagesImpression(conteneur, actions) {
     const choix = creer("select", { classe: "champ-texte", aide, attributs: { "aria-label": etiquette } });
     const modifie = creer("span", { classe: "marque-modifie" });
     const vide = creer("span", { classe: "note-prereglage" });
+    // Un profil du site qui porte l'identifiant d'un profil FOURNI prend sa
+    // place. C'est voulu — l'administrateur l'a changé pour tout le monde —
+    // mais il faut le dire : sans cela, on croit lire les valeurs livrées avec
+    // le logiciel, et on lit celles du site, qu'aucune mise à jour ne corrige.
+    const versionDuSite = creer("span", { classe: "note-prereglage" });
     const question = creer("div", { classe: "question-prereglage", attributs: { hidden: "" } });
     // Les réglages de ce profil, remplis à chaque dessin.
     const corps = creer("div", { classe: "reglages-du-profil" });
@@ -130,7 +140,7 @@ export function creerPanneauReglagesImpression(conteneur, actions) {
       icone: "enregistrer", classe: "plat",
       aide: {
         nom: "Enregistrer le profil",
-        texte: "Écrit les valeurs en vigueur dans le profil choisi, sous son nom. Il gardera ces valeurs aux prochaines séances, sur ce poste.",
+        texte: "Écrit les valeurs en vigueur dans le profil choisi, sous son nom. Il gardera ces valeurs pour tout le site, sur tous les postes.",
       },
       surClic: () => actions.enregistrerPrereglage(source),
     });
@@ -151,12 +161,12 @@ export function creerPanneauReglagesImpression(conteneur, actions) {
       surClic: () => demanderUnNom("Dupliquer", nomDeCopieDisponible(source, impression[source]),
         (valeur) => actions.dupliquerPrereglage(source, valeur)),
     });
-    // Supprimer défait ce que ce poste a enregistré : un profil créé ici
+    // Supprimer défait ce que le site a enregistré : un profil créé ici
     // disparaît, un profil fourni retrouve ses valeurs d'origine. Les deux se
-    // confirment, parce que les deux perdent du travail.
+    // confirment, parce que les deux perdent du travail — et pour tout le monde.
     const supprimer = bouton({
       icone: "supprimer", classe: "plat",
-      aide: { nom: "Supprimer le profil", texte: "Retire de ce poste ce que ce profil y a gardé." },
+      aide: { nom: "Supprimer le profil", texte: "Retire du site ce que ce profil y a gardé. Un profil livré avec le logiciel retrouve ses valeurs d'origine." },
       surClic: () => {
         const fourni = estPrereglageFourni(source, impression[source]);
         const sonNom = prereglage(source, impression[source]).nom;
@@ -164,7 +174,7 @@ export function creerPanneauReglagesImpression(conteneur, actions) {
           creer("span", {
             texte: fourni
               ? "Rendre à « " + sonNom + " » ses valeurs d'origine ?"
-              : "Supprimer « " + sonNom + " » de ce poste ?",
+              : "Supprimer « " + sonNom + " » du site ?",
           }),
           bouton({
             texte: fourni ? "Rétablir l'origine" : "Supprimer",
@@ -197,6 +207,7 @@ export function creerPanneauReglagesImpression(conteneur, actions) {
       creer("div", { classe: "ligne-prereglage" }, [choix]),
       creer("div", { classe: "gestes-prereglage" }, [enregistrer, retablir, renommer, dupliquer, supprimer]),
       vide,
+      versionDuSite,
       question,
       saisie,
       corps,
@@ -220,18 +231,28 @@ export function creerPanneauReglagesImpression(conteneur, actions) {
           : "";
         vide.hidden = !sansProfil;
         choix.hidden = sansProfil;
+        const remplaceUnProfilFourni = !sansProfil
+          && estPrereglageDuSite(source, impression[source])
+          && estPrereglageFourni(source, impression[source]);
+        versionDuSite.textContent = remplaceUnProfilFourni
+          ? "Version du site : elle remplace le profil livré avec le logiciel et ne suit plus "
+            + "ses mises à jour. Supprimer la retire pour retrouver celui d'origine."
+          : "";
+        versionDuSite.hidden = !remplaceUnProfilFourni;
         // Combien de réglages de CE profil diffèrent : c'est la réponse à
         // « qu'est-ce que j'ai changé, et où ? ».
         const ecarts = Object.keys(ecartsDeLaSource(impression.ecarts, source)).length;
         modifie.textContent = ecarts === 1 ? "1 modifié" : ecarts + " modifiés";
         modifie.hidden = ecarts === 0;
         // Enregistrer et Rétablir ne valent que s'il y a quelque chose à garder
-        // ou à défaire ; Supprimer, que si ce poste a quelque chose à rendre.
-        enregistrer.hidden = ecarts === 0 || sansProfil;
+        // ou à défaire ; Supprimer, que si le site a quelque chose à rendre.
+        // Rétablir ne touche qu'au plateau : tout le monde peut défaire ses
+        // propres écarts. Les quatre autres écrivent le profil DU SITE.
+        enregistrer.hidden = ecarts === 0 || sansProfil || !administrateur;
         retablir.hidden = ecarts === 0 || sansProfil;
-        renommer.hidden = sansProfil;
-        dupliquer.hidden = sansProfil;
-        supprimer.hidden = sansProfil || !estPrereglageDuPoste(source, impression[source]);
+        renommer.hidden = sansProfil || !administrateur;
+        dupliquer.hidden = sansProfil || !administrateur;
+        supprimer.hidden = sansProfil || !administrateur || !estPrereglageDuSite(source, impression[source]);
       },
     };
   }
@@ -375,6 +396,11 @@ export function creerPanneauReglagesImpression(conteneur, actions) {
       impression = nouvelle;
       for (const [, section] of sections) section.mettreAJour();
       dessiner();
+    },
+    /* La session administrateur est connue après coup : les gestes d'écriture apparaissent alors. */
+    autoriserLesProfils(peut) {
+      administrateur = peut === true;
+      for (const [, section] of sections) section.mettreAJour();
     },
   };
 }
