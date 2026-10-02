@@ -8,8 +8,11 @@
 
 import { TRIANGLES_CONSEILLES } from "../geometrie/lecture_stl.js";
 import { estUneCleDePolice, policeDeLaCle } from "../noyau/polices.js";
+import { estUneCleDEprouvette, modeleDeLaCle } from "../noyau/eprouvettes.js";
+import { DOSSIER_DES_MODELES } from "../noyau/calibration.js";
 
 const DOSSIER_DES_POLICES = new URL("../vendor/polices/", import.meta.url);
+const DOSSIER_DES_EPROUVETTES = new URL(DOSSIER_DES_MODELES, import.meta.url);
 
 const TAILLE_MAXIMALE_OCTETS = 20 * 1024 * 1024;
 
@@ -22,10 +25,13 @@ export function creerFichiersImportes(ouvrier, stockage) {
       return Promise.all(cles.map((cle) => {
         if (ouvrier.fichierCharge(cle)) return null;
         if (!enChargement.has(cle)) {
-          // Une police vient avec le logiciel, pas du stockage de l'élève.
+          // Une police et une éprouvette viennent avec le logiciel, pas du
+          // stockage de l'élève : l'ouvrier va les chercher lui-même.
           const trajet = (estUneCleDePolice(cle)
             ? ouvrier.chargerPolice(cle, new URL(policeDeLaCle(cle).fichier, DOSSIER_DES_POLICES).href)
-            : stockage.lire(cle).then((octets) => ouvrier.chargerFichier(octets)))
+            : estUneCleDEprouvette(cle)
+              ? ouvrier.chargerEprouvette(cle, new URL(modeleDeLaCle(cle), DOSSIER_DES_EPROUVETTES).href)
+              : stockage.lire(cle).then((octets) => ouvrier.chargerFichier(octets)))
             .finally(() => enChargement.delete(cle));
           enChargement.set(cle, trajet);
         }

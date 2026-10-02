@@ -13,7 +13,13 @@
  * Là où la pièce est trop fine pour une paroi entière, ou entre deux parois
  * qui ne se touchent pas, il reste des interstices : ce qui, dans la bande des
  * parois, n'est couvert par aucune ligne. Ils sont rendus à part, pour être
- * remplis de lignes fines.
+ * réduits à leur ligne centrale (tranchage/axe_median.js).
+ *
+ * Sur une surface du dessus, les parois intérieures laissent des boucles
+ * visibles au milieu de la face. L'option « une seule paroi sur les dessus »
+ * les coupe là et seulement là : le motif du dessus couvre alors la surface
+ * d'un seul tenant. L'intérieur à remplir devient donc double — il commence
+ * après la DERNIÈRE paroi partout, mais après la PREMIÈRE sur cette surface.
  *
  * Les décalages de contours sont ceux de Clipper2, fournis par Manifold
  * (CrossSection.offset). Chaque section 2D est libérée par qui la possède :
@@ -21,13 +27,14 @@
  */
 
 import { TYPES_DE_LIGNE } from "./protocole_tranchage.js";
+import { decouperPolylignes } from "./remplissage.js";
 
 // Un coin très aigu serait prolongé à l'infini par un décalage en onglet : on le coupe.
 export const LIMITE_D_ONGLET = 3;
 // Une surface plus petite que ça n'est qu'un reste de décalage : on ne l'imprime pas.
 export const AIRE_MINIMALE_MM2 = 0.01;
 // Un interstice plus étroit que ça ne se remplit pas : la buse ne sait pas déposer si peu.
-const LARGEUR_MINIMALE_D_INTERSTICE_MM = 0.1;
+export const LARGEUR_MINIMALE_D_INTERSTICE_MM = 0.1;
 
 export function espacement(largeur, hauteur) {
   return largeur - hauteur * (1 - Math.PI / 4);
@@ -35,25 +42,51 @@ export function espacement(largeur, hauteur) {
 
 /*
  * section : la CrossSection de la couche (elle reste à l'appelant).
- * options : { nombre, largeurExterieure, largeurInterieure, hauteur, exterieureDAbord }
- * Rend { chemins, interieur, interstices } :
- *   chemins      par rang, du bord vers le centre : [[{ type, largeur, points, ferme: true }]]
+ * options : { nombre, largeurExterieure, largeurInterieure, hauteur, zoneUneParoi }
+ *   zoneUneParoi : la CrossSection où les parois intérieures sont supprimées
+ *                  (une surface du dessus), ou null.
+ * Rend { parRang, interieur, interstices } :
+ *   parRang      par rang, du bord vers le centre : [[{ type, largeur, points, ferme }]]
  *   interieur    la CrossSection qui reste à remplir, ou null
  *   interstices  la CrossSection des espaces trop étroits pour une paroi, ou null
  * Les deux sections rendues sont à libérer par l'appelant.
  */
 export function paroisDeLaCouche(wasm, section, options) {
   const C = wasm.CrossSection;
+  const { largeurExterieure, largeurInterieure, hauteur } = options;
+  const zoneUneParoi = options.zoneUneParoi ?? null;
+
+  // Hors de la zone « une seule paroi », là où les parois intérieures restent.
+  // Si la zone couvre TOUTE la couche — le cas d'une face du dessus franche, par
+  // exemple la dernière couche d'une pièce — il n'y a rien hors zone : la couche
+  // n'a qu'une paroi, et son intérieur commence juste derrière.
+  let horsZone = null;
+  let toutEnDessus = false;
+  if (zoneUneParoi !== null) {
+    const reste = section.subtract(zoneUneParoi);
+    if (reste.area() <= AIRE_MINIMALE_MM2) {
+      reste.delete();
+      toutEnDessus = true;
+    } else {
+      horsZone = reste;
+    }
+  }
+  const nombre = toutEnDessus ? 1 : options.nombre;
+  const polygonesHorsZone = horsZone === null ? null : horsZone.toPolygons();
+
   const parRang = [];
   const bandes = [];
   let decalage = 0;
   let largeurPrecedente = null;
-  for (let rang = 0; rang < options.nombre; rang += 1) {
-    const largeur = rang === 0 ? options.largeurExterieure : options.largeurInterieure;
+  // Le décalage qui suit la seule paroi extérieure : l'intérieur de la zone du dessus.
+  let decalageUneParoi = 0;
+  for (let rang = 0; rang < nombre; rang += 1) {
+    const largeur = rang === 0 ? largeurExterieure : largeurInterieure;
     decalage += largeurPrecedente === null
       ? largeur / 2
-      : (espacement(largeurPrecedente, options.hauteur) + espacement(largeur, options.hauteur)) / 2;
+      : (espacement(largeurPrecedente, hauteur) + espacement(largeur, hauteur)) / 2;
     largeurPrecedente = largeur;
+    if (rang === 0) decalageUneParoi = decalage + espacement(largeur, hauteur) / 2;
     const boucle = section.offset(-decalage, "Miter", LIMITE_D_ONGLET);
     const polygones = boucle.area() > AIRE_MINIMALE_MM2 ? boucle.toPolygons() : [];
     if (polygones.length === 0) {
@@ -61,21 +94,42 @@ export function paroisDeLaCouche(wasm, section, options) {
       break;
     }
     // La bande que cette paroi couvre : son tracé élargi d'un demi-espacement de chaque côté.
-    const demi = espacement(largeur, options.hauteur) / 2;
+    // Elle est calculée sur la boucle ENTIÈRE, même si le tracé est ensuite coupé :
+    // ce que la boucle ne couvre plus est repris par l'intérieur, qui s'étend jusque-là.
+    const demi = espacement(largeur, hauteur) / 2;
     const dehors = boucle.offset(demi, "Miter", LIMITE_D_ONGLET);
     const dedans = boucle.offset(-demi, "Miter", LIMITE_D_ONGLET);
     bandes.push(dehors.subtract(dedans));
     dehors.delete();
     dedans.delete();
     boucle.delete();
+
     const type = rang === 0 ? TYPES_DE_LIGNE.paroiExterieure : TYPES_DE_LIGNE.paroisInterieures;
-    parRang.push(polygones.map((points) => ({ type, largeur, points, ferme: true })));
+    if (rang === 0 || polygonesHorsZone === null) {
+      parRang.push(polygones.map((points) => ({ type, largeur, points, ferme: true })));
+      continue;
+    }
+    // Une paroi intérieure s'arrête au bord de la surface du dessus : la boucle
+    // fermée devient un ou plusieurs morceaux ouverts.
+    const fermees = polygones.map((points) => [...points, points[0]]);
+    const morceaux = decouperPolylignes(fermees, polygonesHorsZone);
+    parRang.push(morceaux.map((points) => ({ type, largeur, points, ferme: false })));
   }
 
-  // L'intérieur commence à une demi-ligne de la dernière paroi.
+  // L'intérieur commence à une demi-ligne de la dernière paroi — et, sur la
+  // surface du dessus, à une demi-ligne de la seule paroi extérieure.
   let interieur = null;
-  if (parRang.length === options.nombre) {
-    interieur = section.offset(-(decalage + espacement(largeurPrecedente, options.hauteur) / 2), "Miter", LIMITE_D_ONGLET);
+  if (parRang.length === nombre) {
+    const profond = section.offset(-(decalage + espacement(largeurPrecedente, hauteur) / 2), "Miter", LIMITE_D_ONGLET);
+    if (horsZone === null) {
+      interieur = profond;
+    } else {
+      const large = section.offset(-decalageUneParoi, "Miter", LIMITE_D_ONGLET);
+      const dedansZone = large.intersect(zoneUneParoi);
+      const dehorsZone = profond.subtract(zoneUneParoi);
+      interieur = C.union([dedansZone, dehorsZone]);
+      for (const s2 of [profond, large, dedansZone, dehorsZone]) s2.delete();
+    }
     if (interieur.area() <= AIRE_MINIMALE_MM2) {
       interieur.delete();
       interieur = null;
@@ -90,10 +144,26 @@ export function paroisDeLaCouche(wasm, section, options) {
   // Une ouverture morphologique retire les filets plus étroits qu'une ligne minimale.
   const aminci = reste.offset(-LARGEUR_MINIMALE_D_INTERSTICE_MM / 2, "Miter", LIMITE_D_ONGLET);
   let interstices = aminci.offset(LARGEUR_MINIMALE_D_INTERSTICE_MM / 2, "Miter", LIMITE_D_ONGLET);
-  for (const s of [...bandes, couvert, reste, aminci]) s?.delete();
+  for (const s2 of [...bandes, couvert, reste, aminci, horsZone]) s2?.delete();
   if (interstices.area() <= AIRE_MINIMALE_MM2) {
     interstices.delete();
     interstices = null;
   }
-  return { chemins: parRang, interieur, interstices, exterieureDAbord: options.exterieureDAbord };
+  return { parRang, interieur, interstices };
+}
+
+/*
+ * Les rangs de parois dans l'ordre où la buse les pose.
+ *   ordre : "interieures_puis_exterieure" | "exterieure_puis_interieures" | "exterieure_en_sandwich"
+ * « En sandwich » pose une paroi intérieure, puis l'extérieure, puis le reste :
+ * l'extérieure a un appui derrière elle sans perdre sa précision de cote. Il y
+ * faut au moins trois parois ; sinon c'est intérieures d'abord.
+ */
+export function rangsDansLOrdre(parRang, ordre) {
+  const rangs = [...parRang.keys()];
+  if (ordre === "exterieure_puis_interieures") return rangs;
+  if (ordre === "exterieure_en_sandwich" && parRang.length >= 3) {
+    return [1, 0, ...rangs.slice(2)];
+  }
+  return rangs.reverse();
 }

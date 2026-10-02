@@ -984,17 +984,20 @@
 
 /* ── Réglages d'impression (sous la liste du plateau) ── */
 .reglages-impression { border-top: 1px solid var(--chrome-bordure-fine); }
-/* Les cinq préréglages : chacun son nom au-dessus de sa liste, pour qu'on voie
-   l'ordre dans lequel ils se choisissent (imprimante, buse, plaque, matériau,
-   réglages) sans avoir à survoler. */
-.bloc-prereglage { padding-top: 2px; }
-.bloc-prereglage + .bloc-prereglage { border-top: 1px dotted var(--chrome-bordure-fine); }
-.libelle-prereglage {
-  display: block;
-  padding: 2px var(--marge-horizontale) 0;
-  color: var(--texte-doux);
-  font-size: var(--taille-petite);
+/* Une section par profil : son nom, sa liste, ses gestes, puis SES réglages.
+   Le trait plein marque la frontière entre deux profils — c'est elle qui dit
+   à quel profil appartient le réglage qu'on est en train de changer. */
+.section-profil + .section-profil { border-top: 2px solid var(--chrome-bordure); }
+.titre-profil {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px var(--marge-horizontale) 2px;
+  font-weight: 600;
+  background: var(--chrome-fond);
+  border-bottom: 1px solid var(--chrome-bordure-fine);
 }
+.titre-profil > span:first-child { flex: 1 1 auto; }
 .note-prereglage {
   display: block;
   padding: 0 var(--marge-horizontale) var(--marge-verticale);
@@ -1006,10 +1009,10 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 0 var(--marge-horizontale) var(--marge-verticale);
+  padding: var(--marge-verticale) var(--marge-horizontale) 2px;
 }
 .ligne-prereglage select { flex: 1 1 auto; min-width: 0; height: var(--hauteur-champ); }
-.marque-modifie { color: var(--accent); font-weight: 600; }
+.marque-modifie { flex: 0 0 auto; color: var(--accent); font-weight: 600; font-size: var(--taille-petite); }
 .question-prereglage {
   display: flex;
   flex-wrap: wrap;
@@ -1020,31 +1023,31 @@
   background: var(--accent-fond);
   border-radius: var(--rayon-champ);
 }
-.onglets-reglages {
+/* Les gestes du profil, sous sa liste : ils tiennent sur une ligne à part pour
+   que la liste garde toute la largeur de la colonne, même étroite. */
+.gestes-prereglage {
   display: flex;
-  align-items: stretch;
   gap: 2px;
-  padding: 0 var(--marge-horizontale);
-  border-bottom: 1px solid var(--chrome-bordure-fine);
+  padding: 0 var(--marge-horizontale) var(--marge-verticale);
 }
-.onglet-reglages {
-  padding: 3px 8px;
-  font: inherit;
-  color: var(--texte-doux);
-  background: transparent;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
+/* Le refus d'un nom de préréglage : sous le champ, pas dans la barre d'état. */
+.refus-prereglage {
+  flex: 1 0 100%;
+  color: var(--alerte-plateau);
+  font-size: var(--taille-petite);
+  white-space: normal;
 }
-.onglet-reglages.actif { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
-.mode-avance { margin-left: auto; display: flex; align-items: center; gap: 3px; color: var(--texte-doux); }
-.recherche-reglage {
-  display: block;
-  width: calc(100% - 2 * var(--marge-horizontale));
-  margin: var(--marge-verticale) var(--marge-horizontale);
-  height: var(--hauteur-champ);
+/* La recherche et le mode : en tête, ils valent pour toute la liste. */
+.tete-reglages {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--marge-verticale) var(--marge-horizontale);
 }
-.corps-reglages { padding: 0 var(--marge-horizontale) var(--marge-verticale); }
+.mode-avance { flex: 0 0 auto; display: flex; align-items: center; gap: 3px; color: var(--texte-doux); }
+.recherche-reglage { flex: 1 1 auto; min-width: 0; height: var(--hauteur-champ); }
+/* Les réglages d'un profil, en retrait sous lui. */
+.reglages-du-profil { padding: 0 var(--marge-horizontale) var(--marge-verticale); }
 .rangee-reglage { grid-template-columns: var(--largeur-libelle) minmax(0, 1fr) 20px; }
 .rangee-reglage.modifie > .libelle { color: var(--accent); font-weight: 600; }
 .rangee-reglage select { height: var(--hauteur-champ); min-width: 0; }
@@ -1187,7 +1190,6 @@
 .type-ligne-11 { background: var(--ligne-repassage); }
 .type-ligne-12 { background: var(--ligne-pont-interieur); }
 .pastille-type.couture { background: var(--ligne-couture); outline: 1px solid var(--chrome-bordure); border-radius: 50%; width: 9px; height: 9px; }
-.onglets-reglages { flex-wrap: wrap; }
 #liste-plateau { overflow-x: hidden; }
 
 /* L'échelle d'une coloration par valeur, sous le mode d'affichage. */
@@ -1241,122 +1243,14 @@
 .rangee-fiche { display: grid; grid-template-columns: var(--largeur-libelle) 1fr; align-items: center; gap: 6px; margin: 3px 0; }
 .rangee-fiche .champ-texte { min-width: 0; }
 .note-imprimante { color: var(--texte-doux); font-size: var(--taille-petite); white-space: normal; margin: 6px 0; }
+/* Un envoi refusé reste affiché tant qu'on n'a pas réessayé : c'est presque
+   toujours un réglage à changer sur la machine elle-même. */
+.refus-imprimante {
+  color: var(--alerte-plateau);
+  border-left: 2px solid var(--alerte-plateau);
+  padding-left: 6px;
+}
 .camera-imprimante { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: var(--chrome-fond); border-radius: 3px; margin: 6px 0; }
-
-/* ── Calibration ──
-   Une liste d'outils dans l'ordre conseillé : un seul déplié à la fois, pour
-   qu'on voie l'ordre sans se perdre dans les paramètres de tous. */
-.panneau-calibration { width: var(--largeur-panneau-calibration); }
-.intro-calibration, .texte-etage, .pourquoi-outil, .consigne-calibration {
-  color: var(--texte-doux);
-  font-size: var(--taille-petite);
-  white-space: normal;
-  margin: 4px 0;
-}
-.etage-calibration { margin: 10px 0 4px; }
-.etage-calibration:first-of-type { margin-top: 4px; }
-
-.outil-calibration {
-  border: 1px solid var(--chrome-bordure-fine);
-  border-radius: var(--rayon-champ);
-  padding: 4px 6px 6px;
-  margin: 3px 0;
-}
-.outil-calibration.ouvert { border-color: var(--accent); background: var(--chrome-panneau); }
-
-.titre-outil {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 2px 0;
-  font: inherit;
-  text-align: left;
-  color: var(--texte);
-  background: none;
-  border: 0;
-  cursor: pointer;
-}
-.rang-outil {
-  flex: none;
-  min-width: 16px;
-  height: 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--taille-petite);
-  font-weight: 600;
-  color: var(--texte-doux);
-  border: 1px solid var(--chrome-bordure-fine);
-  border-radius: 50%;
-}
-.titre-outil.ouvert .rang-outil { color: var(--accent); border-color: var(--accent); }
-.nom-outil { font-weight: 600; flex: 1 1 auto; }
-.marque-fait, .marque-en-cours { flex: none; font-size: var(--taille-petite); }
-.marque-fait { color: var(--texte-leger); }
-.marque-en-cours { color: var(--accent); }
-.but-outil { margin: 2px 0 0 22px; white-space: normal; }
-.duree-outil { color: var(--texte-leger); font-size: var(--taille-petite); margin: 2px 0; }
-
-.bloc-parametres, .depouillement { margin-top: 8px; }
-.depouillement { border-top: 1px solid var(--chrome-bordure-fine); padding-top: 6px; }
-.rangee-constat { display: flex; align-items: flex-start; gap: 6px; margin: 3px 0; white-space: normal; }
-.rangee-constat input { margin-top: 2px; }
-.bilan-calibration {
-  margin-top: 6px;
-  padding: 6px;
-  background: var(--accent-fond);
-  border-radius: var(--rayon-champ);
-}
-.bilan-calibration p, .note-calibration p { white-space: normal; margin: 0 0 4px; }
-.note-calibration { margin-top: 8px; color: var(--texte-doux); font-size: var(--taille-petite); }
-.determine-outil { color: var(--texte-doux); font-size: var(--taille-petite); white-space: normal; margin: 2px 0; }
-.bloc-combinaisons { margin-bottom: 8px; }
-.compte-essais { margin-right: auto; color: var(--texte-doux); font-size: var(--taille-petite); }
-.nom-combinaison { font-weight: 600; }
-
-/* L'état d'un essai, à droite de son nom : à faire, fait, à refaire. */
-.marque-etat { flex: none; font-size: var(--taille-petite); }
-.marque-etat.a-faire { color: var(--texte-leger); }
-.marque-etat.fait { color: var(--etanche); }
-.marque-etat.a-refaire { color: var(--imprimante-pause); }
-
-/* Les valeurs qu'un essai vient de conclure, avant de les retenir. */
-.liste-conclusion { margin: 4px 0 6px; padding-left: 18px; }
-.liste-conclusion li { white-space: normal; }
-
-/* Une lecture à faire à l'œil : un peu détachée des cotes à relever. */
-.rangee-lecture .libelle { white-space: normal; }
-
-/* ── Comparer deux combinaisons ──
-   Une colonne par combinaison, une ligne par réglage qu'un essai décide. Ce qui
-   diverge est marqué : un matériau ne change pas parce qu'on change de plaque. */
-.bloc-comparaison { margin-top: 10px; }
-.ligne-comparaison {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) repeat(auto-fit, minmax(54px, max-content));
-  gap: 4px;
-  align-items: baseline;
-  padding: 2px var(--marge-horizontale) 2px 0;
-  font-size: var(--taille-petite);
-}
-.libelle-comparaison { color: var(--texte-doux); white-space: normal; }
-.valeur-comparaison { text-align: right; font-variant-numeric: tabular-nums; }
-.entete-comparaison { color: var(--texte-leger); border-bottom: 1px solid var(--chrome-bordure-fine); }
-.entete-comparaison .valeur-comparaison { white-space: normal; }
-.ligne-comparaison.accord .valeur-comparaison { color: var(--etanche); }
-.ligne-comparaison.desaccord .valeur-comparaison { color: var(--imprimante-pause); font-weight: 600; }
-
-/* Un réglage que la combinaison ou un essai tient : sa valeur, en gris, sans champ. */
-.rangee-reglage.verrouille .libelle { color: var(--texte-doux); }
-.valeur-figee {
-  justify-self: start;
-  align-self: center;
-  color: var(--texte-doux);
-  font-size: var(--taille-petite);
-  padding: 0 4px;
-}
-.rangee-reglage[data-role="a_determiner"] .valeur-figee { color: var(--accent); }
 
 /* Les esquisses : leur numéro (l'ordre dans lequel elles peuvent se viser),
    et leur état — entièrement contrainte, encore libre, ou en défaut. */

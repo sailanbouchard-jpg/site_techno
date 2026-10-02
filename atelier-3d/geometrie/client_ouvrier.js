@@ -6,7 +6,8 @@
  */
 
 import {
-  requeteConstruire, requeteAnnuler, requeteChargerFichier, requeteChargerPolice, estMessagePret, REPONSE,
+  requeteConstruire, requeteAnnuler, requeteChargerFichier, requeteChargerPolice, requeteChargerEprouvette,
+  estMessagePret, REPONSE,
 } from "./protocole_ouvrier.js";
 
 const CHEMIN_OUVRIER = new URL("./ouvrier_geometrie.js", import.meta.url);
@@ -83,6 +84,10 @@ export function demarrerOuvrier() {
 
     chargerPolice(cle, adresse) {
       return envoyer((id) => requeteChargerPolice(id, cle, adresse)).promesse;
+    },
+
+    chargerEprouvette(cle, adresse) {
+      return envoyer((id) => requeteChargerEprouvette(id, cle, adresse)).promesse;
     },
 
     fichierCharge(cle) {

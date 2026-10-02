@@ -121,8 +121,6 @@
   --marge-horizontale: 6px;
   --largeur-gauche: 240px;
   --largeur-inspecteur: 268px;
-  /* Le panneau de calibration : plus large, il porte des consignes à lire. */
-  --largeur-panneau-calibration: 320px;
   /* Sous l'arbre écrit sur la vue, la place du cartouche d'esquisse. */
   --reserve-bas-arbre: 110px;
   /* L'aperçu du tranchage : le curseur des couches sous le cube de vue, la légende en bas à gauche. */

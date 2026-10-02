@@ -8,15 +8,16 @@
 // Aucun tirage aléatoire : un niveau FIXE la masse et la vitesse de ses
 // véhicules, sinon le même pont passerait une fois sur deux.
 //
-// ── Deux masses, et c'est voulu ──
-// masseAffichee est ce qu'on ANNONCE : l'ordre de grandeur réel d'un tel
-// véhicule, ce que les élèves doivent retenir (« un camion, c'est 15 tonnes »).
-// masseSolveur est ce que la structure encaisse réellement. Elle est plus basse,
-// parce qu'un tablier de jeu n'a ni la largeur ni le nombre de poutres d'un
-// ouvrage réel : à 15 t pour de bon, presque aucun pont d'élève ne passerait et
-// le jeu n'apprendrait plus rien. On garde donc le chiffre juste sous les yeux
-// et une charge jouable sous les roues. Le rapport est le même pour tous les
-// calculs : masse, traction, puissance travaillent sur masseSolveur.
+// ── Une seule masse : celle qu'on annonce ──
+// Un camion de 15 t pèse 15 t sous les roues. Il y a eu ici deux masses — une
+// annoncée, une plus légère pour le calcul — parce que presque aucun pont
+// d'élève ne passait : l'axial était alors 500× plus mou que la flexion, les
+// treillis ne portaient rien et il fallait bien alléger les camions pour que le
+// jeu reste jouable (voir AXIAL_STIFFNESS_DIVISOR dans physics/config.js). La
+// cause étant corrigée, le pansement n'a plus lieu d'être : un chiffre sous les
+// yeux qui ne serait pas celui sous les roues n'apprendrait rien de bon.
+// masseAffichee reste dans le modèle des véhicules POSÉS : un niveau peut
+// annoncer une masse particulière, et c'est elle qui charge la structure.
 //
 // ── Vitesses ──
 // referenceSpeed est en m/s. Ce sont des vitesses de MANŒUVRE, pas d'autoroute :
@@ -47,37 +48,30 @@ export function puissanceNominale(masse, vitesse) {
   return Math.round((MARGE_PUISSANCE * resistance * vitesse) / WATTS_PER_HORSEPOWER);
 }
 
-function vehicule(id, label, masseAffichee, masseSolveur, referenceSpeed) {
+function vehicule(id, label, masse, referenceSpeed) {
   return {
     id,
     label,
-    masseAffichee,
-    defaultMass: masseSolveur,
+    masseAffichee: masse,
+    defaultMass: masse,
     referenceSpeed,
-    defaultPowerHp: puissanceNominale(masseSolveur, referenceSpeed),
+    defaultPowerHp: puissanceNominale(masse, referenceSpeed),
   };
 }
 
 export const VEHICLE_PRESETS = [
-  //         id       libellé         annoncée  au calcul  vitesse
-  vehicule("car", "Voiture", 1500, 1500, 2),
-  vehicule("van", "Camionnette", 3500, 2500, 1.9),
-  vehicule("truck", "Camion", 15000, 8000, 1.7),
+  //         id       libellé         masse  vitesse
+  vehicule("car", "Voiture", 1500, 2),
+  vehicule("van", "Camionnette", 3500, 1.9),
+  vehicule("truck", "Camion", 15000, 1.7),
 ];
 
 export function getVehiclePresetById(presetId) {
   return VEHICLE_PRESETS.find((preset) => preset.id === presetId) || null;
 }
 
-// Rapport masse au calcul / masse annoncée d'un modèle : sert à garder les deux
-// masses cohérentes quand l'administrateur change celle qui est annoncée.
-export function allegement(presetId) {
-  const preset = getVehiclePresetById(presetId);
-  return preset ? preset.defaultMass / preset.masseAffichee : 1;
-}
-
-// Ce qu'on ANNONCE pour un véhicule posé. Les véhicules enregistrés avant cette
-// distinction n'ont qu'une masse : c'est elle qu'on annonce.
+// Ce qu'on ANNONCE pour un véhicule posé — et, depuis la suppression de
+// l'allègement, ce qu'il pèse. Les véhicules les plus anciens n'ont qu'une masse.
 export function masseAffichee(vehicle) {
   return vehicle.masseAffichee || vehicle.mass;
 }

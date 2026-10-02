@@ -11,6 +11,7 @@
 import {
   createStructure, invalidateIndex, addTerrainPart, adoptIds, removeElements,
   findBeamById, findNodeById, removeBeam, removeJoint, removeLoad, removeMobileLoad,
+  migrerPoutres, migrerVehicules,
 } from "./model/Structure.js";
 import { MODE_DEV, estModeAdmin } from "./mode.js";
 import { NATURE_SOL_DEFAUT } from "./model/terrain.js";
@@ -300,6 +301,10 @@ function restoreFrom(sourceStructure) {
   // Le clone peut traîner des caches d'index sérialisés (depuis localStorage)
   // ou clonés : on les jette pour repartir d'un index propre.
   invalidateIndex(state.structure);
+  // Épaisseurs et raideurs embarquées dans la sauvegarde datent de la session qui
+  // l'a écrite : on les refait depuis le catalogue et la config d'aujourd'hui.
+  migrerPoutres(state.structure);
+  migrerVehicules(state.structure);
   // Rétablit la LARGEUR de grille mémorisée avec la structure (ancienne
   // sauvegarde sans `world` → dimensions de base) : les indices de maillage
   // n'ont de sens qu'avec l'origine qui va avec.

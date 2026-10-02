@@ -1,7 +1,7 @@
 /*
  * interface/barre_haute.js
  * ────────────────────────
- * Nom du projet, onglets Conception / Impression / Calibration, Annuler, Refaire, Importer,
+ * Nom du projet, onglets Conception / Impression, Annuler, Refaire, Importer,
  * Exporter STL. Rien d'autre : l'enregistrement est permanent et automatique,
  * son état s'affiche à droite.
  */
@@ -92,10 +92,10 @@ export function creerBarreHaute(conteneur, actions) {
   const onglets = {
     conception: onglet("conception", "Conception", "Concevoir les pièces et les assembler."),
     impression: onglet("impression", "Impression", "Placer les pièces sur le plateau de l'imprimante. Leur place dans l'assemblage ne change pas."),
-    calibration: onglet("calibration", "Calibration", "Régler l'imprimante et la matière par des impressions d'essai. Le projet n'y est pas touché."),
+
   };
   const barreOnglets = creer("div", { classe: "onglets-espace", attributs: { role: "tablist", "aria-label": "Espace de travail" } },
-    [onglets.conception, onglets.impression, onglets.calibration]);
+    [onglets.conception, onglets.impression]);
 
   conteneur.append(
     nom, projets, separateur(), barreOnglets, separateur(), annuler, refaire, separateur(), importer, exporter, choixDeFichier,
@@ -109,7 +109,6 @@ export function creerBarreHaute(conteneur, actions) {
         b.classList.toggle("actif", nomEspace === espace);
       }
       importer.hidden = espace !== "conception";
-      exporter.hidden = espace === "calibration";
       exporter.querySelector("span").textContent = espace === "impression" ? "Exporter le plateau" : "Exporter STL";
       nomAffiche = nomDuProjet;
       if (document.activeElement !== nom) nom.value = nomDuProjet;

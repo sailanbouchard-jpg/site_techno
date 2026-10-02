@@ -8,8 +8,12 @@ Parle aux imprimantes Bambu Lab P1P/P1S du réseau local, sans cloud Bambu.
   Identifiant : bblp ; mot de passe : le code d'accès affiché par l'imprimante.
 
 L'imprimante doit être en mode « LAN uniquement » avec le mode développeur
-activé (réglages réseau de l'écran) : sans lui, le firmware refuse les ordres
-d'impression venus d'un autre logiciel que Bambu Studio.
+activé (écran de l'imprimante : Réglages › WLAN › LAN Only Mode, puis, plus bas,
+Developer Mode › Enable). Sans le mode développeur, les firmwares récents
+vérifient la signature des ordres MQTT : l'état et les commandes de service
+passent encore, mais tout ordre d'impression est refusé (err_code 0x05024007,
+alerte HMS_0500_0500_0001_0007 « MQTT command verification failed »). Ce réglage
+est propre à chaque machine et une remise à zéro le désactive.
 
 Le fichier envoyé est un .gcode.3mf : une archive ZIP qui contient le G-code
 (Metadata/plate_1.gcode) et ce que le firmware lit autour (modèle d'imprimante,
@@ -41,7 +45,25 @@ UTILISATEUR        = "bblp"
 DELAI_RESEAU_S     = 10
 MAINTIEN_MQTT_S    = 30      # un PINGREQ toutes les 30 s garde la connexion ouverte
 REESSAI_MQTT_S     = 5
+DELAI_ACCUSE_S     = 10      # le firmware accuse un ordre d'impression en moins d'une seconde
 FICHIER_DU_PLATEAU = "Metadata/plate_1.gcode"
+
+# Les refus d'ordre d'impression qu'on sait provoquer, traduits. Le catalogue
+# complet est chez Bambu (e.bambulab.com) : on ne le recopie pas, on nomme les
+# seuls cas que l'atelier rencontre vraiment.
+REFUS_CONNUS = {
+    0x05024007: "l'imprimante refuse les ordres venus d'un autre logiciel que Bambu Studio. "
+                "Sur son écran : Réglages › WLAN, activer « LAN Only Mode », puis, plus bas, "
+                "« Developer Mode » › Enable.",
+    0x0502400D: "l'imprimante n'a pas fini de charger ou de décharger son filament.",
+    0x05024010: "l'imprimante refuse le fichier tranché : elle le juge incompatible.",
+    0x05024030: "l'imprimante n'a pas su lire le G-code du fichier.",
+}
+
+
+class OrdreRefuse(Exception):
+    """Le firmware a répondu, et il a dit non : le message porte la raison."""
+
 
 # Les champs de l'état MQTT que l'Atelier affiche.
 CHAMPS_ETAT = (
@@ -243,6 +265,10 @@ class Imprimante:
         self.etat: dict = {}
         self.connectee = False
         self.erreur = ""
+        # Les accusés d'ordre d'impression reçus, par numéro d'ordre : MQTT en
+        # QoS 0 ne dit pas si un message est arrivé, seul l'accusé le prouve.
+        self._accuses: dict = {}
+        self._numero_d_ordre = 0
         self._sock = None
         self._verrou = threading.Lock()
         self._arret = threading.Event()
@@ -311,6 +337,8 @@ class Imprimante:
         # Les P1 n'envoient que ce qui change : on fusionne dans l'état connu.
         rapport = message.get("print")
         if isinstance(rapport, dict):
+            if rapport.get("command") == "project_file":
+                self._accuses[str(rapport.get("sequence_id"))] = rapport
             self.etat.update({k: v for k, v in rapport.items() if k in CHAMPS_ETAT})
 
     # ── Ordres ──
@@ -323,16 +351,38 @@ class Imprimante:
 
     def imprimer(self, nom_fichier: str, nom_tache: str, md5: str, emplacement) -> None:
         """emplacement : le numéro de la bobine dans l'AMS (0 à 15, 4 par AMS), ou None pour la bobine externe.
-        Le G-code appelle le filament 0 (T0) : ams_mapping dit à l'imprimante quelle bobine lui donner."""
+        Le G-code appelle le filament 0 (T0) : ams_mapping dit à l'imprimante quelle bobine lui donner.
+        Rend la main quand le firmware a accusé l'ordre, lève OrdreRefuse sinon."""
         avec_ams = emplacement is not None
+        self._numero_d_ordre += 1
+        numero = str(self._numero_d_ordre)
+        self._accuses.pop(numero, None)
         self.publier({"print": {
-            "sequence_id": "0", "command": "project_file", "param": FICHIER_DU_PLATEAU,
+            "sequence_id": numero, "command": "project_file", "param": FICHIER_DU_PLATEAU,
             "project_id": "0", "profile_id": "0", "task_id": "0", "subtask_id": "0",
             "subtask_name": nom_tache, "file": "", "url": f"ftp:///{nom_fichier}", "md5": md5,
             "timelapse": False, "bed_type": "auto", "bed_levelling": True,
             "flow_cali": False, "vibration_cali": False, "layer_inspect": False,
             "ams_mapping": [emplacement] if avec_ams else "", "use_ams": avec_ams,
         }})
+        self._attendre_l_accuse(numero)
+
+    def _attendre_l_accuse(self, numero: str) -> None:
+        """L'imprimante renvoie l'ordre sur son sujet de compte rendu, avec un
+        err_code s'il est refusé. Sans cet accusé, l'ordre n'est pas arrivé :
+        un PUBLISH en QoS 0 réussit même dans une connexion déjà morte, et le
+        fichier est alors sur la carte sans que rien ne démarre."""
+        fin = time.monotonic() + DELAI_ACCUSE_S
+        while time.monotonic() < fin:
+            accuse = self._accuses.pop(numero, None)
+            if accuse is not None:
+                code = accuse.get("err_code")
+                if code:
+                    raise OrdreRefuse(REFUS_CONNUS.get(code, f"l'imprimante a refusé l'ordre (code {code:#010x})"))
+                return
+            time.sleep(0.2)
+        raise OrdreRefuse("l'imprimante n'a pas accusé réception de l'ordre : le fichier est déposé "
+                          "sur sa carte, mais rien n'a démarré. Vérifier qu'elle est bien sur le réseau.")
 
     def commande(self, action: str) -> None:
         """action : pause, resume ou stop."""

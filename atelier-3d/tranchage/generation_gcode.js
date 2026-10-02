@@ -28,12 +28,22 @@
  * vitesse et décaler la pièce en Z (decalageZ), ce qui met côte à côte plusieurs
  * écrasements de première couche.
  *
- * Pas encore de rampe de couture.
  * La vitesse de chaque chemin est celle de l'estimation (déjà plafonnée par le
- * débit), divisée par le ralentissement de la couche.
+ * débit, et tenant compte du surplomb, de l'enroulement et des petits contours),
+ * divisée par le ralentissement de la couche.
+ *
+ * Trois choses se décident ici, et nulle part ailleurs :
+ *   le JEU DE FERMETURE  le tour de paroi s'arrête un peu avant son départ ;
+ *   le DÉBIT DES SURPLOMBS  réduit à proportion de la part de la ligne qui est
+ *                        dans le vide, et non d'un bloc ;
+ *   la VENTILATION ANTICIPÉE  le ventilateur d'un P1 met plus d'une seconde à
+ *                        monter en régime : commandé au moment du surplomb, il ne
+ *                        souffle qu'une fois le surplomb passé. Il est donc lancé
+ *                        un chemin plus tôt, ce qui oblige à établir d'avance
+ *                        l'ordre d'émission de la couche.
  */
 
-import { TYPES_DE_LIGNE as T, CHAMPS_PAR_CHEMIN } from "./protocole_tranchage.js";
+import { TYPES_DE_LIGNE as T, CHAMPS_PAR_CHEMIN, ENROULEMENT_CRITIQUE } from "./protocole_tranchage.js";
 import { vitesseVoulue, sectionDeLigne, sectionExtrudee } from "./estimations.js";
 import { DEBUT_P1S, DEBUT_P1P, FIN_P1, LIMITES_P1 } from "./gcode_bambu.js";
 import { PART_ESSUYAGE } from "../noyau/plateau.js";
@@ -56,8 +66,8 @@ const NOMS_DE_TYPE = {
   [T.repassage]: "Ironing",
   [T.pontInterieur]: "Internal Bridge",
 };
-// La part de matière que « appui maximal » pousse dans un surplomb, en %.
-const DEBIT_SURPLOMB_APPUI = 90;
+// Les types qui forment le tour de la pièce : eux seuls reçoivent un jeu de fermeture.
+const EST_UNE_PAROI = new Set([T.paroiExterieure, T.paroisInterieures]);
 // La ventilation propre à certains types de ligne : le réglage l'emporte sur celui
 // de la couche, sauf s'il vaut 0 (« comme la couche »). Ponts et surplombs figent
 // en l'air : c'est le seul cas où le réglage est à fond par défaut.
@@ -128,6 +138,28 @@ function decouperAuDebut(points, longueur) {
     parcouru += l;
   }
   return morceau;
+}
+
+/* Le tracé privé de ses « longueur » derniers millimètres. */
+function raccourcirLaFin(points, longueur) {
+  const totale = longueurDuTrace(points);
+  if (!(longueur > 0) || totale <= 2 * longueur) return points;
+  const cible = totale - longueur;
+  const garde = [points[0]];
+  let parcouru = 0;
+  for (let j = 1; j < points.length; j += 1) {
+    const [a, b] = [points[j - 1], points[j]];
+    const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (l < 1e-9) continue;
+    if (parcouru + l >= cible) {
+      const t = (cible - parcouru) / l;
+      garde.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+      return garde;
+    }
+    garde.push(b);
+    parcouru += l;
+  }
+  return garde;
 }
 
 /* Les segments des deux premiers et deux derniers « longueur » millimètres, coupés en pas courts. */
@@ -229,6 +261,20 @@ function zoneDeLaPremiereCouche(pieces, rangees) {
  * machine : une entrée de MACHINES ; matiere : "PLA", "PETG"…
  * Rend { texte, duree (s, préparation comprise), poids (g), longueurFil (m), hauteur (mm) }.
  */
+/*
+ * Le ventilateur de caisson (M106 P3) du G-code de démarrage, repris du profil
+ * filament PLA de Bambu Lab : il souffle sur le tube pour que le PLA ne
+ * ramollisse pas au-dessus d'un plateau chaud. Rien en dessous de 35 °C — il
+ * n'y a alors plus rien à empêcher.
+ */
+function ventilationDuCaisson(matiere, r) {
+  if (matiere !== "PLA") return "";
+  const plateau = Math.max(r.temperature_plateau_premiere, r.temperature_plateau);
+  if (plateau > 45) return "    M106 P3 S255 ;Prevent PLA from jamming";
+  if (plateau > 35) return "    M106 P3 S180 ;Prevent PLA from jamming";
+  return "";
+}
+
 export function genererGcode(etat, machine, matiere) {
   const reglagesDeBase = etat.reglages;
   // Les modulations d'un essai de calibration : à partir de telle couche, d'autres
@@ -268,7 +314,13 @@ export function genererGcode(etat, machine, matiere) {
     plateau_premiere: r.temperature_plateau_premiere,
     buse_premiere: r.temperature_buse_premiere,
     buse_reduite: r.temperature_buse_premiere - 20,
-    ventilation_pla: matiere === "PLA" && r.temperature_plateau_premiere > 45 ? "    M106 P3 S180 ;Prevent PLA from jamming" : "",
+    // Le ventilateur de caisson qui empêche le PLA de ramollir dans le tube au
+    // voisinage d'un plateau chaud. Deux crans, et sur la PLUS HAUTE des deux
+    // températures de plateau : c'est l'échelle du profil filament PLA de Bambu
+    // ({if bed > 45} S255 {elsif bed > 35} S180). On avait un seul cran, à la
+    // mauvaise valeur et sur la seule première couche — donc rien du tout dès
+    // que le plateau descend, alors que c'est justement là qu'on l'envoie.
+    ventilation_pla: ventilationDuCaisson(matiere, r),
     // Bambu Studio purge à la température haute de la matière : 10 °C au-dessus de l'impression.
     purge_f: nombre(r.debit_maximal / 2.4053 * 60, 3),
     purge_temperature: Math.max(r.temperature_buse_premiere, r.temperature_buse) + 10,
@@ -427,105 +479,153 @@ export function genererGcode(etat, machine, matiere) {
       ecrire(`M140 S${r.temperature_plateau} ; set bed temperature`);
     }
 
+    // ── L'ordre d'émission de la couche : pièce par pièce, chemin par chemin ──
+    // La liste est établie d'avance pour deux raisons : la ventilation doit
+    // pouvoir regarder LE CHEMIN SUIVANT (voir plus bas), et la rétraction qui
+    // quitte une pièce doit se faire avec les réglages de celle qu'on quitte.
+    const aEmettre = [];
     for (let p = 0; p < etat.pieces.length; p += 1) {
+      for (const i of rangees[p][k]) aEmettre.push({ p, i });
+    }
+    const reglagesDe = (p) => {
+      const surPiece = modulationDePiece[p];
+      return surPiece === null ? r : { ...r, ...(surPiece.reglages ?? {}) };
+    };
+
+    /*
+     * La ventilation voulue par un chemin : son réglage propre s'il en a un
+     * (ponts et surplombs figent en l'air, paroi extérieure, surface du dessus),
+     * sinon celle de la couche. Un bord qui s'est retroussé prend la ventilation
+     * des surplombs, même si sa propre couche ne débordait pas.
+     */
+    const ventilationVoulue = ({ p, i }) => {
+      const rp = reglagesDe(p);
+      const chemins = etat.pieces[p].chemins;
+      const type = chemins[i * CHAMPS_PAR_CHEMIN + 1];
+      const enroule = chemins[i * CHAMPS_PAR_CHEMIN + 8] / 1000 >= ENROULEMENT_CRITIQUE;
+      const cle = enroule ? "ventilateur_surplomb" : VENTILATION_PAR_TYPE[type];
+      const propre = cle === undefined ? 0 : (rp[cle] ?? 0);
+      return propre > 0 && k >= rp.couches_sans_ventilateur ? propre : ventilateurDeBase;
+    };
+    // Le ventilateur d'un P1 met plus d'une seconde à monter en régime : commandé
+    // AU MOMENT du surplomb, il ne souffle vraiment qu'une fois le surplomb passé.
+    // On le lance donc un chemin plus tôt, comme Bambu Studio. Un seul chemin
+    // d'avance, et seulement vers le haut : la ventilation ne redescend jamais
+    // avant l'heure.
+    const voulues = aEmettre.map(ventilationVoulue);
+    const ventilations = voulues.map((v, e) => Math.max(v, voulues[e + 1] ?? v));
+
+    let piecePrecedente = -1;
+    aEmettre.forEach(({ p, i }, e) => {
       const piece = etat.pieces[p];
       // Une modulation par pièce : plusieurs valeurs d'un même réglage dans une
       // seule impression, côte à côte et à la même hauteur. C'est ce qui permet
       // à l'escalier des débits de devenir une rangée de plaquettes basses.
       const surPiece = modulationDePiece[p];
-      const rp = surPiece === null ? r : { ...r, ...(surPiece.reglages ?? {}) };
-      // La rétraction qui quitte la pièce précédente lui appartient : elle se
-      // fait AVANT de passer aux réglages de celle-ci. Sans cela, un essai de
-      // rétraction donnerait à chaque tour la vitesse de sa voisine.
-      if (rp !== rActif && rangees[p][k].length > 0) retracter();
-      rActif = rp;
+      const rp = reglagesDe(p);
+      if (p !== piecePrecedente) {
+        // La rétraction qui quitte la pièce précédente lui appartient : elle se
+        // fait AVANT de passer aux réglages de celle-ci. Sans cela, un essai de
+        // rétraction donnerait à chaque tour la vitesse de sa voisine.
+        if (rp !== rActif) retracter();
+        rActif = rp;
+        if (surPiece !== null && surPiece.etiquette) ecrire(`; CALIBRATION: ${surPiece.etiquette}`);
+        piecePrecedente = p;
+      }
       // Une éprouvette peut être posée plus haut ou plus bas que les autres :
       // c'est ainsi qu'un même plateau montre plusieurs écrasements de première couche.
       const zPiece = z + (surPiece?.decalageZ ?? 0);
-      if (surPiece !== null && surPiece.etiquette && rangees[p][k].length > 0) ecrire(`; CALIBRATION: ${surPiece.etiquette}`);
-      for (const i of rangees[p][k]) {
-        const champ = (c) => piece.chemins[i * CHAMPS_PAR_CHEMIN + c];
-        const type = champ(1);
-        const premier = champ(2);
-        const nombreDePoints = champ(3);
-        const largeur = champ(4) / 1000;
-        const ferme = champ(5) === 1;
-        if (nombreDePoints < 2) continue;
-        const bruts = Array.from({ length: nombreDePoints + (ferme ? 1 : 0) },
-          (_v, j) => [piece.points[(premier + j % nombreDePoints) * 2], piece.points[(premier + j % nombreDePoints) * 2 + 1]]);
-        // La couture en biseau ne vaut que pour la face visible, sur une boucle entière.
-        const enBiseau = rp.couture_biseau === "oui" && ferme && type === T.paroiExterieure;
-        const simplifie = simplifier(bruts);
-        const { trace, parts } = enBiseau
-          ? biseauterLaCouture(simplifie, rp.longueur_biseau)
-          : { trace: simplifie, parts: null };
 
-        const [x0, y0] = trace[0];
-        allerA(x0, y0, zPiece, navigation);
-        const propre = rp[VENTILATION_PAR_TYPE[type]] ?? 0;
-        ventiler(propre > 0 && k >= rp.couches_sans_ventilateur ? propre : ventilateurDeBase);
-        accelerer(vitesseVoulue(k, type, rp).acceleration);
-        if (retracte) {
-          ecrire(`G1 E${nombre(rp.longueur_retraction, 3)} F${rp.vitesse_retraction * 60}`);
-          retracte = false;
-        }
-        ecrire(`; FEATURE: ${NOMS_DE_TYPE[type]}`);
-        ecrire(`; LINE_WIDTH: ${mm(largeur)}`);
-        // Un essai de calibration impose sa vitesse (débit maximal) ou l'étire (tour de vitesse).
-        const brute = champ(6) / 100;
-        // La pièce l'emporte sur la couche : un mât de repères garde sa vitesse
-        // pendant que la tour à côté monte en régime.
-        const imposee = surPiece?.vitesseImposee ?? modulationCourante?.vitesseImposee ?? null;
-        const facteur = (surPiece?.facteurVitesse ?? 1) * (modulationCourante?.facteurVitesse ?? 1);
-        const voulue = imposee ?? brute * facteur;
-        const ralentie = voulue / etat.facteurs[k];
-        const v = Math.max(Math.min(voulue, rp.vitesse_min_refroidissement), ralentie);
-        const f = Math.round(v * 60);
-        if (f !== vitesse) ecrire(`G1 F${f}`);
-        vitesse = f;
-
-        // Un surplomb peut recevoir un peu moins de matière : la ligne pend moins.
-        // « Appui maximal » le fait d'office, sans attendre que le réglage soit baissé.
-        const partSurplomb = rp.strategie_surplomb === "appui" ? Math.min(rp.debit_surplomb, DEBIT_SURPLOMB_APPUI) : rp.debit_surplomb;
-        const debit = rp.rapport_debit * (type === T.paroiEnSurplomb ? partSurplomb / 100 : 1);
-        const parMm = sectionExtrudee(type, largeur, epaisseur, rp) * debit / aireDuFil;
-        // Les arcs ne valent que pour un débit constant : une couture en biseau
-        // module la matière segment par segment, on la laisse en droites.
-        const morceaux = rp.arcs === "oui" && parts === null
-          ? regrouperEnArcs(trace, rp.tolerance_arcs)
-          : [{ arc: false, points: trace }];
-        let [xa, ya] = [x0, y0];
-        let j = 0;
-        for (const morceau of morceaux) {
-          if (morceau.arc) {
-            const [x, y] = morceau.points.at(-1);
-            const e = morceau.longueur * parMm;
-            filament += e;
-            ecoule += morceau.longueur / v;
-            // I et J : le centre, compté depuis le point de départ de l'arc.
-            const i = morceau.centre[0] - xa;
-            const jj = morceau.centre[1] - ya;
-            ecrire(`${morceau.sens > 0 ? "G3" : "G2"} X${mm(x)} Y${mm(y)} I${mm(i)} J${mm(jj)} E${nombre(e, 5)}`);
-            [xa, ya] = [x, y];
-            j += morceau.points.length - 1;
-            continue;
-          }
-          for (let m = 1; m < morceau.points.length; m += 1) {
-            const [x, y] = morceau.points[m];
-            const l = Math.hypot(x - xa, y - ya);
-            j += 1;
-            if (l < 1e-4) continue;
-            const e = l * parMm * (parts === null ? 1 : parts[j - 1]);
-            filament += e;
-            ecoule += l / v;
-            ecrire(`G1 X${mm(x)} Y${mm(y)} E${nombre(e, 5)}`);
-            [xa, ya] = [x, y];
-          }
-        }
-        position = { x: xa, y: ya, z: zPiece };
-        derniereLigne = trace;
+      const champ = (c) => piece.chemins[i * CHAMPS_PAR_CHEMIN + c];
+      const type = champ(1);
+      const premier = champ(2);
+      const nombreDePoints = champ(3);
+      const largeur = champ(4) / 1000;
+      const ferme = champ(5) === 1;
+      const surplomb = champ(7) / 1000;
+      if (nombreDePoints < 2) return;
+      const bruts = Array.from({ length: nombreDePoints + (ferme ? 1 : 0) },
+        (_v, j) => [piece.points[(premier + j % nombreDePoints) * 2], piece.points[(premier + j % nombreDePoints) * 2 + 1]]);
+      // La couture en biseau ne vaut que pour la face visible, sur une boucle entière.
+      const enBiseau = rp.couture_biseau === "oui" && ferme && type === T.paroiExterieure;
+      let simplifie = simplifier(bruts);
+      // Le jeu de fermeture : le tour s'arrête un peu avant son départ, et la
+      // matière encore sous pression dans la buse comble le reste. Sans lui, la
+      // fin du tour s'ajoute au début et la couture fait un bourrelet. Inutile
+      // avec la couture en biseau, qui règle le même problème autrement.
+      if (ferme && !enBiseau && rp.jeu_couture > 0 && EST_UNE_PAROI.has(type)) {
+        simplifie = raccourcirLaFin(simplifie, rp.jeu_couture);
       }
-    }
+      if (simplifie.length < 2) return;
+      const { trace, parts } = enBiseau
+        ? biseauterLaCouture(simplifie, rp.longueur_biseau)
+        : { trace: simplifie, parts: null };
+
+      const [x0, y0] = trace[0];
+      allerA(x0, y0, zPiece, navigation);
+      ventiler(ventilations[e]);
+      accelerer(vitesseVoulue(k, type, rp).acceleration);
+      if (retracte) {
+        ecrire(`G1 E${nombre(rp.longueur_retraction, 3)} F${rp.vitesse_retraction * 60}`);
+        retracte = false;
+      }
+      ecrire(`; FEATURE: ${NOMS_DE_TYPE[type]}`);
+      ecrire(`; LINE_WIDTH: ${mm(largeur)}`);
+      // Un essai de calibration impose sa vitesse (débit maximal) ou l'étire (tour de vitesse).
+      const brute = champ(6) / 100;
+      // La pièce l'emporte sur la couche : un mât de repères garde sa vitesse
+      // pendant que la tour à côté monte en régime.
+      const imposee = surPiece?.vitesseImposee ?? modulationCourante?.vitesseImposee ?? null;
+      const facteur = (surPiece?.facteurVitesse ?? 1) * (modulationCourante?.facteurVitesse ?? 1);
+      const voulue = imposee ?? brute * facteur;
+      const ralentie = voulue / etat.facteurs[k];
+      const v = Math.max(Math.min(voulue, rp.vitesse_min_refroidissement), ralentie);
+      const f = Math.round(v * 60);
+      if (f !== vitesse) ecrire(`G1 F${f}`);
+      vitesse = f;
+
+      // Un surplomb reçoit un peu moins de matière : la ligne pend moins et se
+      // retrousse moins. La réduction suit la part de la ligne qui est dans le
+      // vide — une ligne posée au quart dans le vide n'en perd qu'un quart.
+      const reduction = type === T.paroiEnSurplomb ? (1 - rp.debit_surplomb / 100) * surplomb : 0;
+      const debit = rp.rapport_debit * (1 - reduction);
+      const parMm = sectionExtrudee(type, largeur, epaisseur, rp) * debit / aireDuFil;
+      // Les arcs ne valent que pour un débit constant : une couture en biseau
+      // module la matière segment par segment, on la laisse en droites.
+      const morceaux = rp.arcs === "oui" && parts === null
+        ? regrouperEnArcs(trace, rp.tolerance_arcs)
+        : [{ arc: false, points: trace }];
+      let [xa, ya] = [x0, y0];
+      let j = 0;
+      for (const morceau of morceaux) {
+        if (morceau.arc) {
+          const [x, y] = morceau.points.at(-1);
+          const pousse = morceau.longueur * parMm;
+          filament += pousse;
+          ecoule += morceau.longueur / v;
+          // I et J : le centre, compté depuis le point de départ de l'arc.
+          const ci = morceau.centre[0] - xa;
+          const cj = morceau.centre[1] - ya;
+          ecrire(`${morceau.sens > 0 ? "G3" : "G2"} X${mm(x)} Y${mm(y)} I${mm(ci)} J${mm(cj)} E${nombre(pousse, 5)}`);
+          [xa, ya] = [x, y];
+          j += morceau.points.length - 1;
+          continue;
+        }
+        for (let m = 1; m < morceau.points.length; m += 1) {
+          const [x, y] = morceau.points[m];
+          const l = Math.hypot(x - xa, y - ya);
+          j += 1;
+          if (l < 1e-4) continue;
+          const pousse = l * parMm * (parts === null ? 1 : parts[j - 1]);
+          filament += pousse;
+          ecoule += l / v;
+          ecrire(`G1 X${mm(x)} Y${mm(y)} E${nombre(pousse, 5)}`);
+          [xa, ya] = [x, y];
+        }
+      }
+      position = { x: xa, y: ya, z: zPiece };
+      derniereLigne = trace;
+    });
   }
 
   // ── Fin ──

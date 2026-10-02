@@ -56,6 +56,7 @@ import typeRacine from "./types/type_noeud_racine.js";
 import typeInconnu from "./types/type_noeud_inconnu.js";
 import typeGroupe from "./types/type_noeud_groupe.js";
 import typeImporte from "./types/type_noeud_importe.js";
+import typeEprouvette from "./types/type_noeud_eprouvette.js";
 import typePave from "./types/type_noeud_pave.js";
 import typeCylindre from "./types/type_noeud_cylindre.js";
 import typeSphere from "./types/type_noeud_sphere.js";
@@ -85,6 +86,7 @@ const TYPES = [
   typeInconnu,
   typeGroupe,
   typeImporte,
+  typeEprouvette,
   typePave,
   typeCylindre,
   typeSphere,
@@ -188,6 +190,11 @@ export function estTransformable(nomDuType) {
    échelle. Les autres (le groupe) ont la taille de ce qu'elles contiennent. */
 export function estNormalise(nomDuType) {
   return typeDeNoeud(nomDuType).dimensionsParDefaut !== undefined;
+}
+
+/* Une éprouvette de calibration, posée par un essai et non par l'élève. */
+export function estUneEprouvette(nomDuType) {
+  return typeDeNoeud(nomDuType).eprouvette === true;
 }
 
 export function estDegroupable(nomDuType) {

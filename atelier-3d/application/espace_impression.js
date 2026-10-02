@@ -12,17 +12,26 @@
  */
 
 import { commandeModifierPlateau } from "../noyau/commandes/commande_modifier_plateau.js";
+import { commandeAjouterNoeud } from "../noyau/commandes/commande_ajouter_noeud.js";
+import { commandeSupprimerNoeud } from "../noyau/commandes/commande_supprimer_noeud.js";
+import { commandeLot } from "../noyau/commandes/registre_commandes.js";
+import { nouvelObjet } from "../noyau/fabrique_de_noeuds.js";
+import { estUneEprouvette } from "../noyau/registre_types_de_noeuds.js";
 import { avecChamps } from "../noyau/noeud.js";
 import { pretPourLeCalcul } from "../noyau/bibliotheque_d_objets.js";
+import { CLES_IMPOSEES_PAR_LES_ESSAIS } from "../noyau/calibration.js";
 import {
   impressionDe, machineDe, avecPieces, avecReglages, modifierPieces, creerPiece, piecesPresentes, objetsHorsPlateau,
   objetsImprimables, partiesSeparables, rotationDAssemblage, rotationPourPoserAPlat, formeTournee,
   transformationSurLePlateau, boiteSurLePlateau, controlerLePlateau, disposer, placeLibre,
 } from "../noyau/plateau.js";
 import { stlBinaire, morceauAExporter } from "../geometrie/export_stl.js";
-import { ecartsDeLaSource } from "../noyau/reglages_impression.js";
+import {
+  ecartsDeLaSource, valeursEffectives, tousLesPrereglagesPersonnels, prereglage,
+  enregistrerPrereglage, dupliquerPrereglage, renommerPrereglage, supprimerPrereglage,
+} from "../noyau/reglages_impression.js";
 
-export const ESPACES = Object.freeze({ conception: "conception", impression: "impression", calibration: "calibration" });
+export const ESPACES = Object.freeze({ conception: "conception", impression: "impression" });
 
 // Tant que sa forme n'est pas calculée, une pièce occupe ce carré pour trouver sa place.
 const TAILLE_INCONNUE_MM = 30;
@@ -51,7 +60,7 @@ export function creerEspaceImpression(dependances) {
   let poserAPlat = false;
   let apercu = false;          // l'aperçu du tranchage à la place des pièces
   let glisser = null;
-  const cameras = { conception: null, impression: null, calibration: null };
+  const cameras = { conception: null, impression: null };
   const formes = new WeakMap();      // maillage → Map(orientation → forme)
   let placees = new Map();           // id de pièce → { piece, source, noeud, echelle, forme, transformation }
   let controle = { hors: new Set(), chevauchements: [] };
@@ -142,6 +151,13 @@ export function creerEspaceImpression(dependances) {
     // Les pièces d'un modèle portent souvent déjà son nom (« Clip A — mâle »).
     const partie = dependances.nommer(noeud);
     return partie.startsWith(nom) ? partie : nom + " — " + partie;
+  }
+
+  /* Range les profils du poste ; dit si le navigateur a refusé d'écrire. */
+  function rangerLesProfils(quoi) {
+    if (dependances.enregistrerLesPrereglages(tousLesPrereglagesPersonnels())) return true;
+    annoncer(quoi + " vaut pour cette séance : ce navigateur refuse d'enregistrer.", true);
+    return false;
   }
 
   // ── Actions ─────────────────────────────────────────────────────────────
@@ -302,6 +318,126 @@ export function creerEspaceImpression(dependances) {
       const ecarts = garderLesEcarts ? i.ecarts
         : Object.fromEntries(Object.entries(i.ecarts).filter(([cle]) => !(cle in ecartsDeLaSource(i.ecarts, source))));
       modifier(avecReglages(i, { [source]: id, ecarts }));
+    },
+
+    /*
+     * Un essai de calibration pose son éprouvette. C'est le pendant du
+     * `new_project() + add_model()` d'Orca, ramené à l'onglet Impression : le
+     * plateau est vidé — une éprouvette ne se mesure pas au milieu d'autres
+     * pièces — et l'éprouvette précédente, s'il y en avait une, est remplacée.
+     * La conception, elle, n'est pas touchée.
+     *
+     * pieces  [{ fichier, nom, x, y, ecarts }] — x, y au centre du plateau ;
+     * coupe   { bas, haut } en millimètres du modèle, ou null ;
+     * echelle [x, y, z], un facteur : le maillage est déjà à la bonne taille ;
+     * ecarts  les réglages que l'essai impose au plateau.
+     * Rend les pièces créées, pour que l'essai retrouve les siennes.
+     */
+    poserDesEprouvettes({ pieces, coupe, echelle, ecarts }) {
+      const document = documentCourant();
+      const anciennes = document.racine.enfants.filter((n) => estUneEprouvette(n.type));
+      const objets = pieces.map((p) => nouvelObjet("eprouvette", {
+        nom: p.nom,
+        parametres: {
+          modele: p.fichier,
+          coupeBas: coupe?.bas ?? 0,
+          coupeHaut: coupe?.haut ?? 0,
+        },
+        transformation: {
+          position: { x: p.x, y: p.y, z: 0 },
+          echelle: { x: echelle[0], y: echelle[1], z: echelle[2] },
+        },
+      }));
+      const m = machine();
+      const posees = objets.map((objet, i) => creerPiece({
+        source: objet.id, partie: null,
+        x: m.largeur / 2 + pieces[i].x, y: m.profondeur / 2 + pieces[i].y,
+      }));
+      const avant = impression();
+      const apres = avecPieces(avecReglages(avant, { ecarts: { ...avant.ecarts, ...ecarts } }), posees);
+
+      const commandes = [
+        ...anciennes.map((n) => commandeSupprimerNoeud.creer(document, n.id)),
+        ...objets.map((objet) => commandeAjouterNoeud.creer(document.racine.id, objet)),
+        commandeModifierPlateau.creer(document.impression, apres),
+      ];
+      etat.executer(commandeLot.creer(commandes, "Poser l'éprouvette"));
+      selection = new Set(posees.map((p) => p.id));
+      dependances.rafraichir();
+      return posees.map((p, i) => ({ id: p.id, ecarts: pieces[i].ecarts ?? null }));
+    },
+
+    /* L'essai est retiré : son éprouvette quitte le plateau et la conception. */
+    retirerLesEprouvettes() {
+      const document = documentCourant();
+      const anciennes = document.racine.enfants.filter((n) => estUneEprouvette(n.type));
+      if (anciennes.length === 0) return;
+      const restantes = new Set(anciennes.map((n) => n.id));
+      // Les réglages que l'essai avait imposés s'en vont avec lui : sinon le
+      // plateau garderait une seule paroi, pas de jupe ou un décalage de plaque
+      // à zéro, et la pièce suivante s'imprimerait avec sans rien dire.
+      const avant = impression();
+      const ecarts = { ...avant.ecarts };
+      for (const cle of CLES_IMPOSEES_PAR_LES_ESSAIS) delete ecarts[cle];
+      const commandes = [
+        ...anciennes.map((n) => commandeSupprimerNoeud.creer(document, n.id)),
+        commandeModifierPlateau.creer(document.impression,
+          avecPieces(avecReglages(avant, { ecarts }), avant.pieces.filter((p) => !restantes.has(p.source)))),
+      ];
+      etat.executer(commandeLot.creer(commandes, "Retirer l'éprouvette"));
+      selection = new Set();
+      dependances.rafraichir();
+    },
+
+    // ── Les profils de réglages ──
+    /*
+     * ENREGISTRER. Les valeurs en vigueur entrent dans le profil choisi, sous
+     * son nom. Rien n'est demandé, rien n'est créé à côté : c'est le profil
+     * qu'on reprendra la prochaine fois.
+     */
+    enregistrerPrereglage(source) {
+      const i = impression();
+      const enregistre = enregistrerPrereglage(source, i[source], i);
+      if (rangerLesProfils("« " + enregistre.nom + " »")) {
+        annoncer("Profil « " + enregistre.nom + " » enregistré sur ce poste.");
+      }
+      // Les écarts sont désormais DANS le profil : le plateau n'en porte plus.
+      actions.changerPrereglage(source, enregistre.id, false);
+    },
+
+    /* DUPLIQUER. Rend null si c'est fait, sinon la phrase qui dit pourquoi. */
+    dupliquerPrereglage(source, nom) {
+      const i = impression();
+      const { erreur, cree } = dupliquerPrereglage(source, i[source], nom, i);
+      if (erreur !== undefined) return erreur;
+      if (rangerLesProfils("« " + cree.nom + " »")) {
+        annoncer("Profil « " + cree.nom + " » créé sur ce poste.");
+      }
+      actions.changerPrereglage(source, cree.id, false);
+      return null;
+    },
+
+    /* RENOMMER. Rend null si c'est fait, sinon la phrase qui dit pourquoi. */
+    renommerPrereglage(source, nom) {
+      const { erreur } = renommerPrereglage(source, impression()[source], nom);
+      if (erreur !== undefined) return erreur;
+      rangerLesProfils("Le nouveau nom");
+      dependances.rafraichir();
+      return null;
+    },
+
+    /*
+     * SUPPRIMER. Un profil fourni retrouve ses valeurs d'origine, un profil
+     * créé ici disparaît et un autre prend sa place dans la liste.
+     */
+    supprimerPrereglage(source) {
+      const i = impression();
+      const nom = prereglage(source, i[source]).nom;
+      const suivant = supprimerPrereglage(source, i[source], i.buse);
+      rangerLesProfils("La suppression");
+      annoncer("Profil « " + nom + " » supprimé de ce poste.");
+      if (suivant !== null) actions.changerPrereglage(source, suivant, false);
+      else dependances.rafraichir();
     },
 
     basculerApercu() {
@@ -542,9 +678,8 @@ export function creerEspaceImpression(dependances) {
     glisser = null;
     scene.finirApercus();
     scene.marquerSurvol(null);
-    // La calibration montre aussi le plateau : c'est l'éprouvette qu'on y voit.
-    const surLePlateau = nom === ESPACES.impression || nom === ESPACES.calibration;
     const enImpression = nom === ESPACES.impression;
+    const surLePlateau = enImpression;
     scene.montrerPlateau(surLePlateau ? machine() : null);
     if (!surLePlateau) scene.signalerSurLePlateau([]);
     if (cameras[nom] !== null) scene.controleur.restaurer(cameras[nom]);
@@ -577,12 +712,16 @@ export function creerEspaceImpression(dependances) {
       })).filter((p) => p.maillage !== null);
     },
     enImpression: () => espace === ESPACES.impression,
-    enCalibration: () => espace === ESPACES.calibration,
+    /* Une éprouvette d'essai est-elle encore là ? L'essai cesse avec elle :
+       la supprimer à la main doit suffire à rendre au plateau son G-code normal. */
+    aUneEprouvette: () => documentCourant().racine.enfants.some((n) => estUneEprouvette(n.type)),
     selection: () => selection,
     poserAPlatActif: () => poserAPlat,
     objetsAAfficher,
     machine,
     impression,
+    /* Les valeurs effectives des réglages : préréglages plus écarts du plateau. */
+    reglagesEffectifs: () => valeursEffectives(impression()),
 
     /* Ce que les panneaux montrent. */
     resume() {

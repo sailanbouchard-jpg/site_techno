@@ -14,7 +14,9 @@
  *   sols                les contours au sol de toutes les pièces : la jupe les entoure
  * Réponse  { id, ok, points: Float32Array (x, y…), chemins: Uint32Array
  *            (voir protocole_tranchage.js), bilan, sol, coutures: Float32Array (x, y, couche…),
- *            contours: le bord de chaque couche, pour les déplacements }
+ *            contours: le bord de chaque couche, pour les déplacements,
+ *            contoursOuverts: le nombre de contours qu'un maillage troué n'a pas
+ *            permis de refermer }
  * « annuler » { id } : la pièce a changé, ce tranchage ne sert plus.
  * Pendant le travail, l'ouvrier envoie { id, avancement } (0 à 1) : le fil
  * principal en fait la barre de progression.
@@ -49,7 +51,12 @@ function emballer(chemins) {
   const table = new Uint32Array(chemins.length * CHAMPS_PAR_CHEMIN);
   let p = 0;
   chemins.forEach((c, i) => {
-    table.set([c.couche, c.type, p / 2, c.points.length, Math.round(c.largeur * 1000), c.ferme ? 1 : 0, Math.round(c.vitesse * 100)], i * CHAMPS_PAR_CHEMIN);
+    table.set([
+      c.couche, c.type, p / 2, c.points.length, Math.round(c.largeur * 1000),
+      c.ferme ? 1 : 0, Math.round(c.vitesse * 100),
+      Math.round(Math.max(0, Math.min(1, c.surplomb ?? 0)) * 1000),
+      Math.round(Math.max(0, c.enroulement ?? 0) * 1000),
+    ], i * CHAMPS_PAR_CHEMIN);
     for (const [x, y] of c.points) {
       points[p++] = x;
       points[p++] = y;
@@ -67,10 +74,13 @@ function trancher({ id, positions, indices, matrice, couches, reglages }) {
     dernierEnvoi = maintenant;
     postMessage({ id, avancement: part });
   };
-  const { chemins, sol, coutures, contours } = trancherPiece(wasm, placer(positions, matrice), indices, couches, reglages, surAvancement);
+  const tranche = trancherPiece(wasm, placer(positions, matrice), indices, couches, reglages, surAvancement);
+  const { chemins, sol, coutures, contours, contoursOuverts } = tranche;
   // L'estimation d'abord : elle donne à chaque chemin sa vitesse réelle, que l'emballage garde.
   const bilan = estimer(chemins, couches, reglages);
-  return { ...emballer(chemins), bilan, sol, coutures: new Float32Array(coutures.flat()), contours };
+  return {
+    ...emballer(chemins), bilan, sol, coutures: new Float32Array(coutures.flat()), contours, contoursOuverts,
+  };
 }
 
 /* La jupe : des boucles autour de l'enveloppe de toutes les pièces, sur la première couche. */
@@ -95,7 +105,7 @@ function jupe({ sols, couches, reglages }) {
     }
   }
   const bilan = estimer(chemins, couches, reglages);
-  return { ...emballer(chemins), bilan, sol: [], coutures: new Float32Array(0), contours: [] };
+  return { ...emballer(chemins), bilan, sol: [], coutures: new Float32Array(0), contours: [], contoursOuverts: 0 };
 }
 
 /* Une tâche, puis on rend la main : les annulations arrivées entre-temps sont lues avant la suivante. */

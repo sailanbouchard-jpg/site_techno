@@ -9,15 +9,16 @@
 import { creer } from "./elements.js";
 import { boutonRuban, griser, groupe } from "./ruban.js";
 import { definirCondition } from "./bulle_d_aide.js";
+import { ESSAIS } from "../noyau/calibration.js";
 
 const UNE = "Sélectionner au moins une pièce du plateau.";
 
 /*
  * imprimantes() : les préréglages d'imprimante [{ id, nom }], relus à chaque mise à
- *   jour — une combinaison exportée en ajoute un. Le volume vient du matériel résolu.
+ *   jour — un préréglage enregistré en ajoute un. Le volume vient du matériel résolu.
  * actions : { machine(id), toutMettre(), disposer(), poserAPlat(), tourner(degres),
  *             orienter(), dupliquer(), retirer(), exporter(), exporterGcode(),
- *             apercu(), imprimantes(), calibration() }
+ *             apercu(), imprimantes(), calibrer(idEssai), retirerEssai() }
  * machines : [{ id, nom, largeur, profondeur, hauteur }]
  */
 export function creerRubanImpression(conteneur, imprimantes, actions) {
@@ -97,12 +98,20 @@ export function creerRubanImpression(conteneur, imprimantes, actions) {
     }),
   ];
 
+  // Un bouton par essai, dans l'ordre d'OrcaSlicer. Chacun ouvre sa boîte de
+  // réglages, puis pose son éprouvette sur le plateau : on reste dans le
+  // slicer, avec les réglages éditables à gauche.
   const calibrer = [
-    commande("calibration", {
-      iconeNom: "regle", texte: "Calibration",
-      aide: { nom: "Outils de calibration", texte: "Les impressions d'essai qui donnent les bons réglages, par étages : la bobine (diamètre, température, débit, avance de pression, débit maximal, rétraction), la plaque (écrasement de la première couche), puis les réglages d'impression (cotes, surplombs et ponts, vitesse). Chaque essai pose ses éprouvettes à la place du plateau, le temps de l'impression." },
-      surClic: actions.calibration,
-    }),
+    ...ESSAIS.map((essai) => commande("essai_" + essai.id, {
+      iconeNom: "regle", texte: essai.nom,
+      aide: { nom: essai.titre, texte: essai.but },
+      surClic: () => actions.calibrer(essai.id),
+    })),
+    commande("retirerEssai", {
+      iconeNom: "supprimer", texte: "Retirer l'essai",
+      aide: { nom: "Retirer l'essai", texte: "Enlève l'éprouvette du plateau. Le G-code redevient celui d'un plateau ordinaire." },
+      surClic: actions.retirerEssai,
+    }, "Aucun essai posé."),
   ];
 
   const exporter = [
@@ -131,7 +140,7 @@ export function creerRubanImpression(conteneur, imprimantes, actions) {
 
   return {
     /* etat : { machine, disponibles: { nom: bool }, poserAPlat: bool } */
-    mettreAJour({ imprimante, machine, disponibles, poserAPlat, apercu: apercuActif, imprimantes: imprimantesOuvertes, calibration: calibrationOuverte }) {
+    mettreAJour({ imprimante, machine, disponibles, poserAPlat, apercu: apercuActif, imprimantes: imprimantesOuvertes }) {
       // Un préréglage personnel vient peut-être d'apparaître.
       const attendues = imprimantes();
       if (choixMachine.options.length !== attendues.length) {
@@ -147,7 +156,6 @@ export function creerRubanImpression(conteneur, imprimantes, actions) {
       boutons.get("poserAPlat").bouton.classList.toggle("actif", poserAPlat);
       boutons.get("apercu").bouton.classList.toggle("actif", apercuActif);
       boutons.get("imprimantes").bouton.classList.toggle("actif", imprimantesOuvertes);
-      boutons.get("calibration").bouton.classList.toggle("actif", calibrationOuverte === true);
     },
   };
 }

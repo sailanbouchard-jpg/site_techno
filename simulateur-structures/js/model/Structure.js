@@ -288,6 +288,9 @@ export function addBeam(structure, a, b, beamTypeId, cablePretension = 0) {
 
   const beam = {
     id: beamId,
+    // Le TYPE catalogue est enregistré avec la poutre : matériau et épaisseur en
+    // découlent, et un réglage du catalogue s'applique aux plans déjà sauvegardés.
+    beamTypeId,
     materialId,
     sectionArea,
     gridA: { i: a.i, j: a.j },
@@ -319,10 +322,16 @@ export function addBeam(structure, a, b, beamTypeId, cablePretension = 0) {
 // validité : trop longue pour son type, trop courte (1 m minimum), sortie du
 // maillage, ou venant recouvrir une autre poutre.
 
-// Le type catalogue d'une poutre, retrouvé par son couple matériau + section :
-// c'est lui qui porte la longueur maximale.
-function beamTypeOf(beam) {
-  return BEAM_TYPES.find((t) => t.materialId === beam.materialId && t.thickness === beam.sectionArea) || null;
+// Le type catalogue d'une poutre : c'est lui qui porte la longueur maximale.
+// `beam.beamTypeId` fait foi. Le repli par couple matériau + épaisseur ne sert
+// qu'aux poutres enregistrées AVANT que l'id ne soit stocké ; il échoue dès
+// qu'on modifie une épaisseur dans BEAM_TYPES, d'où l'id (voir migrerPoutres).
+export function beamTypeOf(beam) {
+  return (
+    getBeamTypeById(beam.beamTypeId) ||
+    BEAM_TYPES.find((t) => t.materialId === beam.materialId && t.thickness === beam.sectionArea) ||
+    null
+  );
 }
 
 export function beamsAtJoint(structure, jointId) {
@@ -829,6 +838,7 @@ function rebuildBeamFromChain(structure, oldBeam, chainNodeIds, broken) {
   const bNode = findNodeById(structure, chainNodeIds[chainNodeIds.length - 1]);
   const beam = {
     id: beamId,
+    beamTypeId: oldBeam.beamTypeId,
     materialId: oldBeam.materialId,
     sectionArea: oldBeam.sectionArea,
     gridA: aNode.kind === "joint" ? { i: aNode.gridI, j: aNode.gridJ } : null,
@@ -846,6 +856,48 @@ function rebuildBeamFromChain(structure, oldBeam, chainNodeIds, broken) {
 }
 
 // ── Sérialisation propre / chargement (sauvegardes serveur) ───────────────────
+
+// Une sauvegarde embarque deux valeurs DÉRIVÉES du catalogue : l'épaisseur de
+// chaque poutre (beam.sectionArea) et la raideur axiale de chaque segment
+// (E·A/L divisée par le diviseur de config). Sans rien faire, un plan rouvert
+// garderait les valeurs de la session qui l'a écrit : changer une constante
+// n'aurait aucun effet sur les plans existants. On les REFAIT donc à chaque
+// chargement, depuis le type catalogue de la poutre.
+//
+// Les poutres d'avant n'ont pas de `beamTypeId` : on le retrouve une fois par
+// couple matériau + épaisseur (le repli de beamTypeOf) et on l'inscrit. À partir
+// de là, modifier une épaisseur dans BEAM_TYPES se propage aux plans déjà
+// enregistrés — ce que l'appariement par épaisseur ne pouvait pas faire, puisque
+// c'est justement l'épaisseur qui change.
+//
+// Non concernés : les propriétés matériau (lues vivantes par leur id), les masses
+// des nœuds (recalculées par physics/mass.js) et la raideur de FLEXION (jamais
+// stockée, bending.js la refait à chaque fois).
+export function migrerPoutres(structure) {
+  for (const beam of structure.beams) {
+    const type = beamTypeOf(beam);
+    if (!type) continue; // type disparu du catalogue : on laisse la poutre telle quelle
+    beam.beamTypeId = type.id;
+    beam.sectionArea = type.thickness;
+  }
+  for (const segment of structure.segments) {
+    const beam = findBeamById(structure, segment.beamId);
+    if (!beam) continue;
+    segment.stiffness = computeAxialStiffness(beam.materialId, beam.sectionArea, segment.restLength);
+  }
+}
+
+// Les véhicules enregistrés avant la suppression de l'allègement portent deux
+// masses : celle annoncée et une plus légère pour le calcul. On les ramène à la
+// masse annoncée, la seule qui ait encore un sens (voir model/vehiclePresets.js).
+// Rien à estampiller ici, contrairement aux poutres : la masse annoncée est
+// toujours présente et reste la vérité, le rattrapage au chargement suffit.
+export function migrerVehicules(structure) {
+  for (const vehicle of structure.mobileLoads || []) {
+    if (vehicle.masseAffichee) vehicle.mass = vehicle.masseAffichee;
+  }
+}
+
 // exportStructure : copie SÉRIALISABLE et PROPRE de la structure, à envoyer au
 // serveur. On ne garde que l'état de CONCEPTION :
 //  - on jette les caches internes (index, forces, masses) — des Map de

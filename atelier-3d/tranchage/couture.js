@@ -104,7 +104,9 @@ export function placerLesCoutures(parRang, strategie, precedentes, couche, large
     return { ...chemin, points: tourner(chemin.points, depart) };
   });
   const interieures = parRang.slice(1).map((rang) => rang.map((chemin) => {
-    if (coutures.length === 0) return chemin;
+    // Une paroi intérieure coupée par une surface du dessus n'est plus une boucle :
+    // elle a déjà un début et une fin imposés, il n'y a rien à faire tourner.
+    if (coutures.length === 0 || chemin.ferme !== true) return chemin;
     const premier = chemin.points[0];
     const cible = coutures.reduce((m, p) => (distance(p, premier) < distance(m, premier) ? p : m), coutures[0]);
     return { ...chemin, points: tourner(chemin.points, plusProche(chemin.points, cible)) };

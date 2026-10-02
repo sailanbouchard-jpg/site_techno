@@ -75,8 +75,10 @@ import { creerActionsBibliotheque } from "./application/actions_bibliotheque.js"
 import { creerMenuBibliotheque } from "./interface/menu_bibliotheque.js";
 import { creerBandeauModele } from "./interface/bandeau_modele.js";
 import { creerEspaceImpression, ESPACES } from "./application/espace_impression.js";
+import { creerCalibration } from "./application/calibration.js";
+import { lireLesPrereglagesPersonnels, ecrireLesPrereglagesPersonnels } from "./stockage/prereglages_personnels.js";
 import { objetsImprimables } from "./noyau/plateau.js";
-import { listeDesPrereglages } from "./noyau/reglages_impression.js";
+import { listeDesPrereglages, definirLesPrereglagesPersonnels } from "./noyau/reglages_impression.js";
 import { creerRubanImpression } from "./interface/ruban_impression.js";
 import { creerPanneauPlateau } from "./interface/panneau_plateau.js";
 import { creerInspecteurPlateau } from "./interface/inspecteur_plateau.js";
@@ -86,9 +88,6 @@ import { creerPanneauDiagnostic } from "./interface/panneau_diagnostic.js";
 import { diagnostiquer } from "./tranchage/diagnostic_impression.js";
 import { creerPanneauReglagesImpression } from "./interface/panneau_reglages_impression.js";
 import { TYPES_DE_LIGNE } from "./tranchage/protocole_tranchage.js";
-import { creerCalibration } from "./application/calibration_en_cours.js";
-import { creerPanneauCalibration } from "./interface/panneau_calibration.js";
-import { creerRubanCalibration } from "./interface/ruban_calibration.js";
 
 const element = (id) => document.getElementById(id);
 
@@ -109,7 +108,9 @@ async function demarrer() {
     return;
   }
   scene.surPerteDuContexte(() => annoncer("L'affichage 3D s'est interrompu. Recharger la page : le travail est enregistré.", true));
-
+  // Les préréglages calibrés sur ce poste, avant tout document : un projet
+  // enregistré peut en désigner un, et il doit exister quand on le relit.
+  definirLesPrereglagesPersonnels(lireLesPrereglagesPersonnels());
   const etat = creerEtatApplication(creerDocument());
   const eleve = await eleveConnecte();
   const stockageProjets = creerStockageDeProjets(eleve);
@@ -147,6 +148,7 @@ async function demarrer() {
       scene.cacherLesPieces(actif);
       apercuCouches.montrer(actif);
     },
+    enregistrerLesPrereglages: (parSource) => ecrireLesPrereglagesPersonnels(parSource),
     changerDeCouche: (pas) => apercuCouches.deplacerHaut(pas),
     avancerDansLaCouche: (pas) => apercuCouches.deplacerParcours(pas),
   });
@@ -533,6 +535,15 @@ async function demarrer() {
   scene.controleur.surChangement(placerLaBarre);
 
   // ── Onglet Impression ───────────────────────────────────────────────────
+  // ── Calibration ──
+  // Les essais vivent dans le slicer : l'éprouvette arrive sur le plateau, les
+  // réglages restent éditables à gauche, et c'est l'utilisateur qui consigne ce
+  // qu'il a lu. Comme dans OrcaSlicer.
+  const calibration = creerCalibration({
+    fenetre, plateau, annoncer,
+    surChangement: () => rafraichirPanneaux(),
+  });
+
   const rubanImpression = creerRubanImpression(element("ruban-impression"), () => listeDesPrereglages("imprimante"), {
     machine: (id) => plateau.actions.changerMachine(id),
     toutMettre: () => plateau.actions.toutMettreSurLePlateau(),
@@ -546,7 +557,8 @@ async function demarrer() {
     exporterGcode: () => envoi.exporter(),
     apercu: () => plateau.actions.basculerApercu(),
     imprimantes: () => basculerImprimantes(),
-    calibration: () => plateau.changer(ESPACES.calibration),
+    calibrer: (idEssai) => calibration.ouvrir(idEssai),
+    retirerEssai: () => calibration.retirer(),
   });
   const listePlateau = creerPanneauPlateau(element("liste-plateau"), {
     selectionner: (id, facon) => plateau.actions.selectionner([id], facon),
@@ -583,6 +595,10 @@ async function demarrer() {
     regler: (cle, valeur) => plateau.actions.regler(cle, valeur),
     retablir: (cle) => plateau.actions.retablir(cle),
     changerPrereglage: (source, id, garder) => plateau.actions.changerPrereglage(source, id, garder),
+    enregistrerPrereglage: (source) => plateau.actions.enregistrerPrereglage(source),
+    renommerPrereglage: (source, nom) => plateau.actions.renommerPrereglage(source, nom),
+    dupliquerPrereglage: (source, nom) => plateau.actions.dupliquerPrereglage(source, nom),
+    supprimerPrereglage: (source) => plateau.actions.supprimerPrereglage(source),
   });
 
   // ── Aperçu du tranchage ──
@@ -612,7 +628,7 @@ async function demarrer() {
   let dernierTranchage = null;
   /* Le dessin des lignes n'est refait que si un résultat a changé. */
   function afficherTranchage() {
-    const etatDuTranchage = plateau.enCalibration() && calibration.actif() ? calibration.etat() : tranchage.etat();
+    const etatDuTranchage = tranchage.etat();
     const signature = [etatDuTranchage.couches.hauteurs.length, ...etatDuTranchage.pieces];
     const change = dernierTranchage === null || signature.length !== dernierTranchage.length
       || signature.some((element, i) => element !== dernierTranchage[i]);
@@ -644,7 +660,7 @@ async function demarrer() {
   // ── Imprimantes du réseau local ──
   const envoi = creerEnvoiImpression({
     tranchage, plateau, annoncer, telecharger, nomDuProjet: () => etat.document().nom,
-    essaiEnCours: () => calibration.source(),
+    modulations: (tranche) => calibration.modulationsPour(tranche),
   });
   const panneauImprimantes = creerPanneauImprimantes(element("panneau-imprimantes"), {
     lister: envoi.lister, enregistrer: envoi.enregistrer, retirer: envoi.retirer, commande: envoi.commande,
@@ -658,63 +674,6 @@ async function demarrer() {
     fenetreImprimantes.montrer(ouvrir);
     rafraichirImpression();
   }
-
-  // ── Calibration ──
-  // L'essai en cours remplace le plateau dans l'aperçu et dans ce qu'on envoie à
-  // l'imprimante ; le projet retrouve son plateau dès que l'essai est arrêté.
-  const calibration = creerCalibration({
-    plateau, annoncer,
-    surChangement: () => {
-      panneauCalibration.rafraichir();
-      rafraichirPanneaux();
-    },
-  });
-  const panneauCalibration = creerPanneauCalibration(element("panneau-calibration"), {
-    combinaisons: () => calibration.liste(),
-    active: () => calibration.active(),
-    choisir: (id) => calibration.choisir(id),
-    ajouter: (champs) => calibration.ajouter(champs),
-    renommer: (id, nom) => calibration.renommer(id, nom),
-    dupliquer: (id) => calibration.dupliquer(id),
-    retirer: (id) => calibration.retirer(id),
-    changerPrereglage: (source, id) => calibration.changerPrereglage(source, id),
-    exporter: () => calibration.exporter(),
-    editionDesChoix: () => calibration.editionDesChoix(),
-    basculerEditionDesChoix: (ouvert) => calibration.basculerEditionDesChoix(ouvert),
-    avancement: () => calibration.avancement(),
-    comparaison: (source) => calibration.comparaison(source),
-    reglagesDeLaCombinaison: () => calibration.reglagesDeLaCombinaison(),
-    reglagesDeLOutil: (id) => calibration.reglagesDeLOutil(id),
-    lancer: async (id, parametres) => {
-      await calibration.lancer(id, parametres);
-      if (!plateau.apercuActif()) plateau.actions.basculerApercu();
-      annoncer("Éprouvette posée sur le plateau.");
-    },
-    arreter: () => calibration.arreter(),
-    exporterFichier: () => envoi.exporter(),
-    conclure: (id, parametres, saisie) => calibration.conclure(id, parametres, saisie),
-    retenir: (id, conclusion) => calibration.retenir(id, conclusion),
-    oublier: (id) => calibration.oublier(id),
-    essaiCourant: () => calibration.outil()?.id ?? null,
-    annoncer,
-  });
-
-  // Les réglages de la combinaison, à gauche : la même interface que celle du
-  // plateau, mais ce qu'un essai décide et ce que la combinaison fixe n'y sont
-  // pas éditables — les modifier à la main viderait la calibration de son sens.
-  const reglagesCalibration = creerPanneauReglagesImpression(element("reglages-calibration"), {
-    regler: (cle, valeur) => calibration.regler(cle, valeur),
-    retablir: (cle) => calibration.regler(cle, undefined),
-    changerPrereglage: (source, id) => calibration.changerPrereglage(source, id),
-  }, { verrouillage: (r) => calibration.verrouillage(r), sansPrereglages: true });
-
-  const rubanCalibration = creerRubanCalibration(element("ruban-calibration"), {
-    apercu: () => plateau.actions.basculerApercu(),
-    imprimantes: () => basculerImprimantes(),
-    arreter: () => calibration.arreter(),
-    exporterFichier: () => envoi.exporter(),
-    exporter: () => calibration.exporter(),
-  });
 
   const fenetrePlateau = creerFenetreFlottante(element("colonne-plateau"), element("vue"), "atelier-3d:inspecteur-plateau", { droite: 132, haut: 8 });
 
@@ -740,55 +699,18 @@ async function demarrer() {
   /* Passer d'un onglet à l'autre : les panneaux de l'un laissent la place à ceux de l'autre. */
   function changerDEspace(nom) {
     const enImpression = nom === ESPACES.impression;
-    const enCalibration = nom === ESPACES.calibration;
-    const surLePlateau = enImpression || enCalibration;
-    document.body.classList.toggle("espace-impression", surLePlateau);
-    document.body.classList.toggle("espace-calibration", enCalibration);
-    element("ruban").hidden = surLePlateau;
+    document.body.classList.toggle("espace-impression", enImpression);
+    element("ruban").hidden = enImpression;
     element("ruban-impression").hidden = !enImpression;
-    element("ruban-calibration").hidden = !enCalibration;
-    element("arbre").hidden = surLePlateau;
+    element("arbre").hidden = enImpression;
     element("liste-plateau").hidden = !enImpression;
-    element("reglages-calibration").hidden = !enCalibration;
-    element("colonne-calibration").hidden = !enCalibration;
-    element("vues-en-coupe").hidden = surLePlateau;
-    if (enCalibration) panneauCalibration.rafraichir();
-    else calibration.arreter();
+    element("vues-en-coupe").hidden = enImpression;
     // Le plateau montre les pièces entières : pas de vue en coupe.
-    if (surLePlateau) scene.definirCoupe(null);
+    if (enImpression) scene.definirCoupe(null);
     else if (panneauImprimantes.estOuvert()) basculerImprimantes(false);
     else coupes.synchroniser();
     affichage.rafraichir();
     rafraichirPanneaux();
-  }
-
-  function rafraichirCalibration() {
-    barreHaute.mettreAJour({ nomDuProjet: etat.document().nom, peutAnnuler: etat.peutAnnuler(), peutRefaire: etat.peutRefaire(), espace: plateau.espace() });
-    reglagesCalibration.mettreAJour(calibration.impressionCourante());
-    const essai = calibration.outil();
-    rubanCalibration.mettreAJour({
-      essai: essai === null ? null : essai.nom,
-      combinaison: calibration.active(),
-      apercu: plateau.apercuActif(),
-      imprimantes: panneauImprimantes.estOuvert(),
-    });
-    if (plateau.apercuActif() && calibration.actif()) afficherTranchage();
-    fenetrePlateau.montrer(false);
-    fenetreInspecteur.montrer(false);
-    const avancement = calibration.avancement();
-    barreEtat.mettreAJour({
-      nombreSelectionnes: 0,
-      dimensions: null,
-      objets: avancement === null ? 0 : avancement.faits,
-      nomDesObjets: ["essai à jour", "essais à jour"],
-      etanche: true,
-      complet: true,
-      horsSite: !stockageProjets.surLeSite,
-      sousLeSol: false,
-      avertissement: calibration.active() === null ? "Aucune combinaison : en créer une pour commencer." : null,
-    });
-    scene.suivreAvecLeGizmo(null, null);
-    placerLaBarre();
   }
 
   function rafraichirImpression() {
@@ -809,7 +731,6 @@ async function demarrer() {
       poserAPlat: plateau.poserAPlatActif(),
       apercu: plateau.apercuActif(),
       imprimantes: panneauImprimantes.estOuvert(),
-      calibration: false,
       disponibles: {
         toutMettre: resume.horsPlateau.length > 0,
         disposer: resume.pieces.length > 0,
@@ -820,7 +741,12 @@ async function demarrer() {
         retirer: choisies.length > 0,
         exporter: resume.pieces.length > 0,
         exporterGcode: resume.pieces.length > 0,
-        apercu: resume.pieces.length > 0 || plateau.apercuActif() || calibration.actif(),
+        apercu: resume.pieces.length > 0 || plateau.apercuActif(),
+        // Ce qui compte est l'éprouvette SUR LE PLATEAU, pas l'essai en mémoire :
+        // après un rechargement de la page, le plateau porte toujours la sienne
+        // mais plus personne ne se souvient de l'essai. Le bouton restait alors
+        // grisé, et les réglages imposés par l'essai étaient là pour de bon.
+        retirerEssai: plateau.aUneEprouvette(),
       },
     });
     listePlateau.mettreAJour(resume, selection);
@@ -854,10 +780,6 @@ async function demarrer() {
 
   // ── Chaque changement d'état remet la vue et les panneaux d'accord ──────
   rafraichirPanneaux = () => {
-    if (plateau.enCalibration()) {
-      rafraichirCalibration();
-      return;
-    }
     if (plateau.enImpression()) {
       rafraichirImpression();
       return;

@@ -64,6 +64,7 @@ export function creerApercuTranchage(scene3d, couleurs) {
   let nombreDeCouches = 0;
   let modulationParCouche = [];
   let debitDePiece = new Map();
+  let decalageDePiece = new Map();
   let plage = [0, Infinity];
   let avancement = Infinity;    // segments montrés dans la couche du haut
   let mode = "type";
@@ -132,16 +133,20 @@ export function creerApercuTranchage(scene3d, couleurs) {
     const { hauteurs, epaisseurs } = donnees.couches;
     nombreDeCouches = hauteurs.length;
     modulationParCouche = etaler(donnees.modulations, nombreDeCouches);
-    // Le rapport de débit de chaque pièce : un essai peut en donner un par
-    // éprouvette (l'escalier des débits), et c'est le G-code qui l'applique.
+    // Ce qu'un essai de calibration change pièce par pièce : son rapport de
+    // débit (l'escalier des débits) et son décalage en Z (l'essai d'écrasement
+    // de la première couche pose ses plaquettes à des hauteurs différentes).
+    // Sans ce décalage, l'aperçu montrerait toutes les plaquettes au même niveau.
     const debitDeBase = donnees.reglages?.rapport_debit ?? 1;
     const parPiece = donnees.modulationsDePiece ?? [];
     let rangDePiece = -1;
     debitDePiece = new Map();
+    decalageDePiece = new Map();
     for (const piece of donnees.pieces) {
-      if (piece.jupe === true) { debitDePiece.set(piece, debitDeBase); continue; }
+      if (piece.jupe === true) { debitDePiece.set(piece, debitDeBase); decalageDePiece.set(piece, 0); continue; }
       rangDePiece += 1;
       debitDePiece.set(piece, parPiece[rangDePiece]?.reglages?.rapport_debit ?? debitDeBase);
+      decalageDePiece.set(piece, parPiece[rangDePiece]?.decalageZ ?? 0);
     }
     // Les chemins de chaque couche, dans l'ordre d'impression : pièce après pièce.
     const parCouche = Array.from({ length: nombreDeCouches }, () => []);
@@ -168,7 +173,8 @@ export function creerApercuTranchage(scene3d, couleurs) {
         const liste = [];
         for (let i = 0; i < nombre; i += 1) liste.push([points[(premier + i) * 2] - decalage[0], points[(premier + i) * 2 + 1] - decalage[1]]);
         const debut = tampon.indices.length;
-        const segments = ecrireCordon(tampon, liste, ferme, largeur / 2, zBas, zHaut, [largeur, vitesse, k, debitDePiece.get(piece) ?? 1]);
+        const dz = decalageDePiece.get(piece) ?? 0;
+        const segments = ecrireCordon(tampon, liste, ferme, largeur / 2, zBas + dz, zHaut + dz, [largeur, vitesse, k, debitDePiece.get(piece) ?? 1]);
         ordre[k].push({ type, debut, segments, fin: tampon.indices.length, piece, c });
       }
     }

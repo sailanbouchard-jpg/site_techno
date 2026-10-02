@@ -241,6 +241,10 @@ G28 X ; re-home XY
 ;===== fmech mode fast check============================
 
 
+;===== décalage Z propre à la plaque posée (épaisseur et texture) ==
+; AVANT la ligne d'amorce, pas après : sinon l'amorce est la seule chose du
+; plateau à ignorer le décalage mesuré pour cette plaque, et elle est écrasée.
+{decalage_plaque}
 ;===== nozzle load line ===============================
 M975 S1
 G90
@@ -248,7 +252,12 @@ M83
 T1000
 G1 X18.0 Y1.0 Z0.8 F18000;Move to start position
 M109 S{buse_premiere}
-G1 Z0.2
+; Z 0,3 et non 0,2 : les E de la ligne d'amorce ci-dessous poussent 15 mm de
+; filament sur 222 mm, soit la section d'une ligne de 0,5 × 0,3. Posée à 0,2,
+; elle recevait donc une fois et demie ce qu'il lui faut et se trouvait laminée
+; contre la plaque — d'où une amorce qu'on n'enlève qu'en abîmant la surface.
+; À 0,3 la ligne est enfin conforme au débit que le F d'en dessous suppose.
+G1 Z0.3
 G0 E2 F300
 G0 X240 E15 F{amorce_f}
 G0 Y11 E0.700 F{amorce_f_lente}
@@ -258,8 +267,6 @@ G0 Y1.5 E0.700
 G0 X18 E15 F{amorce_f}
 M400
 
-;===== décalage Z propre à la plaque posée (épaisseur et texture) ==
-{decalage_plaque}
 ;========turn off light and wait extrude temperature =============
 M1002 gcode_claim_action : 0
 M106 S0 ; turn off fan
@@ -499,6 +506,10 @@ G28 X ; re-home XY
 ;===== fmech mode fast check============================
 
 
+;===== décalage Z propre à la plaque posée (épaisseur et texture) ==
+; AVANT la ligne d'amorce, pas après : sinon l'amorce est la seule chose du
+; plateau à ignorer le décalage mesuré pour cette plaque, et elle est écrasée.
+{decalage_plaque}
 ;===== nozzle load line ===============================
 M975 S1
 G90
@@ -506,7 +517,12 @@ M83
 T1000
 G1 X18.0 Y1.0 Z0.8 F18000;Move to start position
 M109 S{buse_premiere}
-G1 Z0.2
+; Z 0,3 et non 0,2 : les E de la ligne d'amorce ci-dessous poussent 15 mm de
+; filament sur 222 mm, soit la section d'une ligne de 0,5 × 0,3. Posée à 0,2,
+; elle recevait donc une fois et demie ce qu'il lui faut et se trouvait laminée
+; contre la plaque — d'où une amorce qu'on n'enlève qu'en abîmant la surface.
+; À 0,3 la ligne est enfin conforme au débit que le F d'en dessous suppose.
+G1 Z0.3
 G0 E2 F300
 G0 X240 E15 F{amorce_f}
 G0 Y11 E0.700 F{amorce_f_lente}
@@ -516,8 +532,6 @@ G0 Y1.5 E0.700
 G0 X18 E15 F{amorce_f}
 M400
 
-;===== décalage Z propre à la plaque posée (épaisseur et texture) ==
-{decalage_plaque}
 ;========turn off light and wait extrude temperature =============
 M1002 gcode_claim_action : 0
 M106 S0 ; turn off fan

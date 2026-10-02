@@ -26,8 +26,9 @@ export function subdivisionCount(length) {
 }
 
 // Raideur axiale d'un sous-élément (ressort de Hooke équivalent), ASSOUPLIE par
-// AXIAL_STIFFNESS_DIVISOR pour rendre la déformation visible et stabiliser
-// l'intégration (voir physics/config.js).
+// AXIAL_STIFFNESS_DIVISOR pour stabiliser l'intégration — mais pas au point de
+// rendre l'axial mou devant la flexion, sinon treillis et arcs ne portent plus
+// rien (voir physics/config.js).
 export function computeAxialStiffness(materialId, sectionArea, restLength) {
   const material = getMaterialById(materialId);
   if (!material || restLength === 0) return 0;

@@ -13,6 +13,7 @@
 import chargerManifold from "../vendor/manifold-3.5.3/manifold.js";
 import { preparerAtelier, construireMaillage } from "./construction_du_solide.js";
 import { lireStl } from "./lecture_stl.js";
+import { lireDraco } from "./lecture_draco.js";
 import { cleDeFichier } from "./cle_de_fichier.js";
 import { lirePolice } from "./lecture_police.js";
 import { contoursDuTexte } from "./texte_en_contours.js";
@@ -71,6 +72,23 @@ function traiterChargerFichier(id, octets) {
   }
 }
 
+/* Une éprouvette de calibration : le .drc du catalogue, décompressé une fois
+   et rangé avec les fichiers importés — la suite ne voit aucune différence. */
+async function traiterChargerEprouvette(id, cle, adresse) {
+  try {
+    if (!fichiers.has(cle)) {
+      const reponse = await fetch(adresse);
+      if (!reponse.ok) throw new Error("fichier introuvable (" + reponse.status + ")");
+      const lu = await lireDraco(await reponse.arrayBuffer());
+      fichiers.set(cle, { positions: lu.positions, indices: lu.indices, triangles: lu.triangles, boite: lu.boite });
+    }
+    const { triangles, boite } = fichiers.get(cle);
+    postMessage(reponseFichierCharge(id, { cle, triangles, boite }));
+  } catch (erreur) {
+    postMessage(reponseErreur(id, "L'éprouvette n'a pas pu être chargée : " + erreur.message));
+  }
+}
+
 async function traiterChargerPolice(id, cle, adresse) {
   try {
     if (!polices.has(cle)) {
@@ -94,6 +112,11 @@ self.onmessage = (evenement) => {
 
   if (message.type === REQUETE.CHARGER_FICHIER) {
     traiterChargerFichier(message.id, message.octets);
+    return;
+  }
+
+  if (message.type === REQUETE.CHARGER_EPROUVETTE) {
+    traiterChargerEprouvette(message.id, message.cle, message.adresse);
     return;
   }
 

@@ -28,6 +28,7 @@ export const REQUETE = Object.freeze({
   ANNULER: "annuler",        // l'élève a changé autre chose : ce calcul ne sert plus
   CHARGER_FICHIER: "charger_fichier",
   CHARGER_POLICE: "charger_police",
+  CHARGER_EPROUVETTE: "charger_eprouvette",
 });
 
 export const REPONSE = Object.freeze({
@@ -57,6 +58,12 @@ export function requeteChargerFichier(id, octets) {
 /* Une police : l'ouvrier la télécharge lui-même, la lit et la garde sous « cle ». */
 export function requeteChargerPolice(id, cle, adresse) {
   return { id, type: REQUETE.CHARGER_POLICE, cle, adresse };
+}
+
+/* Une éprouvette de calibration (.drc) : même trajet qu'une police, l'ouvrier
+   va la chercher dans le catalogue du logiciel et la décompresse. */
+export function requeteChargerEprouvette(id, cle, adresse) {
+  return { id, type: REQUETE.CHARGER_EPROUVETTE, cle, adresse };
 }
 
 // ── Réponses (ouvrier → fil principal) ──────────────────────────────────────

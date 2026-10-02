@@ -7,7 +7,16 @@
  *
  * Le maillage peut avoir ses sommets dédoublés (normales franches aux arêtes) :
  * les points de coupe sont recollés par leur position, arrondie au dix-millième
- * de millimètre.
+ * de millimètre. Cet arrondi n'est PAS une tolérance : deux points distants d'un
+ * cent-millième de millimètre mais de part et d'autre d'une frontière de grille
+ * reçoivent des clés différentes. Le chaînage regarde donc aussi les huit cases
+ * voisines, et referme un contour dont les deux bouts se rejoignent à la
+ * tolérance près — sans quoi un STL importé légèrement imparfait perdait des
+ * îlots entiers, en silence.
+ *
+ * Ce qui ne se referme toujours pas est COMPTÉ et remonté à l'appelant : un
+ * maillage troué se voit alors dans le diagnostic, au lieu de se traduire par de
+ * la matière qui manque sans explication.
  *
  * Les contours sont orientés : le dehors d'une pièce tourne dans le sens
  * trigonométrique, un trou dans l'autre sens — la matière est à gauche du
@@ -18,18 +27,25 @@
 // on décale la hauteur de coupe d'un rien.
 const DECALAGE_DE_COUPE_MM = 1e-5;
 const PRECISION_DE_RECOLLAGE = 1e4;
+// Deux bouts distants de moins de ça sont le même point (un dix-millième de millimètre).
+const TOLERANCE_MM = 1 / PRECISION_DE_RECOLLAGE;
 
-const cleDePoint = (x, y) => Math.round(x * PRECISION_DE_RECOLLAGE) + "," + Math.round(y * PRECISION_DE_RECOLLAGE);
+const caseDePoint = (x, y) => [Math.round(x * PRECISION_DE_RECOLLAGE), Math.round(y * PRECISION_DE_RECOLLAGE)];
+const cleDeCase = (ix, iy) => ix + "," + iy;
 
 /*
  * positions : Float32Array (x, y, z par sommet), déjà placé sur le plateau
  * indices   : Uint32Array (3 par triangle)
  * hauteurs  : les hauteurs de coupe, croissantes
- * Rend, pour chaque hauteur, une liste de contours [[x, y], …] (sans répéter le premier point).
+ * Rend { couches, ouverts } :
+ *   couches  pour chaque hauteur, une liste de contours [[x, y], …] (sans répéter
+ *            le premier point)
+ *   ouverts  le nombre de contours qu'il a été impossible de refermer, toutes
+ *            couches confondues
  */
 export function decouperEnCouches(positions, indices, hauteurs) {
   const couches = hauteurs.map(() => []);
-  if (hauteurs.length === 0) return couches;
+  if (hauteurs.length === 0) return { couches, ouverts: 0 };
 
   // Chaque triangle ne concerne que les couches entre son point bas et son point haut.
   const segmentsParCouche = hauteurs.map(() => []);
@@ -78,8 +94,13 @@ export function decouperEnCouches(positions, indices, hauteurs) {
     }
   }
 
-  for (let k = 0; k < hauteurs.length; k += 1) couches[k] = chainer(segmentsParCouche[k]);
-  return couches;
+  let ouverts = 0;
+  for (let k = 0; k < hauteurs.length; k += 1) {
+    const chaines = chainer(segmentsParCouche[k]);
+    couches[k] = chaines.contours;
+    ouverts += chaines.ouverts;
+  }
+  return { couches, ouverts };
 }
 
 function premierIndexAuDessus(hauteurs, z) {
@@ -92,35 +113,61 @@ function premierIndexAuDessus(hauteurs, z) {
   return bas;
 }
 
-/* Des segments orientés [p0, q0, p1, q1, …] aux contours fermés. Un bout qui
-   ne se referme pas (maillage troué) est abandonné : il ne délimite rien. */
+/*
+ * Des segments orientés [p0, q0, p1, q1, …] aux contours fermés.
+ * Rend { contours, ouverts } : ce qui s'est refermé, et le nombre de morceaux
+ * qui n'ont pas pu l'être (maillage troué) — ceux-là ne délimitent rien et sont
+ * abandonnés, mais on sait les compter.
+ */
 function chainer(segments) {
-  const depuis = new Map();   // clé du point de départ → indices des segments
+  const nombre = segments.length / 2;
+  // Les segments rangés par la case de leur point de départ.
+  const depuis = new Map();
   for (let i = 0; i < segments.length; i += 2) {
-    const cle = cleDePoint(segments[i][0], segments[i][1]);
+    const [ix, iy] = caseDePoint(segments[i][0], segments[i][1]);
+    const cle = cleDeCase(ix, iy);
     if (!depuis.has(cle)) depuis.set(cle, []);
     depuis.get(cle).push(i);
   }
-  const utilise = new Uint8Array(segments.length / 2);
+  const utilise = new Uint8Array(nombre);
+  /* Le segment libre qui part de ce point, cherché dans sa case et autour. */
+  const partantDe = (point) => {
+    const [ix, iy] = caseDePoint(point[0], point[1]);
+    let meilleur;
+    let mini = Infinity;
+    for (let dx = -1; dx <= 1; dx += 1) {
+      for (let dy = -1; dy <= 1; dy += 1) {
+        for (const j of depuis.get(cleDeCase(ix + dx, iy + dy)) ?? []) {
+          if (utilise[j / 2]) continue;
+          const d = Math.hypot(segments[j][0] - point[0], segments[j][1] - point[1]);
+          if (d <= TOLERANCE_MM && d < mini) {
+            mini = d;
+            meilleur = j;
+          }
+        }
+      }
+    }
+    return meilleur;
+  };
+
   const contours = [];
+  let ouverts = 0;
   for (let i = 0; i < segments.length; i += 2) {
     if (utilise[i / 2]) continue;
-    const debut = cleDePoint(segments[i][0], segments[i][1]);
+    const debut = segments[i];
     const contour = [];
     let courant = i;
-    let ferme = false;
+    let fin = debut;
     while (courant !== undefined) {
       utilise[courant / 2] = 1;
       contour.push(segments[courant]);
-      const fin = segments[courant + 1];
-      const cleFin = cleDePoint(fin[0], fin[1]);
-      if (cleFin === debut) {
-        ferme = true;
-        break;
-      }
-      courant = (depuis.get(cleFin) ?? []).find((j) => !utilise[j / 2]);
+      fin = segments[courant + 1];
+      if (Math.hypot(fin[0] - debut[0], fin[1] - debut[1]) <= TOLERANCE_MM) break;
+      courant = partantDe(fin);
     }
+    const ferme = Math.hypot(fin[0] - debut[0], fin[1] - debut[1]) <= TOLERANCE_MM;
     if (ferme && contour.length >= 3) contours.push(contour);
+    else if (!ferme) ouverts += 1;
   }
-  return contours;
+  return { contours, ouverts };
 }

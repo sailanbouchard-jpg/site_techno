@@ -2,6 +2,7 @@
 data.db
 uploads/
 secret_key.txt
+admin_password.txt
 imprimantes.json
 
 # Dossier généré par build.py

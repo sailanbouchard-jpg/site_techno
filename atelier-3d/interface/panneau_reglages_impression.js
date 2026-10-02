@@ -1,31 +1,36 @@
 /*
  * interface/panneau_reglages_impression.js
  * ────────────────────────────────────────
- * Les réglages du tranchage, sous la liste du plateau : les cinq préréglages en
- * tête, dans l'ordre où on les choisit (imprimante, buse, plaque, matériau,
- * réglages d'impression), puis les onglets (Qualité, Résistance…), un mode
- * Simple / Avancé et une recherche par nom.
+ * Les réglages du tranchage, sous la liste du plateau. Une seule liste qui
+ * descend, en cinq sections — une par profil, dans l'ordre où on les choisit :
+ * imprimante, buse, plaque, matériau, réglages d'impression.
+ *
+ * CHAQUE RÉGLAGE EST SOUS LE PROFIL QUI LE PORTE. La température de la buse est
+ * sous Matériau parce qu'elle appartient à la bobine ; le décalage Z est sous
+ * Plaque parce qu'il appartient au plateau ; les accélérations sont sous
+ * Imprimante parce qu'elles appartiennent à la machine. On voit donc, sans
+ * avoir à le chercher, quel profil on est en train de modifier — et, quand on
+ * enregistre, ce qui part dans ce profil-là.
  *
  * La buse commande les trois derniers : changer de diamètre change la liste des
  * plaques, des matériaux et des réglages proposés. Un diamètre qu'on n'a pas
  * encore rempli n'en propose aucun, et le panneau le dit plutôt que de laisser
- * croire qu'un préréglage d'une autre buse ferait l'affaire.
+ * croire qu'un profil d'une autre buse ferait l'affaire.
  *
- * Un réglage qui diffère du préréglage est marqué, avec un bouton pour lui
- * rendre la valeur du préréglage ; le nom du préréglage affiche alors
- * « (modifié) ». Changer de préréglage avec des modifications en cours
- * demande s'il faut les garder.
+ * Un réglage qui diffère de son profil est marqué, avec un bouton pour lui
+ * rendre la valeur du profil ; l'en-tête de la section compte ces écarts.
  *
  * Tout vient du catalogue (noyau/reglages_impression.js) : un réglage ajouté
- * là apparaît ici sans autre code.
+ * là apparaît ici, sous son profil, sans autre code.
  */
 
 import { creer, bouton } from "./elements.js";
 import { icone } from "./icones.js";
 import { creerChampNumerique } from "./champ_numerique.js";
 import {
-  ONGLETS, REGLAGES, SOURCES, listeDesPrereglages, dependDeLaBuse,
-  valeurDuPrereglage, valeursEffectives, ecartsDeLaSource,
+  REGLAGES, SOURCES, listeDesPrereglages, dependDeLaBuse,
+  valeurDuPrereglage, valeursEffectives, ecartsDeLaSource, prereglage,
+  nomDeCopieDisponible, estPrereglageFourni, estPrereglageDuPoste,
 } from "../noyau/reglages_impression.js";
 
 const CLE_MODE = "atelier-3d:reglages-avances";
@@ -50,31 +55,127 @@ const texteDeValeur = (r, v) => (r.choix ? r.choix.find((c) => c.valeur === v)?.
   : v.toLocaleString("fr-FR", { maximumFractionDigits: 3 }) + (r.unite ? " " + r.unite : ""));
 
 /*
- * actions : { regler(cle, valeur), retablir(cle), changerPrereglage(source, id, garderLesEcarts) }
- * options.verrouillage(reglage) → null, ou { raison } : le réglage est montré mais
- *   pas éditable, avec la raison en bulle. L'espace de calibration s'en sert pour
- *   geler ce qu'un essai décide et ce que la combinaison a fixé.
- * options.sansPrereglages : cache les listes de préréglages (la combinaison les tient).
+ * actions : { regler(cle, valeur), retablir(cle), changerPrereglage(source, id, garderLesEcarts),
+ *             enregistrerPrereglage(source), supprimerPrereglage(source),
+ *             renommerPrereglage(source, nom) et dupliquerPrereglage(source, nom),
+ *             qui rendent null si c'est fait, sinon la phrase du refus }
  */
-export function creerPanneauReglagesImpression(conteneur, actions, options = {}) {
-  const verrouillage = options.verrouillage ?? (() => null);
-  let onglet = ONGLETS[0].id;
+export function creerPanneauReglagesImpression(conteneur, actions) {
   let avance = lireMode();
   let recherche = "";
   let impression = null;
 
-  // ── Les cinq préréglages, dans l'ordre où on les choisit ──
-  /* Une ligne de préréglage : son nom, la liste, « (modifié) », et le retour aux valeurs du préréglage. */
-  function lignePrereglage(source, etiquette, aide) {
+  // ── Une section : le profil, ses gestes, et SES réglages ──
+  /*
+   * Enregistrer écrit DANS le profil choisi, sous son nom : c'est le geste
+   * courant, et il ne pose aucune question. Seuls Renommer et Dupliquer
+   * demandent un nom, parce qu'eux seuls en changent un.
+   */
+  function sectionDuProfil(source, etiquette, aide) {
     const choix = creer("select", { classe: "champ-texte", aide, attributs: { "aria-label": etiquette } });
-    const modifie = creer("span", { classe: "marque-modifie", texte: "(modifié)" });
-    const retablir = bouton({
-      icone: "annuler", classe: "plat",
-      aide: { nom: "Revenir au préréglage", texte: "Abandonne les modifications de ces réglages et reprend les valeurs du préréglage." },
-      surClic: () => actions.changerPrereglage(source, impression[source], false),
-    });
+    const modifie = creer("span", { classe: "marque-modifie" });
     const vide = creer("span", { classe: "note-prereglage" });
     const question = creer("div", { classe: "question-prereglage", attributs: { hidden: "" } });
+    // Les réglages de ce profil, remplis à chaque dessin.
+    const corps = creer("div", { classe: "reglages-du-profil" });
+
+    // ── Le champ de nom, pour Renommer et Dupliquer ──
+    // Un seul champ pour les deux : ce qu'il fera à la validation est dans
+    // « geste », posé au moment où on l'ouvre.
+    let geste = null;          // { valider(nom) → null, ou la phrase du refus }
+    const nom = creer("input", {
+      classe: "champ-texte", attributs: { type: "text", maxlength: "60", spellcheck: "false", "aria-label": "Nom du profil" },
+    });
+    // Le refus se lit SOUS le champ, là où le regard est. Le champ reste
+    // ouvert : on corrige et on recommence, sans rien avoir perdu.
+    const refus = creer("span", { classe: "refus-prereglage" });
+    // Un libellé dès la naissance : « bouton » ne pose son span que si on lui
+    // donne un texte, et c'est ce span qu'on réécrit à chaque ouverture.
+    const boutonDuGeste = bouton({ texte: "Renommer", surClic: () => validerLeNom() });
+    const saisie = creer("div", { classe: "question-prereglage", attributs: { hidden: "" } }, [
+      nom,
+      boutonDuGeste,
+      bouton({ texte: "Annuler", classe: "plat", surClic: () => { saisie.hidden = true; } }),
+      refus,
+    ]);
+    function demanderUnNom(titre, propose, valider) {
+      geste = { valider };
+      boutonDuGeste.querySelector("span").textContent = titre;
+      nom.value = propose;
+      refus.textContent = "";
+      refus.hidden = true;
+      saisie.hidden = false;
+      nom.focus();
+      nom.select();
+    }
+    function validerLeNom() {
+      const probleme = geste.valider(nom.value);
+      refus.textContent = probleme ?? "";
+      refus.hidden = probleme === null;
+      if (probleme === null) {
+        saisie.hidden = true;
+        return;
+      }
+      nom.focus();
+      nom.select();
+    }
+    nom.addEventListener("keydown", (evenement) => {
+      evenement.stopPropagation();
+      if (evenement.key === "Enter") validerLeNom();
+      if (evenement.key === "Escape") saisie.hidden = true;
+    });
+
+    // ── Les gestes ──
+    const enregistrer = bouton({
+      icone: "enregistrer", classe: "plat",
+      aide: {
+        nom: "Enregistrer le profil",
+        texte: "Écrit les valeurs en vigueur dans le profil choisi, sous son nom. Il gardera ces valeurs aux prochaines séances, sur ce poste.",
+      },
+      surClic: () => actions.enregistrerPrereglage(source),
+    });
+    const retablir = bouton({
+      icone: "annuler", classe: "plat",
+      aide: { nom: "Rétablir le profil", texte: "Abandonne les modifications en cours et reprend les valeurs du profil." },
+      surClic: () => actions.changerPrereglage(source, impression[source], false),
+    });
+    const renommer = bouton({
+      icone: "renommer", classe: "plat",
+      aide: { nom: "Renommer le profil", texte: "Change le nom du profil choisi. Ses valeurs ne bougent pas." },
+      surClic: () => demanderUnNom("Renommer", prereglage(source, impression[source]).nom,
+        (valeur) => actions.renommerPrereglage(source, valeur)),
+    });
+    const dupliquer = bouton({
+      icone: "dupliquer", classe: "plat",
+      aide: { nom: "Dupliquer le profil", texte: "Crée un deuxième profil avec les valeurs en vigueur, sous un autre nom. Le profil d'origine reste tel quel." },
+      surClic: () => demanderUnNom("Dupliquer", nomDeCopieDisponible(source, impression[source]),
+        (valeur) => actions.dupliquerPrereglage(source, valeur)),
+    });
+    // Supprimer défait ce que ce poste a enregistré : un profil créé ici
+    // disparaît, un profil fourni retrouve ses valeurs d'origine. Les deux se
+    // confirment, parce que les deux perdent du travail.
+    const supprimer = bouton({
+      icone: "supprimer", classe: "plat",
+      aide: { nom: "Supprimer le profil", texte: "Retire de ce poste ce que ce profil y a gardé." },
+      surClic: () => {
+        const fourni = estPrereglageFourni(source, impression[source]);
+        const sonNom = prereglage(source, impression[source]).nom;
+        question.replaceChildren(
+          creer("span", {
+            texte: fourni
+              ? "Rendre à « " + sonNom + " » ses valeurs d'origine ?"
+              : "Supprimer « " + sonNom + " » de ce poste ?",
+          }),
+          bouton({
+            texte: fourni ? "Rétablir l'origine" : "Supprimer",
+            surClic: () => { question.hidden = true; actions.supprimerPrereglage(source); },
+          }),
+          bouton({ texte: "Annuler", classe: "plat", surClic: () => { question.hidden = true; } }),
+        );
+        question.hidden = false;
+      },
+    });
+
     choix.addEventListener("change", () => {
       const id = choix.value;
       if (Object.keys(ecartsDeLaSource(impression.ecarts, source)).length === 0) {
@@ -90,17 +191,22 @@ export function creerPanneauReglagesImpression(conteneur, actions, options = {})
       );
       question.hidden = false;
     });
-    const element = creer("div", { classe: "bloc-prereglage" }, [
-      creer("span", { classe: "libelle-prereglage", texte: etiquette }),
-      creer("div", { classe: "ligne-prereglage" }, [choix, modifie, retablir]),
+
+    const element = creer("section", { classe: "section-profil" }, [
+      creer("div", { classe: "titre-profil", aide }, [creer("span", { texte: etiquette }), modifie]),
+      creer("div", { classe: "ligne-prereglage" }, [choix]),
+      creer("div", { classe: "gestes-prereglage" }, [enregistrer, retablir, renommer, dupliquer, supprimer]),
       vide,
       question,
+      saisie,
+      corps,
     ]);
     return {
       element,
+      corps,
       mettreAJour() {
-        // La liste dépend de la buse choisie, et un préréglage personnel vient
-        // peut-être d'être exporté : on la redresse à chaque fois.
+        // La liste dépend de la buse choisie, et un profil vient peut-être
+        // d'être enregistré ou renommé : on la redresse à chaque fois.
         const attendus = listeDesPrereglages(source, dependDeLaBuse(source) ? impression.buse : null);
         const memes = choix.options.length === attendus.length
           && attendus.every((p, i) => choix.options[i].value === p.id && choix.options[i].textContent === p.nom);
@@ -108,28 +214,32 @@ export function creerPanneauReglagesImpression(conteneur, actions, options = {})
           choix.replaceChildren(...attendus.map((p) => creer("option", { texte: p.nom, attributs: { value: p.id } })));
         }
         if (choix.value !== impression[source] && question.hidden) choix.value = impression[source] ?? "";
-        vide.textContent = attendus.length === 0
-          ? "Aucun préréglage pour cette buse : en calibrer un dans l'onglet Calibration."
+        const sansProfil = attendus.length === 0;
+        vide.textContent = sansProfil
+          ? "Aucun profil pour cette buse : régler les valeurs, puis Dupliquer pour en créer un."
           : "";
-        vide.hidden = attendus.length > 0;
-        choix.hidden = attendus.length === 0;
-        modifie.hidden = Object.keys(ecartsDeLaSource(impression.ecarts, source)).length === 0;
-        retablir.hidden = modifie.hidden;
+        vide.hidden = !sansProfil;
+        choix.hidden = sansProfil;
+        // Combien de réglages de CE profil diffèrent : c'est la réponse à
+        // « qu'est-ce que j'ai changé, et où ? ».
+        const ecarts = Object.keys(ecartsDeLaSource(impression.ecarts, source)).length;
+        modifie.textContent = ecarts === 1 ? "1 modifié" : ecarts + " modifiés";
+        modifie.hidden = ecarts === 0;
+        // Enregistrer et Rétablir ne valent que s'il y a quelque chose à garder
+        // ou à défaire ; Supprimer, que si ce poste a quelque chose à rendre.
+        enregistrer.hidden = ecarts === 0 || sansProfil;
+        retablir.hidden = ecarts === 0 || sansProfil;
+        renommer.hidden = sansProfil;
+        dupliquer.hidden = sansProfil;
+        supprimer.hidden = sansProfil || !estPrereglageDuPoste(source, impression[source]);
       },
     };
   }
-  const prereglages = options.sansPrereglages ? []
-    : SOURCES.map(({ id, etiquette, aide }) => lignePrereglage(id, etiquette, { nom: etiquette, texte: aide }));
 
-  // ── Onglets, mode, recherche ──
-  const boutonsOnglets = new Map(ONGLETS.map((o) => {
-    const b = creer("button", { classe: "onglet-reglages", texte: o.etiquette, attributs: { type: "button", role: "tab" } });
-    b.addEventListener("click", () => {
-      onglet = o.id;
-      dessiner();
-    });
-    return [o.id, b];
-  }));
+  const sections = SOURCES.map(({ id, etiquette, aide }) =>
+    [id, sectionDuProfil(id, etiquette, { nom: etiquette, texte: aide })]);
+
+  // ── Mode et recherche, en tête : ils valent pour toute la liste ──
   const caseAvance = creer("input", { attributs: { type: "checkbox" } });
   caseAvance.checked = avance;
   caseAvance.addEventListener("change", () => {
@@ -147,16 +257,17 @@ export function creerPanneauReglagesImpression(conteneur, actions, options = {})
   });
   champRecherche.addEventListener("keydown", (evenement) => evenement.stopPropagation());
 
-  const corps = creer("div", { classe: "corps-reglages" });
+  const rienTrouve = creer("div", { classe: "inspecteur-vide", texte: "Aucun réglage ne correspond.", attributs: { hidden: "" } });
+
   conteneur.append(
     creer("div", { classe: "titre-panneau" }, [icone("variables"), creer("span", { texte: "Réglages d'impression" })]),
-    ...prereglages.map((l) => l.element),
-    creer("div", { classe: "onglets-reglages", attributs: { role: "tablist" } }, [
-      ...boutonsOnglets.values(),
-      creer("label", { classe: "mode-avance", aide: { nom: "Mode avancé", texte: "Montre tous les réglages. Sans lui, seulement ceux qu'on change tous les jours." } }, [caseAvance, creer("span", { texte: "Avancé" })]),
+    creer("div", { classe: "tete-reglages" }, [
+      champRecherche,
+      creer("label", { classe: "mode-avance", aide: { nom: "Mode avancé", texte: "Montre tous les réglages. Sans lui, seulement ceux qu'on change tous les jours." } },
+        [caseAvance, creer("span", { texte: "Avancé" })]),
     ]),
-    champRecherche,
-    corps,
+    ...sections.map(([, s]) => s.element),
+    rienTrouve,
   );
 
   // Les champs gardés d'un dessin à l'autre : une mise à jour ne vole pas le focus.
@@ -185,10 +296,8 @@ export function creerPanneauReglagesImpression(conteneur, actions, options = {})
       surClic: () => actions.retablir(r.cle),
     });
     const libelle = creer("span", { classe: "libelle", texte: r.etiquette });
-    // La valeur figée, à la place du champ, quand l'essai ou la combinaison la tient.
-    const fige = creer("span", { classe: "valeur-figee" });
-    const ligne = creer("div", { classe: "rangee rangee-reglage" }, [libelle, controle, fige, retablir]);
-    const entree = { ligne, definir, retablir, libelle, controle, fige };
+    const ligne = creer("div", { classe: "rangee rangee-reglage" }, [libelle, controle, retablir]);
+    const entree = { ligne, definir, retablir, libelle, controle };
     champs.set(r.cle, entree);
     return entree;
   }
@@ -214,54 +323,57 @@ export function creerPanneauReglagesImpression(conteneur, actions, options = {})
     }
   }
 
+  /*
+   * Les réglages d'un profil qui passent le filtre, dans l'ordre du catalogue.
+   * Un réglage MODIFIÉ se montre toujours, même en mode simple : un écart caché
+   * est un écart qu'on oublie, et c'est lui qu'on enregistrera sans le savoir.
+   */
+  function reglagesRetenus(source) {
+    return REGLAGES.filter((r) => r.source === source && (recherche !== ""
+      // Un réglage sans équivalent OrcaSlicer a orca à null : on ne le cherche pas.
+      ? [r.etiquette, r.groupe, r.orca, r.aide].some((t) => t && t.toLowerCase().includes(recherche))
+      : avance || r.niveau === "simple" || r.cle in impression.ecarts));
+  }
+
   function dessinerMaintenant() {
     if (impression === null) return;
-    for (const [id, b] of boutonsOnglets) {
-      b.classList.toggle("actif", id === onglet && recherche === "");
-      b.setAttribute("aria-selected", String(id === onglet));
-    }
     const valeurs = valeursEffectives(impression);
-    const retenus = REGLAGES.filter((r) => (recherche !== ""
-      ? [r.etiquette, r.groupe, r.orca, r.aide].some((t) => t.toLowerCase().includes(recherche))
-      : r.onglet === onglet && (avance || r.niveau === "simple")));
+    let total = 0;
 
-    const blocs = [];
-    let groupe = null;
-    let bloc = null;
-    for (const r of retenus) {
-      if (r.groupe !== groupe) {
-        groupe = r.groupe;
-        bloc = creer("section", { classe: "bloc-inspecteur" }, [creer("div", { classe: "titre-bloc", texte: r.groupe })]);
-        blocs.push(bloc);
+    for (const [source, section] of sections) {
+      const retenus = reglagesRetenus(source);
+      total += retenus.length;
+      // Un groupe par nom, dans l'ordre où il se présente : « Parois » reste un
+      // seul bloc même si le catalogue le remplit en deux fois.
+      const blocs = new Map();
+      for (const r of retenus) {
+        if (!blocs.has(r.groupe)) {
+          blocs.set(r.groupe, creer("section", { classe: "bloc-inspecteur" },
+            [creer("div", { classe: "titre-bloc", texte: r.groupe })]));
+        }
+        const entree = champDe(r);
+        const ecart = r.cle in impression.ecarts;
+        entree.definir(valeurs[r.cle]);
+        entree.ligne.dataset.role = r.role ?? "fixe";
+        entree.ligne.classList.toggle("modifie", ecart);
+        entree.retablir.hidden = !ecart;
+        entree.retablir.title = "Revenir à la valeur du profil : " + texteDeValeur(r, valeurDuPrereglage(impression, r.cle));
+        // L'aide du réglage, avec son nom dans OrcaSlicer pour retrouver la référence.
+        entree.libelle.title = r.aide + (r.orca ? " (OrcaSlicer : " + r.orca + ")" : "");
+        blocs.get(r.groupe).append(entree.ligne);
       }
-      const entree = champDe(r);
-      const ecart = r.cle in impression.ecarts;
-      const duPrereglage = valeurDuPrereglage(impression, r.cle);
-      entree.definir(valeurs[r.cle]);
-      const verrou = verrouillage(r);
-      entree.controle.hidden = verrou !== null;
-      entree.fige.hidden = verrou === null;
-      entree.ligne.classList.toggle("verrouille", verrou !== null);
-      entree.ligne.dataset.role = r.role ?? "fixe";
-      if (verrou !== null) {
-        entree.fige.textContent = texteDeValeur(r, valeurs[r.cle]);
-        entree.fige.title = verrou.raison;
-      }
-      entree.ligne.classList.toggle("modifie", ecart);
-      entree.retablir.hidden = !ecart || verrou !== null;
-      entree.retablir.title = "Revenir à la valeur du préréglage : " + texteDeValeur(r, duPrereglage);
-      // L'aide du réglage, avec son nom dans OrcaSlicer pour retrouver la référence.
-      entree.libelle.title = r.aide + (r.orca ? " (OrcaSlicer : " + r.orca + ")" : "");
-      bloc.append(entree.ligne);
+      section.corps.replaceChildren(...blocs.values());
+      // Pendant une recherche, un profil sans résultat s'efface entièrement :
+      // ce qui reste à l'écran est la réponse.
+      section.element.hidden = recherche !== "" && retenus.length === 0;
     }
-    corps.replaceChildren(...blocs);
-    if (blocs.length === 0) corps.append(creer("div", { classe: "inspecteur-vide", texte: "Aucun réglage ne correspond." }));
+    rienTrouve.hidden = total > 0;
   }
 
   return {
     mettreAJour(nouvelle) {
       impression = nouvelle;
-      for (const ligne of prereglages) ligne.mettreAJour();
+      for (const [, section] of sections) section.mettreAJour();
       dessiner();
     },
   };

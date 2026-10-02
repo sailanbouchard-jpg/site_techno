@@ -133,7 +133,32 @@ export const OMEGA_CIBLE_NORMALE = (2 * MARGE_STABILITE) / PHYSICS_DT_REF;
 export const FACTEUR_INERTIE_MAX = 6;
 
 // ── Amplification de la déformation (diviseurs de raideur) ──
-export const AXIAL_STIFFNESS_DIVISOR = 500;
+// Ces deux diviseurs ne sont PAS indépendants : c'est leur RAPPORT qui décide du
+// chemin par lequel une structure porte sa charge. Divisé par 500, l'axial était
+// 500× plus mou que la flexion — autrement dit un treillis, un arc ou un
+// haubanage (qui travaillent en TRACTION/COMPRESSION) devenaient 500× moins
+// efficaces qu'une simple poutre fléchie. Résultat mesuré : un treillis de 28 m
+// ne soulageait pas du tout son tablier (la route restait à 128 % et cassait
+// sous son seul poids, l'acier plafonnant à 46 %) — le treillis ne servait à
+// rien. Avec 50, le treillis reprend l'effort : même tablier à 41 %, et l'acier
+// redevient le matériau dimensionnant.
+//
+// POURQUOI 50 ET PAS MOINS. Ce diviseur règle aussi ce qu'on VOIT : plus l'axial
+// est raide, moins l'ouvrage bouge, et un pont qui ne bouge pas n'apprend rien.
+// À 20, un treillis de 28 m ne fléchissait que de 10 cm sous un camion — trois
+// pixels à l'écran, autant dire rien. À 50 il en prend 22 à 35, bien lisibles,
+// et le jeu redevient exigeant : en acier fin, ce treillis CASSE sous un camion
+// de 15 t ; il faut élargir les membrures (il passe alors tout juste, à 100 %)
+// ou raccourcir les travées du tablier (panneaux de 2 m : 80 %). Rien ne passe
+// confortablement, c'est voulu.
+// POURQUOI PAS PLUS. À 100, le remède redevient le mal : le treillis de 28 m
+// s'écroule à nouveau sous son seul poids (101 %), comme avec l'ancien 500.
+//
+// Ce réglage ne touche PAS la portée de ruine d'un tablier seul, fixée par
+// l'équilibre (M = pL²/8) et non par la raideur : 12 m tiennent (69 %), 16 m
+// cassent (128 %), comme avant. Il coûte un pas de temps plus court (environ
+// 2× plus de pas qu'avec 500), largement dans le budget par image.
+export const AXIAL_STIFFNESS_DIVISOR = 50;
 export const BENDING_STIFFNESS_DIVISOR = 1;
 // (Plus de raideur d'ENCASTREMENT : un APPUI ANCRÉ est désormais un PIVOT PUR —
 // position figée, rotation LIBRE, aucun moment transmis. Il n'y a donc plus rien

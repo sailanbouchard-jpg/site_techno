@@ -32,9 +32,10 @@ const nomDeFichier = (nom) => (nom.trim() || "projet").replace(/[\\/:*?"<>|]+/g,
 
 /*
  * dependances : { tranchage, plateau, annoncer(texte, erreur), telecharger(contenu, nom, type), nomDuProjet(),
- *                 essaiEnCours() → null, ou l'essai de calibration qui prend la place du plateau }
+ *                 modulations(etat) → { modulations, modulationsDePiece } : ce qu'un essai de
+ *                 calibration ajoute au G-code. Sans essai posé, deux listes vides. }
  */
-export function creerEnvoiImpression({ tranchage, plateau, annoncer, telecharger, nomDuProjet, essaiEnCours = () => null }) {
+export function creerEnvoiImpression({ tranchage, plateau, annoncer, telecharger, nomDuProjet, modulations = () => ({ modulations: [], modulationsDePiece: [] }) }) {
   /* Tranche le plateau s'il ne l'est pas déjà, et attend la fin (jupe comprise). */
   async function plateauTranche() {
     const resume = plateau.resume();
@@ -63,16 +64,18 @@ export function creerEnvoiImpression({ tranchage, plateau, annoncer, telecharger
 
   /* modele : le code de la machine visée (C11, C12) ; par défaut celui des réglages. */
   async function preparer(modele = null) {
-    // Pendant un essai de calibration, c'est son éprouvette qu'on imprime, pas le plateau.
-    const essai = essaiEnCours();
-    const etat = essai === null ? await plateauTranche() : await essai.attendre();
+    const tranche = await plateauTranche();
+    // Un essai de calibration module le G-code : d'autres réglages à partir de
+    // telle couche, et d'autres pour telle pièce. C'est le seul endroit où la
+    // calibration touche au tranchage.
+    const etat = { ...tranche, ...modulations(tranche) };
     const impression = plateau.impression();
     const machine = modele === null ? plateau.machine()
       : (MACHINES.find((m) => m.modele === modele) ?? plateau.machine());
     const materiau = prereglage("materiau", impression.materiau);
     const resultat = genererGcode(etat, machine, materiau.matiere);
     return {
-      nom: essai === null ? nomDuProjet() : essai.nom,
+      nom: nomDuProjet(),
       gcode: resultat.texte,
       modele: machine.modele,
       matiere: materiau.matiere,

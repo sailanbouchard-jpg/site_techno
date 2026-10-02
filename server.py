@@ -103,7 +103,15 @@ mimetypes.add_type("text/javascript", ".js")
 # WebAssembly.instantiateStreaming refuse tout ce qui n'est pas application/wasm :
 # sans cette ligne, le moteur de géométrie de l'Atelier 3D ne démarre pas.
 mimetypes.add_type("application/wasm", ".wasm")
-ADMIN_PASSWORD        = "admin"   # ← change this before deploying
+# Mot de passe administrateur : lu depuis admin_password.txt, jamais versionné
+# (même principe que secret_key.txt). Fichier absent → "admin", pour le poste de
+# développement uniquement. En production, le fichier doit exister.
+_ADMIN_PASSWORD_FILE  = Path(__file__).parent / "admin_password.txt"
+ADMIN_PASSWORD        = (
+    _ADMIN_PASSWORD_FILE.read_text(encoding="utf-8").strip()
+    if _ADMIN_PASSWORD_FILE.exists()
+    else "admin"
+)
 MAX_REPONSE_CHARS     = 2000
 MAX_DROP_FILE_BYTES   = 20 * 1024 * 1024   # 20 Mo
 
@@ -1189,6 +1197,9 @@ def api_imprimer(ident: str) -> Response:
     archive = imprimante_bambu.construire_3mf(data["gcode"], infos)
     try:
         imprimante_bambu.envoyer_et_imprimer(imprimante, _nom_de_fichier_3mf(nom), nom, archive, emplacement)
+    except imprimante_bambu.OrdreRefuse as e:
+        # Le fichier est arrivé, c'est la machine qui dit non : son message porte la raison.
+        return jsonify({"erreur": f"Impression refusée : {e}"}), 409
     except (OSError, EOFError, ConnectionError, ftplib.Error) as e:
         return jsonify({"erreur": f"Envoi impossible : {e}"}), 502
     return jsonify({"message": "Impression lancée"})

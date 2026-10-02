@@ -35,6 +35,10 @@ export function creerPanneauImprimantes(conteneur, actions) {
   let ouvert = false;
   let minuterie = null;
   let envoiEnCours = null;       // id de l'imprimante qui reçoit le plateau
+  // Le dernier envoi refusé, par imprimante. La barre d'état disparaît au
+  // rafraîchissement suivant, et un refus qui demande d'aller changer un réglage
+  // sur la machine doit rester sous les yeux jusqu'au prochain essai.
+  const dernierRefus = new Map();
   let fiche = null;              // null, ou { id, nouvelle } : la fiche de connexion ouverte
   let cameraOuverte = null;      // id de l'imprimante dont on regarde la caméra
   const bobineChoisie = new Map(); // id de l'imprimante → valeur du choix de bobine ("externe" ou n° d'emplacement)
@@ -119,8 +123,10 @@ export function creerPanneauImprimantes(conteneur, actions) {
           // Le modèle de CETTE imprimante : le même préréglage sert aux deux P1,
           // c'est l'envoi qui adapte l'en-tête du fichier.
           await actions.imprimer(imprimante.id, choix === "externe" ? null : Number(choix), imprimante.modele);
+          dernierRefus.delete(imprimante.id);
           actions.annoncer("Impression lancée sur « " + imprimante.nom + " ».");
         } catch (erreur) {
+          dernierRefus.set(imprimante.id, erreur.message);
           actions.annoncer(erreur.message, true);
         }
         envoiEnCours = null;
@@ -202,6 +208,9 @@ export function creerPanneauImprimantes(conteneur, actions) {
         creer("span", { texte: "Plateau " + temperature(etat.bed_temper, etat.bed_target_temper) }),
       ]),
       etat.subtask_name && occupee ? creer("div", { classe: "tache-imprimante", texte: etat.subtask_name }) : null,
+      dernierRefus.has(imprimante.id)
+        ? creer("p", { classe: "note-imprimante refus-imprimante", texte: dernierRefus.get(imprimante.id) })
+        : null,
       video,
       rangeeBobine,
       creer("div", { classe: "ligne-actions" }, [envoyer, pause, arreter, voirCamera]),

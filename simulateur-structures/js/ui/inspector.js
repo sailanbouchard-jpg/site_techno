@@ -8,11 +8,11 @@
 import { state, estModifiable, MODES, clearSelection, captureUndo, deleteMultiSelection } from "../state.js";
 import {
   findNodeById, findBeamById, findSegmentById, findLoadByJointId, removeLoad, removeMobileLoad,
-  removeBeam, removeJoint, invalidateIndex,
+  removeBeam, removeJoint, invalidateIndex, beamTypeOf,
 } from "../model/Structure.js";
-import { getMaterialById, getBeamTypeById, BEAM_TYPES } from "../model/materials.js";
+import { getMaterialById, getBeamTypeById } from "../model/materials.js";
 import { TYPES_BATEAU, typeBateau, retirerBateau, bateauxDe, LARGEUR_BATEAU } from "../model/bateau.js";
-import { puissanceNominale, masseAffichee, allegement } from "../model/vehiclePresets.js";
+import { puissanceNominale, masseAffichee } from "../model/vehiclePresets.js";
 import { bumpTerrainVersion } from "../model/Structure.js";
 import { computeAxialStiffness } from "../model/Beam.js";
 import { computeNodeEffectiveMass, computeBeamMass } from "../physics/mass.js";
@@ -134,12 +134,13 @@ function renderBeam(panel, beam, editable) {
   categorie(grille, "Élément");
   if (material) ligne(grille, "Matériau", swatch(material));
   const select = document.createElement("select");
-  const current = BEAM_TYPES.find((t) => t.materialId === beam.materialId && t.thickness === beam.sectionArea);
+  const current = beamTypeOf(beam);
   populateBeamTypeSelect(select, current ? current.id : null);
   select.disabled = !modifiable(editable, { type: "beam", id: beam.id });
   if (current) select.value = current.id;
   select.addEventListener("change", () => {
     const bt = getBeamTypeById(select.value);
+    beam.beamTypeId = bt.id;
     beam.materialId = bt.materialId;
     beam.sectionArea = bt.thickness;
     // Les drapeaux suivent STRICTEMENT le type : seule une ROUTE porte les
@@ -252,11 +253,10 @@ function renderVehicle(panel, v, editable) {
   editable = modifiable(editable, { type: "vehicle", id: v.id });
   const { grille, actions } = open(panel, NOMS_VEHICULES[v.presetId] || "Véhicule");
   const motoriser = () => { v.powerHp = puissanceNominale(v.mass, v.referenceSpeed); renderInspector(); };
-  // On règle la masse ANNONCÉE ; la charge réellement encaissée suit, allégée du
-  // même rapport que le modèle d'origine (voir model/vehiclePresets.js).
+  // Une seule masse : celle qu'on annonce est celle qui charge la structure.
   numberField(grille, "Masse (kg)", masseAffichee(v), editable, (x) => {
     v.masseAffichee = x;
-    v.mass = Math.round(x * allegement(v.presetId));
+    v.mass = x; // le véhicule pèse ce qu'il annonce (voir vehiclePresets.js)
     motoriser();
   }, 1);
   numberField(grille, "Vitesse (km/h)", Math.round(msToKmh(v.referenceSpeed)), editable,

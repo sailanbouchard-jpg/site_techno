@@ -184,6 +184,10 @@ const ICONES = {
   fermer: [{ d: "M4 4l8 8 M12 4l-8 8" }],
   // La règle graduée : les essais de calibration se concluent au pied à coulisse.
   regle: [{ d: "M1.5 5h13v6h-13z M4 5v2.5 M6.5 5v3.5 M9 5v2.5 M11.5 5v3.5" }],
+  // Le crayon : renommer.
+  renommer: [{ d: "M2.5 13.5v-2.6L10.9 2.5l2.6 2.6-8.4 8.4z M9.6 3.8l2.6 2.6" }],
+  // La disquette : enregistrer un préréglage.
+  enregistrer: [{ d: "M2.5 2.5h8L13.5 5.5v8h-11z M5.5 2.5v4h4.5v-4 M5 13.5v-4h6v4" }],
   // Des pièces qui se rejoignent.
   rassembler: [{ d: "M2.5 4.5h4.5v7H2.5z M9 4.5h4.5v7H9z M7 8h2" }],
 };
